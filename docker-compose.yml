@@ -1,0 +1,90 @@
+version: '3.9'
+
+services:
+  migrate-road:
+    image: ghcr.io/kukymbr/goose-docker:3.23.0
+    environment:
+      - GOOSE_DRIVER=postgres
+      - GOOSE_DBSTRING=host=postgres-tibsphereai port=5432 user=postgres password=1111 dbname=tibsphereai sslmode=disable
+    volumes:
+      - ./migrations:/migrations
+    depends_on:
+      postgres-tibsphereai:
+        condition: service_healthy
+    networks:
+      - tibsphereai
+
+  postgres-tibsphereai:
+    container_name: postgres-tibsphereai
+    image: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1111
+      PGDATA: /data/postgres
+      POSTGRES_DB: tibsphereai
+    volumes:
+      - tibsphereai_postgres_data:/var/lib/postgres/data
+    ports:
+      - "127.0.0.1:5473:5432"
+    networks:
+      - tibsphereai
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  tibsphereai:
+    container_name: tibsphereai
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8004:8004"
+    environment:
+      - POSTGRES_HOST=postgres-tibsphereai
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=redis-tibsphereai
+      - REDIS_PORT=:6379
+      - MINIO_ENDPOINT=minio-tibsphereai
+      - MINIO_PORT=:9010
+      - BASE_URL=https://dev-medic.axadjonovsardorbek.uz
+      - MINIO_DOMAIN=https://dev-medic-minio.axadjonovsardorbek.uz
+    depends_on:
+      - postgres-tibsphereai
+      - redis-tibsphereai
+    networks:
+      - tibsphereai
+
+  redis-tibsphereai:
+    image: redis:latest
+    container_name: redis-tibsphereai
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6337:6379"
+    networks:
+      - tibsphereai
+
+  minio-tibsphereai:
+    image: quay.io/minio/minio
+    container_name: minio-tibsphereai
+    restart: unless-stopped
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin123
+    ports:
+      - "127.0.0.1:9010:9010"
+      - "127.0.0.1:9011:9011"
+    command: server /data --address ":9010" --console-address ":9011"
+    volumes:
+      - tibsphereai_minio_data:/data
+    networks:
+      - tibsphereai
+
+networks:
+  tibsphereai:
+    driver: bridge
+
+volumes:
+  tibsphereai_postgres_data:
+  tibsphereai_minio_data:

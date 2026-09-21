@@ -1,0 +1,50 @@
+version: '3'
+
+vars:
+  LOCAL_BIN: '{{.PWD}}/bin'
+  PATH: '{{.LOCAL_BIN}}:{{.PATH}}'
+  PG_URL: '{{.PG_URL}}'
+
+env:
+  ENV: development
+  GOOSE_DRIVER: postgres
+  GOOSE_DBSTRING: '{{.PG_URL}}?sslmode=disable'
+
+dotenv: ['.env', '{{.HOME}}/.env']
+
+tasks:
+  compose-up:
+    desc: "Run docker compose"
+    cmds:
+      - docker compose up --build -d postgres-tibsphereai redis-tibsphereai
+      - docker compose logs -f
+
+  compose-down:
+    desc: "Down docker-compose"
+    cmds:
+      - docker-compose down --remove-orphans
+
+  run:
+    desc: "Run the application"
+    cmds:
+      - go run ./cmd/main.go
+
+  migrate-create:
+    desc: "Create new migration"
+    cmds:
+      - goose -s create -dir migrations {{.NAME}} sql
+
+  migrate-up:
+    desc: "Migration up"
+    cmds:
+      - goose -dir migrations up
+
+  migrate-down:
+    desc: "Migration down"
+    cmds:
+      - goose -dir migrations down
+
+  swag-init:
+    desc: "Generate Swagger docs"
+    cmds:
+      - swag init -g api/api.go -o api/docs

@@ -1,0 +1,354 @@
+package ai
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
+	"tibsphereai/internal/config"
+	"tibsphereai/pkg/models"
+	"tibsphereai/storage"
+)
+
+// geminiClient - Gemini "generateContent" REST API'ga real so'rov yuboruvchi
+// klient (google.golang.org/genai o'rniga oddiy net/http - qo'shimcha
+// bog'liqlik shart emas). GEMINI_API_KEY berilganda ishlatiladi.
+type geminiClient struct {
+	apiKey     string
+	model      string
+	promptRepo storage.AIPromptI
+	httpClient *http.Client
+}
+
+func newGeminiClient(cfg *config.Config, promptRepo storage.AIPromptI) *geminiClient {
+	return &geminiClient{
+		apiKey:     cfg.GEMINI_API_KEY,
+		model:      cfg.GEMINI_MODEL,
+		promptRepo: promptRepo,
+		httpClient: &http.Client{Timeout: 60 * time.Second},
+	}
+}
+
+// --- Default promptlar (admin panelda ai_prompts jadvali orqali kodni
+// o'zgartirmasdan qayta yozilishi mumkin, BACKEND_STRUCTURE.md 7-bo'lim) ---
+
+const defaultPatientPersonaPrompt = `Sen klinik simulyatsiyada bemor rolidasan. Quyidagi bemor holati (JSON) asosida, FAQAT bemor tilidan, tabiiy va klinik jihatdan to'g'ri javob ber. Tashxis qo'yma, tibbiy atamalarni bemor bilmaydigan darajada ishlatma, shifokorga maslahat berma - faqat bemor his-tuyg'usi va simptomlarini tasvirla.
+
+Bemor holati (case scenario):
+%s`
+
+const defaultDebriefPrompt = `Sen tibbiyot bo'yicha ekspert-baholovchisan. Quyidagi klinik simulyatsiya case'i va shifokor (foydalanuvchi) bosgan qadamlar logi asosida, AHA/ERC kabi xalqaro klinik qo'llanmalarga tayangan holda debriefing tahlili tuz.
+
+Case scenario:
+%s
+
+Shifokor bosgan qadamlar (JSON ro'yxat, "type" va "payload" bilan):
+%s
+
+Javobni FAQAT quyidagi JSON formatda qaytar, boshqa hech qanday matn, izoh yoki markdown belgisi qo'shma:
+{"correct_steps": ["..."], "incorrect_steps": ["..."], "guideline_notes": "...", "weak_topics": ["..."]}`
+
+const defaultCaseGenerationPrompt = `Sen tajribali shoshilinch tibbiy yordam shifokori va ta'lim dizaynerisan. "%s" mavzusi bo'yicha, "%s" qiyinlik darajasida (easy|medium|hard) to'liq klinik simulyatsiya keysi (case) generatsiya qil.
+
+Javobni FAQAT quyidagi JSON formatda qaytar (o'zbek tilida, boshqa hech qanday matn/markdown qo'shma):
+{
+  "title": {"uz": "...", "ru": "...", "en": "..."},
+  "subtitle": {"uz": "...", "ru": "...", "en": "..."},
+  "expected_answer": "kutilgan to'g'ri davolash algoritmi matn ko'rinishida",
+  "difficulty": "%s",
+  "chief_complaint": {"uz": "...", "ru": "...", "en": "..."},
+  "patient_age": 45,
+  "patient_gender": "male|female",
+  "expected_duration_minutes": 10,
+  "initial_vitals": {"hr": 0, "bp": "120/80", "spo2": 98, "rr": 16, "temp": 36.6, "gcs": 15},
+  "visual_state": "conscious|pain|unconscious|seizure|coma",
+  "scenario": {"patient_persona": "bemor personaji tavsifi", "expected_steps": ["..."], "labs": {}, "imaging": {}, "medications": []}
+}`
+
+func (g *geminiClient) Reply(ctx context.Context, caseScenario map[string]any, question string) (string, *Usage, error) {
+	tmpl, params := g.loadPrompt(models.AIPromptPatientPersona, defaultPatientPersonaPrompt)
+	scenarioJSON, _ := json.MarshalIndent(caseScenario, "", "  ")
+
+	system := tmpl
+	if strings.Contains(system, "%s") {
+		system = fmt.Sprintf(tmpl, string(scenarioJSON))
+	}
+	prompt := system + "\n\nShifokor savoli: " + question + "\n\nBemor javobi (faqat bemor nutqi):"
+
+	text, usage, err := g.generateContent(ctx, prompt, params, false)
+	if err != nil {
+		return "", usage, err
+	}
+	return strings.TrimSpace(text), usage, nil
+}
+
+func (g *geminiClient) Generate(ctx context.Context, caseScenario map[string]any, events []models.SimulationEventReq) (*models.DebriefReportCreateReq, *Usage, error) {
+	tmpl, params := g.loadPrompt(models.AIPromptDebrief, defaultDebriefPrompt)
+	scenarioJSON, _ := json.MarshalIndent(caseScenario, "", "  ")
+	eventsJSON, _ := json.MarshalIndent(events, "", "  ")
+
+	prompt := tmpl
+	if strings.Contains(prompt, "%s") {
+		prompt = fmt.Sprintf(tmpl, string(scenarioJSON), string(eventsJSON))
+	}
+
+	text, usage, err := g.generateContent(ctx, prompt, params, true)
+	if err != nil {
+		return nil, usage, err
+	}
+
+	var report models.DebriefReportCreateReq
+	if err := unmarshalJSONLoose(text, &report); err != nil {
+		return nil, usage, fmt.Errorf("gemini debrief response parse error: %w (raw: %s)", err, text)
+	}
+	return &report, usage, nil
+}
+
+// geminiCaseGen - CaseGeneratorAI uchun alohida tip (geminiClient'da
+// allaqachon boshqa signature bilan Generate metodi bor - DebriefAI).
+type geminiCaseGen struct {
+	g *geminiClient
+}
+
+func (c geminiCaseGen) Generate(ctx context.Context, topic, difficulty string) (*models.CaseCreateReq, *Usage, error) {
+	g := c.g
+	tmpl, params := g.loadPrompt(models.AIPromptCaseGeneration, defaultCaseGenerationPrompt)
+	if difficulty == "" {
+		difficulty = "medium"
+	}
+
+	prompt := tmpl
+	if strings.Contains(prompt, "%s") {
+		// default shablon 3 ta %s kutadi (topic, difficulty, difficulty); admin
+		// o'zi yozgan shablonda bironta %s bo'lmasligi ham mumkin - shunda
+		// topic/difficulty pastda alohida qo'shib qo'yiladi.
+		n := strings.Count(prompt, "%s")
+		args := make([]any, n)
+		for i := range args {
+			switch i {
+			case 0:
+				args[i] = topic
+			default:
+				args[i] = difficulty
+			}
+		}
+		prompt = fmt.Sprintf(prompt, args...)
+	} else {
+		prompt = fmt.Sprintf("%s\n\nMavzu: %s\nQiyinlik darajasi: %s", prompt, topic, difficulty)
+	}
+
+	text, usage, err := g.generateContent(ctx, prompt, params, true)
+	if err != nil {
+		return nil, usage, err
+	}
+
+	var req models.CaseCreateReq
+	if err := unmarshalJSONLoose(text, &req); err != nil {
+		return nil, usage, fmt.Errorf("gemini case-generation response parse error: %w (raw: %s)", err, text)
+	}
+	if req.Difficulty == "" {
+		req.Difficulty = difficulty
+	}
+	return &req, usage, nil
+}
+
+const defaultActionEvalPrompt = `Sen shoshilinch tibbiy yordam bo'yicha ekspert-baholovchisan. Quyidagi klinik simulyatsiya case'i (bemor holati, kutilgan qadamlar) asosida, shifokor (foydalanuvchi) hozir bajargan BITTA harakatni AHA/ERC xalqaro qo'llanmalariga tayanib baho.
+
+Case scenario (JSON):
+%s
+
+Shifokor bajargan harakat turi: %s
+Harakat tafsilotlari (JSON): %s
+
+Baholash mezoni:
+- to'g'ri, o'z vaqtida va klinik jihatdan asosli harakat: health_delta ijobiy (+5 dan +20 gacha)
+- ortiqcha zarar keltirmaydigan, lekin foydasiz/kerak bo'lmagan harakat: health_delta 0
+- noto'g'ri, xavfli yoki qarshi ko'rsatilgan (contraindicated) harakat: health_delta manfiy (-10 dan -40 gacha)
+
+Javobni FAQAT quyidagi JSON formatda qaytar, boshqa hech qanday matn yoki markdown qo'shma:
+{"is_correct": true, "health_delta": 10, "feedback": "Qisqa (1-2 gap) klinik izoh - nima uchun to'g'ri/noto'g'ri"}`
+
+// action_eval hozircha ai_prompts jadvalida yo'q (CHECK constraint faqat
+// patient_persona/debrief/case_generation'ni ruxsat beradi), shu sabab
+// hozircha faqat kod ichidagi default (defaultActionEvalPrompt) ishlatiladi.
+func (g *geminiClient) Evaluate(ctx context.Context, caseScenario map[string]any, eventType string, payload map[string]any) (*ActionEvalRes, *Usage, error) {
+	scenarioJSON, _ := json.MarshalIndent(caseScenario, "", "  ")
+	payloadJSON, _ := json.MarshalIndent(payload, "", "  ")
+	prompt := fmt.Sprintf(defaultActionEvalPrompt, string(scenarioJSON), eventType, string(payloadJSON))
+
+	text, usage, err := g.generateContent(ctx, prompt, nil, true)
+	if err != nil {
+		return nil, usage, err
+	}
+
+	var raw struct {
+		IsCorrect   bool   `json:"is_correct"`
+		HealthDelta int    `json:"health_delta"`
+		Feedback    string `json:"feedback"`
+	}
+	if err := unmarshalJSONLoose(text, &raw); err != nil {
+		return nil, usage, fmt.Errorf("gemini action-eval response parse error: %w (raw: %s)", err, text)
+	}
+	return &ActionEvalRes{IsCorrect: raw.IsCorrect, HealthDelta: raw.HealthDelta, Feedback: raw.Feedback}, usage, nil
+}
+
+// --- Gemini REST chaqiruvi ---
+
+type geminiGenerationConfig struct {
+	Temperature      *float64 `json:"temperature,omitempty"`
+	TopP             *float64 `json:"topP,omitempty"`
+	TopK             *float64 `json:"topK,omitempty"`
+	MaxOutputTokens  *int     `json:"maxOutputTokens,omitempty"`
+	ResponseMimeType string   `json:"responseMimeType,omitempty"`
+}
+
+type geminiRequest struct {
+	Contents         []geminiContent         `json:"contents"`
+	GenerationConfig *geminiGenerationConfig `json:"generationConfig,omitempty"`
+}
+
+type geminiContent struct {
+	Role  string       `json:"role"`
+	Parts []geminiPart `json:"parts"`
+}
+
+type geminiPart struct {
+	Text string `json:"text"`
+}
+
+type geminiResponse struct {
+	Candidates []struct {
+		Content struct {
+			Parts []geminiPart `json:"parts"`
+		} `json:"content"`
+		FinishReason string `json:"finishReason"`
+	} `json:"candidates"`
+	UsageMetadata struct {
+		PromptTokenCount     int `json:"promptTokenCount"`
+		CandidatesTokenCount int `json:"candidatesTokenCount"`
+		ThoughtsTokenCount   int `json:"thoughtsTokenCount"` // "fikrlash" (reasoning) tokenlari - narxda output sifatida hisoblanadi
+		TotalTokenCount      int `json:"totalTokenCount"`
+	} `json:"usageMetadata"`
+	Error *struct {
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
+// generateContent - Gemini "generateContent" endpointiga bitta so'rov,
+// javob matni + token/xarajat (Usage) bilan qaytadi.
+func (g *geminiClient) generateContent(ctx context.Context, prompt string, modelParams map[string]any, jsonMode bool) (string, *Usage, error) {
+	genCfg := &geminiGenerationConfig{}
+	if jsonMode {
+		genCfg.ResponseMimeType = "application/json"
+	}
+	if t, ok := modelParams["temperature"].(float64); ok {
+		genCfg.Temperature = &t
+	}
+	if t, ok := modelParams["top_p"].(float64); ok {
+		genCfg.TopP = &t
+	}
+	if t, ok := modelParams["max_output_tokens"].(float64); ok {
+		v := int(t)
+		genCfg.MaxOutputTokens = &v
+	}
+
+	reqBody := geminiRequest{
+		Contents:         []geminiContent{{Role: "user", Parts: []geminiPart{{Text: prompt}}}},
+		GenerationConfig: genCfg,
+	}
+	payload, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", nil, fmt.Errorf("gemini request marshal error: %w", err)
+	}
+
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent", g.model)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
+	if err != nil {
+		return "", nil, fmt.Errorf("gemini request build error: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("x-goog-api-key", g.apiKey)
+
+	resp, err := g.httpClient.Do(httpReq)
+	if err != nil {
+		return "", nil, fmt.Errorf("gemini request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", nil, fmt.Errorf("gemini response read error: %w", err)
+	}
+
+	var gr geminiResponse
+	if err := json.Unmarshal(body, &gr); err != nil {
+		return "", nil, fmt.Errorf("gemini response decode error: %w (status=%d, body=%s)", err, resp.StatusCode, truncate(string(body), 500))
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		msg := fmt.Sprintf("gemini API error (status %d)", resp.StatusCode)
+		if gr.Error != nil && gr.Error.Message != "" {
+			msg = fmt.Sprintf("gemini API error (status %d): %s", resp.StatusCode, gr.Error.Message)
+		}
+		return "", nil, errors.New(msg)
+	}
+
+	// OutputTokens narx uchun candidates + thoughts (reasoning) tokenlarini
+	// birga oladi - Google ikkalasini ham output narxida hisoblaydi, aks
+	// holda "thinking" modellarda xarajat kamroq ko'rsatiladi.
+	usage := &Usage{
+		PromptTokens: gr.UsageMetadata.PromptTokenCount,
+		OutputTokens: gr.UsageMetadata.CandidatesTokenCount + gr.UsageMetadata.ThoughtsTokenCount,
+		TotalTokens:  gr.UsageMetadata.TotalTokenCount,
+	}
+	usage.CostUSD = calcCost(g.model, usage.PromptTokens, usage.OutputTokens)
+
+	if len(gr.Candidates) == 0 || len(gr.Candidates[0].Content.Parts) == 0 {
+		return "", usage, fmt.Errorf("gemini returned no candidates")
+	}
+
+	var text strings.Builder
+	for _, p := range gr.Candidates[0].Content.Parts {
+		text.WriteString(p.Text)
+	}
+	return text.String(), usage, nil
+}
+
+// loadPrompt - admin panelda tahrirlangan template'ni (ai_prompts jadvali)
+// o'qiydi, topilmasa yoki DB xato bo'lsa kodda qattiq yozilgan default'ga
+// qaytadi (BACKEND_STRUCTURE.md 7-bo'lim: promptlarni kodsiz sozlash).
+func (g *geminiClient) loadPrompt(key, fallback string) (string, map[string]any) {
+	if g.promptRepo == nil {
+		return fallback, nil
+	}
+	row, err := g.promptRepo.GetByKey(key)
+	if err != nil || row == nil || strings.TrimSpace(row.Template) == "" {
+		return fallback, nil
+	}
+	return row.Template, row.ModelParams
+}
+
+// unmarshalJSONLoose - Gemini ba'zan JSON'ni ```json ... ``` fensasi ichida
+// qaytarishi mumkin (responseMimeType=application/json bo'lsa kamdan-kam,
+// lekin ehtiyot uchun tozalab olamiz).
+func unmarshalJSONLoose(text string, v any) error {
+	t := strings.TrimSpace(text)
+	t = strings.TrimPrefix(t, "```json")
+	t = strings.TrimPrefix(t, "```")
+	t = strings.TrimSuffix(t, "```")
+	t = strings.TrimSpace(t)
+	return json.Unmarshal([]byte(t), v)
+}
+
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "..."
+}

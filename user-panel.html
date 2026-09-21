@@ -1,0 +1,1664 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TibSphereAI — User App (Review UI)</title>
+<style>
+  :root{
+    --bg:#0b1420; --panel:#0f1f2e; --panel2:#15293c; --border:#233b52;
+    --text:#e6f1f8; --muted:#8fa9bd; --accent:#14b8a6; --accent2:#0d9488;
+    --ok:#22c55e; --danger:#ef4444; --warn:#f59e0b;
+    font-size:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+  a{color:var(--accent)}
+  button{cursor:pointer;font-family:inherit}
+  input,select,textarea{font-family:inherit;background:#081019;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:7px 9px}
+  input:focus,select:focus,textarea:focus{outline:1px solid var(--accent)}
+  button{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:7px 12px}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent2);color:#04211c}
+  button.primary:hover{background:var(--accent2);color:#fff}
+  button.danger{background:#3a1414;border-color:var(--danger);color:#fca5a5}
+  button.ok{background:#0f2e1c;border-color:var(--ok);color:#86efac}
+  button.sm{padding:4px 8px;font-size:12px}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .hidden{display:none!important}
+
+  #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .loginBox{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:28px;width:380px;max-width:100%}
+  .loginBox h1{font-size:18px;margin:0 0 4px}
+  .loginBox p{color:var(--muted);margin:0 0 18px;font-size:12px}
+  .tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border)}
+  .tabs button{background:transparent;border:none;border-bottom:2px solid transparent;border-radius:0;padding:8px 4px;color:var(--muted)}
+  .tabs button.active{color:var(--text);border-bottom-color:var(--accent)}
+  .field{margin-bottom:12px;display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:12px;color:var(--muted)}
+  .field input,.field select,.field textarea{width:100%}
+  #loginErr{color:#fca5a5;font-size:12px;min-height:16px}
+  #otpStep2{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
+
+  #app{display:none;min-height:100vh;grid-template-columns:210px 1fr;grid-template-rows:52px 1fr;}
+  #app.show{display:grid}
+  #topbar{grid-column:1/3;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--border);background:var(--panel)}
+  #topbar .brand{font-weight:700}
+  #topbar .right{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+  #sidebar{border-right:1px solid var(--border);background:var(--panel);overflow-y:auto;padding:10px}
+  #sidebar .grp{margin:10px 6px 4px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  #sidebar button.nav{display:block;width:100%;text-align:left;background:transparent;border:none;border-radius:6px;padding:8px 10px;color:var(--text);margin-bottom:2px}
+  #sidebar button.nav:hover{background:var(--panel2)}
+  #sidebar button.nav.active{background:var(--accent);color:#04211c;font-weight:600}
+  #main{padding:18px;overflow-y:auto}
+
+  h2.pageTitle{margin:0 0 4px}
+  .pageDesc{color:var(--muted);font-size:12px;margin:0 0 16px}
+  h3.secTitle{margin:22px 0 8px;font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+  .toolbar .field{margin:0;min-width:130px}
+
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  thead th{background:var(--panel2);text-align:left;padding:8px 10px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+  tbody td{padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:top;max-width:280px;overflow:hidden;text-overflow:ellipsis}
+  tbody tr:hover{background:#0d1c2a}
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;background:var(--panel2);border:1px solid var(--border)}
+  .pager{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:12px;color:var(--muted)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:10px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:border-color .1s}
+  .card:hover{border-color:var(--accent)}
+  .card h4{margin:0 0 6px;font-size:14px}
+  .card p{margin:0;font-size:12px;color:var(--muted)}
+  .card .v{font-size:22px;font-weight:700}
+  .card.stat{cursor:default}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px}
+
+  .modalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:30px 14px;overflow-y:auto;z-index:50}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:10px;width:560px;max-width:100%;padding:18px}
+  .modal h3{margin:0 0 12px}
+  .formGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .formGrid .full{grid-column:1/3}
+  .modalFooter{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+
+  #toasts{position:fixed;bottom:16px;right:16px;display:flex;flex-direction:column;gap:8px;z-index:99}
+  .toast{background:var(--panel2);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:6px;padding:10px 14px;font-size:13px;max-width:340px}
+  .toast.err{border-left-color:var(--danger)}
+  .toast.ok{border-left-color:var(--ok)}
+
+  .breadcrumb{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-size:12px}
+  .breadcrumb button{padding:3px 8px;font-size:12px}
+
+  .muted{color:var(--muted)}
+  .kv{display:flex;flex-direction:column;gap:6px;font-size:13px}
+  .kv div span.k{color:var(--muted);display:inline-block;min-width:160px}
+  .healthbar{height:10px;border-radius:6px;background:#1a2f42;overflow:hidden;border:1px solid var(--border)}
+  .healthbar .fill{height:100%;background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e)}
+  .eventLog{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;margin-top:10px}
+  .eventItem{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px}
+  .eventItem.correct{border-left:4px solid var(--ok)}
+  .eventItem.wrong{border-left:4px solid var(--danger)}
+  code.small{font-size:11px;color:var(--muted)}
+  .subtabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .subtabs button.active{background:var(--accent);color:#04211c}
+
+  /* ============================================================
+     MOBILE APP SHELL (reference: medicai-mvp.vercel.app)
+     ============================================================ */
+  :root{
+    --doc1:#22d3ee; --doc2:#3b82f6;
+    --cit1:#fb923c; --cit2:#ef4444;
+    --cardbg:#0e1c2b; --cardbg2:#0c1826;
+  }
+  #shell{display:none;max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:78px}
+  #shell.show{display:block}
+  #shellContent{padding:14px 14px 8px}
+
+  .topProfile{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:10px 14px;margin-bottom:16px}
+  .topProfile .who{display:flex;align-items:center;gap:10px}
+  .avatarCircle{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--doc1),var(--doc2));display:flex;align-items:center;justify-content:center;font-weight:700;color:#04212f;flex-shrink:0}
+  .who .name{font-weight:700;display:flex;align-items:center;gap:6px}
+  .lvlPill{font-size:10px;background:var(--panel2);border:1px solid var(--border);border-radius:999px;padding:1px 7px;color:var(--muted)}
+  .who .sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .topRight{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .statPill{font-size:11px;font-weight:600;border-radius:999px;padding:4px 9px;white-space:nowrap;border:1px solid var(--border)}
+  .statPill.coins{background:#2a1f08;color:#fbbf24;border-color:#7a5a12}
+  .statPill.limit{background:#0b2a24;color:#5eead4;border-color:#0f5e52}
+
+  .heroBox{text-align:center;padding:10px 8px 20px}
+  .heroIcon{width:64px;height:64px;border-radius:18px;background:var(--panel2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px}
+  .heroBox h1{font-size:21px;margin:0 0 8px}
+  .heroBox p{color:var(--muted);font-size:13px;margin:0;line-height:1.5}
+
+  .modeToggle{display:flex;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:4px;gap:4px;margin-bottom:16px}
+  .modeBtn{flex:1;border:none;border-radius:11px;padding:11px 6px;font-size:13px;font-weight:600;background:transparent;color:var(--muted);transition:all .15s}
+  .modeBtn.active.doctor{background:linear-gradient(90deg,var(--doc2),var(--doc1));color:#04212f;box-shadow:0 4px 14px -4px rgba(59,130,246,.6)}
+  .modeBtn.active.citizen{background:linear-gradient(90deg,var(--cit2),var(--cit1));color:#2b0d02;box-shadow:0 4px 14px -4px rgba(239,68,68,.6)}
+  .modeBtn:disabled{opacity:.4;cursor:not-allowed}
+
+  .stepCard{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px}
+  .stepLabelRow{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .stepLabel{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
+  .modeTag{font-size:10px;font-weight:700;border-radius:999px;padding:3px 9px}
+  .modeTag.doctor{background:#0d2a3d;color:#7dd3fc;border:1px solid #164e63}
+  .modeTag.citizen{background:#3a1607;color:#fdba74;border:1px solid #7c2d12}
+  .stepCard select{width:100%;padding:11px 10px;font-size:13px;border-radius:10px}
+  .stepCard + .stepCard{margin-top:-6px}
+
+  .pillGroup{display:flex;gap:8px;margin-top:4px}
+  .pillGroup button{flex:1;padding:11px 4px;border-radius:10px;font-size:13px;font-weight:600;background:var(--panel2);border:1px solid var(--border);color:var(--text)}
+  .pillGroup button.active{border-color:#f59e0b;color:#fbbf24;background:#241a06}
+
+  .ctaBtn{width:100%;padding:16px;border:none;border-radius:14px;font-size:15px;font-weight:700;color:#04212f;background:linear-gradient(90deg,var(--doc1),var(--doc2));box-shadow:0 8px 22px -6px rgba(34,211,238,.55);display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px}
+  .ctaBtn.citizen{color:#2b0d02;background:linear-gradient(90deg,var(--cit1),var(--cit2));box-shadow:0 8px 22px -6px rgba(239,68,68,.55)}
+  .ctaBtn:disabled{opacity:.55;box-shadow:none}
+
+  .promoCard{border-radius:14px;padding:14px;background:linear-gradient(120deg,#3a2306,#1c1206);border:1px solid #6b4a10;display:flex;gap:10px;align-items:flex-start}
+  .promoCard .tag{font-size:9px;font-weight:700;color:#fbbf24;background:#2a1a04;border:1px solid #7a5a12;border-radius:5px;padding:2px 6px}
+  .promoCard .sub{font-size:10px;color:var(--muted);margin-left:6px}
+  .promoCard p{margin:6px 0 0;font-size:12px;font-weight:600}
+  .promoCard .ic{font-size:22px}
+
+  #bottomNav{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:480px;display:flex;background:var(--panel);border-top:1px solid var(--border);padding:8px 6px calc(env(safe-area-inset-bottom,0px) + 8px)}
+  #bottomNav button{flex:1;background:transparent;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;color:var(--muted);font-size:11px;border-radius:10px}
+  #bottomNav button .ic{font-size:19px}
+  #bottomNav button.active{color:var(--accent)}
+
+  /* ---------- Simulyatsiya ekrani ---------- */
+  #simView{display:none;position:fixed;inset:0;background:var(--bg);z-index:40;flex-direction:column;max-width:480px;margin:0 auto}
+  #simView.show{display:flex}
+  .simTopbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--panel)}
+  .simTopbar .ttl{font-weight:700;font-size:14px}
+  .simTopbar .sub{font-size:11px;color:var(--muted)}
+  .simIconBtn{width:34px;height:34px;border-radius:10px;background:var(--panel2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+  .simBody{flex:1;overflow-y:auto;padding:12px 14px 4px;display:flex;flex-direction:column;gap:12px}
+
+  .statusRow{display:flex;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:8px 12px;font-size:12px;font-weight:600}
+  .statusRow .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:6px}
+  .statusRow.warn .dot{background:var(--warn)} .statusRow.warn{color:#fbbf24}
+  .statusRow.critical .dot{background:var(--danger);animation:blink 1s infinite} .statusRow.critical{color:#fca5a5}
+  .statusRow.flat .dot{background:#f87171} .statusRow.flat{color:#f87171}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+  .avatarStage{display:flex;flex-direction:column;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px 8px}
+  .avatarFig{width:96px;height:120px}
+  .avatarFig .breathe{transform-origin:center;animation:breathe 3s ease-in-out infinite}
+  .avatarFig.severity-mid .breathe{animation-duration:1.6s}
+  .avatarFig.severity-high .breathe{animation-duration:.9s}
+  .avatarFig.seizure{animation:shake .25s linear infinite}
+  @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+  @keyframes shake{0%{transform:translateX(-2px) rotate(-1deg)}50%{transform:translateX(2px) rotate(1deg)}100%{transform:translateX(-2px) rotate(-1deg)}}
+  .ecgWrap{width:100%;height:44px;overflow:hidden;margin-top:10px;border-radius:8px;background:#050c14}
+  .ecgWrap svg{width:200%;height:100%;animation:ecgScroll 2.4s linear infinite}
+  .ecgWrap.flat svg{animation:none}
+  @keyframes ecgScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .avatarMeta{display:flex;justify-content:space-between;width:100%;font-size:11px;color:var(--muted);margin-top:8px}
+  .avatarMeta b{color:var(--text);font-size:13px}
+
+  .barRow{display:flex;flex-direction:column;gap:4px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 12px}
+  .barRow .lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+  .barRow .lbl b{color:var(--text);font-size:12px}
+  .miniBar{height:8px;border-radius:5px;background:#1a2f42;overflow:hidden}
+  .miniBar .fill{height:100%;background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e);transition:width .4s}
+
+  .vitalsGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .vitalCard{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:9px 12px;display:flex;align-items:center;gap:8px}
+  .vitalCard .ic{font-size:16px}
+  .vitalCard .v{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+  .vitalCard .l{font-size:10px;color:var(--muted)}
+  .vitalCard.alert{border-color:var(--danger)}
+
+  .chatLog{display:flex;flex-direction:column;gap:10px;padding-bottom:4px}
+  .msg{max-width:86%;font-size:13px;line-height:1.45;border-radius:14px;padding:10px 13px}
+  .msg.sys{align-self:center;max-width:96%;text-align:center;background:transparent;border:1px dashed var(--border);color:var(--muted);font-size:11px}
+  .msg.sys b{color:var(--accent);display:block;font-size:10px;letter-spacing:.05em;margin-bottom:3px}
+  .msg.patient{align-self:flex-start;background:var(--panel2);border:1px solid var(--border);border-bottom-left-radius:4px}
+  .msg.doctor{align-self:flex-end;background:linear-gradient(90deg,var(--doc2),var(--doc1));color:#04212f;font-weight:500;border-bottom-right-radius:4px}
+  .msg.err{align-self:flex-start;background:#2a1010;border:1px solid var(--danger);color:#fca5a5}
+  .msg.typing{display:flex;gap:4px;align-items:center;padding:12px 16px}
+  .msg.typing .dot{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:typingDot 1.1s infinite ease-in-out}
+  .msg.typing .dot:nth-child(2){animation-delay:.15s}
+  .msg.typing .dot:nth-child(3){animation-delay:.3s}
+  @keyframes typingDot{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+  #simMsgInput:disabled, .simInputBar button:disabled{opacity:.5}
+
+  .simInputBar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid var(--border);background:var(--panel)}
+  .simInputBar input{flex:1;border-radius:999px;padding:10px 14px}
+  .simInputBar button.round{width:38px;height:38px;border-radius:50%;padding:0;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .eventPicker{display:flex;gap:6px;overflow-x:auto;padding:0 12px 8px}
+  .eventPicker button{flex-shrink:0;font-size:11px;padding:6px 10px;border-radius:999px;background:var(--panel2)}
+  .eventPicker button.active{background:var(--accent);color:#04211c;border-color:var(--accent2)}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN / REGISTER ================= -->
+<div id="loginScreen">
+  <div class="loginBox">
+    <h1>🩺 TibSphereAI</h1>
+    <p>Foydalanuvchi ilovasi — review UI. /mobile/* API'larga ulanadi.</p>
+    <div class="field">
+      <label>Backend Base URL</label>
+      <input id="baseUrlInput" value="https://dev-medic.axadjonovsardorbek.uz">
+    </div>
+
+    <div class="tabs">
+      <button id="tabOtp" class="active" onclick="switchAuthTab('otp')">📱 OTP (email/telegram)</button>
+      <button id="tabGoogle" onclick="switchAuthTab('google')">🔵 Google</button>
+    </div>
+
+    <div id="otpPane">
+      <div class="field">
+        <label>Identifikator (email yoki telefon)</label>
+        <input id="identifierInput" placeholder="user@mail.com yoki +998901234567">
+      </div>
+      <div class="field">
+        <label>Kanal turi</label>
+        <select id="otpTypeInput">
+          <option value="email">email</option>
+          <option value="telegram">telegram</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button onclick="checkAccount()" style="flex:1">🔍 Hisobni tekshirish</button>
+        <button class="primary" onclick="sendOtp()" style="flex:1">✉️ Kod yuborish</button>
+      </div>
+      <div id="otpStep2" class="hidden">
+        <div class="field">
+          <label>Tasdiqlash kodi</label>
+          <input id="otpCodeInput" placeholder="123456">
+        </div>
+        <button class="primary" style="width:100%" onclick="confirmOtp()">✅ Tasdiqlash va kirish</button>
+      </div>
+    </div>
+
+    <div id="googlePane" class="hidden">
+      <div class="field">
+        <label>Google id_token (frontend Google Sign-In'dan olinadi)</label>
+        <textarea id="googleTokenInput" rows="3" placeholder="eyJhbGciOi..."></textarea>
+      </div>
+      <button class="primary" style="width:100%" onclick="doGoogleLogin()">🔵 Google bilan kirish</button>
+    </div>
+
+    <div id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ================= APP (mobile shell) ================= -->
+<div id="shell">
+  <div id="shellContent">
+    <div id="topProfile"></div>
+    <div id="homeView"></div>
+    <!-- Keyslar/Profil sahifalari (eski render* funksiyalar) shu konteynerga chiqadi -->
+    <div id="main"></div>
+  </div>
+</div>
+<div id="bottomNav"></div>
+
+<!-- ================= SIMULATION (fullscreen) ================= -->
+<div id="simView">
+  <div class="simTopbar" id="simTopbar"></div>
+  <div class="simBody" id="simBody"></div>
+  <div class="eventPicker" id="simEventPicker"></div>
+  <div class="simInputBar" id="simInputBar"></div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+/* ============================================================
+   STATE + CORE
+   ============================================================ */
+const state = {
+  baseUrl: localStorage.getItem('tu_base') || 'https://dev-medic.axadjonovsardorbek.uz',
+  access: localStorage.getItem('tu_access') || '',
+  refresh: localStorage.getItem('tu_refresh') || '',
+  uid: localStorage.getItem('tu_uid') || '',
+  lang: localStorage.getItem('tu_lang') || 'uz',
+  activeSession: JSON.parse(localStorage.getItem('tu_active_session') || 'null'),
+};
+
+function toast(msg, kind){
+  const box = document.createElement('div');
+  box.className = 'toast ' + (kind || '');
+  box.textContent = msg;
+  document.getElementById('toasts').appendChild(box);
+  setTimeout(()=>box.remove(), 4500);
+}
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function api(path, {method='GET', body=null, isForm=false, query=null, silent=false} = {}){
+  let url = state.baseUrl.replace(/\/$/,'') + path;
+  if(query){
+    const qs = Object.entries(query).filter(([,v])=>v!==undefined && v!==null && v!=='').map(([k,v])=>encodeURIComponent(k)+'='+encodeURIComponent(v)).join('&');
+    if(qs) url += (url.includes('?')?'&':'?') + qs;
+  }
+  const headers = {'Accept-Language': state.lang};
+  if(state.access) headers['Authorization'] = 'Bearer ' + state.access;
+  let fetchBody;
+  if(isForm){ fetchBody = body; }
+  else if(body !== null && body !== undefined){ headers['Content-Type']='application/json'; fetchBody = JSON.stringify(body); }
+  let res;
+  try{
+    res = await fetch(url, {method, headers, body: fetchBody});
+  }catch(e){
+    if(!silent) toast('Tarmoq xatosi: ' + e.message, 'err');
+    throw e;
+  }
+  const text = await res.text();
+  let data = null;
+  try{ data = text ? JSON.parse(text) : null; }catch(e){ data = text; }
+  if(!res.ok){
+    let msg = 'Xatolik (' + res.status + ')';
+    if(data && data.error && data.error.message) msg = data.error.message + (data.error.details ? (' — ' + data.error.details) : '');
+    else if(typeof data === 'string' && data) msg = data;
+    if(res.status === 401) msg = 'Sessiya tugagan. Qayta kiring. (' + msg + ')';
+    if(!silent) toast(msg, 'err');
+    const err = new Error(msg); err.status = res.status; err.data = data;
+    throw err;
+  }
+  return data;
+}
+
+function extractList(json){
+  if(Array.isArray(json)) return {items: json, count: json.length};
+  if(json && typeof json === 'object'){
+    for(const k of Object.keys(json)){
+      if(Array.isArray(json[k])){
+        const count = typeof json.total === 'number' ? json.total : (typeof json.count === 'number' ? json.count : json[k].length);
+        return {items: json[k], count};
+      }
+    }
+  }
+  return {items: [], count: 0};
+}
+function ml(v){ // multilingual object -> current lang string
+  if(v && typeof v === 'object') return v[state.lang] || v.uz || v.ru || v.en || '';
+  return v ?? '';
+}
+function fmtCell(v){
+  if(v === null || v === undefined) return '<span class="muted">—</span>';
+  if(typeof v === 'boolean') return v ? '✅' : '⬜️';
+  if(typeof v === 'object'){
+    if(v.uz !== undefined || v.ru !== undefined || v.en !== undefined) return esc(ml(v));
+    const s = JSON.stringify(v);
+    return '<code class="small" title="'+esc(s)+'">'+esc(s.length>60?s.slice(0,60)+'…':s)+'</code>';
+  }
+  const s = String(v);
+  return esc(s.length>140 ? s.slice(0,140)+'…' : s);
+}
+
+/* ============================================================
+   GENERIC MODAL / FORM (trimmed version of admin engine)
+   ============================================================ */
+function buildFormField(container, f, values){
+  const wrap = document.createElement('div');
+  wrap.className = 'field' + (f.full ? ' full' : '');
+  const label = document.createElement('label');
+  label.textContent = f.label + (f.required ? ' *' : '');
+  wrap.appendChild(label);
+
+  if(f.type === 'textarea' || f.type === 'json'){
+    const ta = document.createElement('textarea');
+    ta.rows = f.rows || 3;
+    let v = values[f.name];
+    if(f.type === 'json' && v !== undefined && typeof v === 'object') v = JSON.stringify(v, null, 2);
+    ta.value = v ?? '';
+    wrap.appendChild(ta);
+    wrap._getValue = () => {
+      if(f.type === 'json'){
+        const raw = ta.value.trim();
+        if(!raw) return f.jsonDefault !== undefined ? f.jsonDefault : {};
+        try{ return JSON.parse(raw); }catch(e){ throw new Error('"'+f.label+'" JSON xato: ' + e.message); }
+      }
+      return ta.value;
+    };
+  } else if(f.type === 'checkbox'){
+    const inp = document.createElement('input');
+    inp.type='checkbox'; inp.checked = !!values[f.name];
+    wrap.style.flexDirection='row'; wrap.style.alignItems='center'; wrap.style.gap='8px';
+    wrap.appendChild(inp);
+    wrap._getValue = () => inp.checked;
+  } else if(f.type === 'select'){
+    const sel = document.createElement('select');
+    (f.options||[]).forEach(o=>{ const op=document.createElement('option'); op.value=o.value; op.textContent=o.label; sel.appendChild(op); });
+    sel.value = values[f.name] ?? (f.options && f.options[0] ? f.options[0].value : '');
+    wrap.appendChild(sel);
+    wrap._getValue = () => sel.value;
+  } else if(f.type === 'file'){
+    const inp = document.createElement('input');
+    inp.type = 'file'; if(f.accept) inp.accept = f.accept;
+    wrap.appendChild(inp);
+    wrap._getValue = () => inp.files[0] || null;
+  } else {
+    const inp = document.createElement('input');
+    inp.type = f.type === 'number' ? 'number' : (f.type === 'password' ? 'password' : 'text');
+    if(f.step) inp.step = f.step;
+    inp.value = values[f.name] ?? '';
+    if(f.placeholder) inp.placeholder = f.placeholder;
+    wrap.appendChild(inp);
+    wrap._getValue = () => f.type === 'number' ? (inp.value===''?0:Number(inp.value)) : inp.value;
+  }
+  container.appendChild(wrap);
+  return wrap;
+}
+
+function openModal({title, fields, values, onSubmit, submitLabel}){
+  const overlay = document.createElement('div');
+  overlay.className = 'modalOverlay';
+  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+  const modal = document.createElement('div'); modal.className = 'modal';
+  modal.innerHTML = '<h3>' + esc(title) + '</h3>';
+  const grid = document.createElement('div'); grid.className='formGrid';
+  const wraps = fields.map(f => buildFormField(grid, f, values || {}));
+  modal.appendChild(grid);
+  const footer = document.createElement('div'); footer.className='modalFooter';
+  const cancelBtn = document.createElement('button'); cancelBtn.textContent='Bekor qilish';
+  cancelBtn.onclick = () => overlay.remove();
+  const submitBtn = document.createElement('button'); submitBtn.className='primary';
+  submitBtn.textContent = submitLabel || 'Saqlash';
+  submitBtn.onclick = async () => {
+    const out = {};
+    try{ fields.forEach((f,i)=> out[f.name] = wraps[i]._getValue()); }
+    catch(e){ toast(e.message,'err'); return; }
+    submitBtn.disabled = true; const orig = submitBtn.textContent; submitBtn.textContent='...';
+    try{ await onSubmit(out); overlay.remove(); }
+    catch(e){ submitBtn.disabled=false; submitBtn.textContent=orig; }
+  };
+  footer.appendChild(cancelBtn); footer.appendChild(submitBtn);
+  modal.appendChild(footer);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+function confirmDialog(msg){ return window.confirm(msg); }
+
+function renderSimpleTable(container, items, columns, rowActionsFn){
+  if(!items.length){ container.innerHTML = '<p class="muted">Ma\'lumot topilmadi.</p>'; return; }
+  const table = document.createElement('table');
+  const thead = document.createElement('thead'); const trh = document.createElement('tr');
+  columns.forEach(c=>{ const th=document.createElement('th'); th.textContent=c.label||c.key; trh.appendChild(th); });
+  if(rowActionsFn){ const th=document.createElement('th'); th.textContent='Amallar'; trh.appendChild(th); }
+  thead.appendChild(trh); table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  items.forEach(row=>{
+    const tr = document.createElement('tr');
+    columns.forEach(c=>{
+      const td = document.createElement('td');
+      const val = c.get ? c.get(row) : row[c.key];
+      td.innerHTML = c.raw ? (val ?? '') : fmtCell(val);
+      tr.appendChild(td);
+    });
+    if(rowActionsFn){
+      const td = document.createElement('td');
+      const box = document.createElement('div'); box.className='actions';
+      rowActionsFn(row).forEach(b=>box.appendChild(b));
+      td.appendChild(box); tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  container.innerHTML=''; container.appendChild(table);
+}
+
+/* ============================================================
+   AUTH
+   ============================================================ */
+function switchAuthTab(which){
+  document.getElementById('tabOtp').classList.toggle('active', which==='otp');
+  document.getElementById('tabGoogle').classList.toggle('active', which==='google');
+  document.getElementById('otpPane').classList.toggle('hidden', which!=='otp');
+  document.getElementById('googlePane').classList.toggle('hidden', which!=='google');
+}
+
+function curBase(){ return document.getElementById('baseUrlInput').value.trim().replace(/\/$/,''); }
+
+async function rawPost(path, body){
+  const res = await fetch(curBase()+path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok){
+    const msg = (data && data.error && data.error.message) || 'Xatolik';
+    throw new Error(msg);
+  }
+  return data;
+}
+
+async function checkAccount(){
+  const identifier = document.getElementById('identifierInput').value.trim();
+  document.getElementById('loginErr').textContent='';
+  if(!identifier){ document.getElementById('loginErr').textContent='Identifikator kiriting'; return; }
+  try{
+    const res = await rawPost('/mobile/auth/user/check', {identifier});
+    document.getElementById('loginErr').textContent = res.has_account ? '✅ Hisob mavjud — kod yuboring va kiring.' : 'ℹ️ Hisob topilmadi — kod tasdiqlansa avtomatik ro\'yxatdan o\'tasiz.';
+    document.getElementById('loginErr').style.color = '#8fa9bd';
+  }catch(e){ document.getElementById('loginErr').textContent = e.message; document.getElementById('loginErr').style.color = '#fca5a5'; }
+}
+
+async function sendOtp(){
+  const identifier = document.getElementById('identifierInput').value.trim();
+  const type = document.getElementById('otpTypeInput').value;
+  document.getElementById('loginErr').textContent='';
+  if(!identifier){ document.getElementById('loginErr').textContent='Identifikator kiriting'; return; }
+  try{
+    await rawPost('/mobile/auth/user/otp/send', {identifier, type});
+    document.getElementById('otpStep2').classList.remove('hidden');
+    document.getElementById('loginErr').style.color = '#8fa9bd';
+    document.getElementById('loginErr').textContent = 'Kod yuborildi. Pastga kiriting.';
+  }catch(e){ document.getElementById('loginErr').style.color='#fca5a5'; document.getElementById('loginErr').textContent = e.message; }
+}
+
+async function confirmOtp(){
+  const identifier = document.getElementById('identifierInput').value.trim();
+  const type = document.getElementById('otpTypeInput').value;
+  const confirmation_code = document.getElementById('otpCodeInput').value.trim();
+  document.getElementById('loginErr').textContent='';
+  try{
+    const res = await rawPost('/mobile/auth/user/otp/confirm', {identifier, confirmation_code, type});
+    saveSession(res);
+  }catch(e){ document.getElementById('loginErr').style.color='#fca5a5'; document.getElementById('loginErr').textContent = e.message; }
+}
+
+async function doGoogleLogin(){
+  const id_token = document.getElementById('googleTokenInput').value.trim();
+  document.getElementById('loginErr').textContent='';
+  if(!id_token){ document.getElementById('loginErr').textContent='id_token kiriting'; return; }
+  try{
+    const res = await rawPost('/mobile/auth/google', {id_token});
+    saveSession(res);
+  }catch(e){ document.getElementById('loginErr').style.color='#fca5a5'; document.getElementById('loginErr').textContent = e.message; }
+}
+
+function saveSession(tokenRes){
+  state.baseUrl = curBase();
+  state.access = tokenRes.access_token || '';
+  state.refresh = tokenRes.refresh_token || '';
+  state.uid = tokenRes.id || '';
+  localStorage.setItem('tu_base', state.baseUrl);
+  localStorage.setItem('tu_access', state.access);
+  localStorage.setItem('tu_refresh', state.refresh);
+  localStorage.setItem('tu_uid', state.uid);
+  startApp();
+}
+
+function logout(){
+  ['tu_access','tu_refresh','tu_uid','tu_active_session'].forEach(k=>localStorage.removeItem(k));
+  state.access=''; state.refresh=''; state.uid=''; state.activeSession=null;
+  closeSimView();
+  document.getElementById('shell').classList.remove('show');
+  document.getElementById('loginScreen').style.display='flex';
+}
+
+/* ============================================================
+   HOME
+   ============================================================ */
+/* ============================================================
+   HOME (reference: medicai-mvp.vercel.app — Case Simulyatsiyani Boshlash)
+   ============================================================ */
+let homeMode = localStorage.getItem('tu_home_mode') || 'doctor'; // doctor|citizen
+let homeDifficulty = 'medium';
+let homeDuration = 10;
+
+async function renderHomeNew(){
+  const view = document.getElementById('homeView');
+  view.innerHTML =
+    '<div class="heroBox">'+
+      '<div class="heroIcon">✨</div>'+
+      '<h1>Case Simulyatsiyani Boshlash</h1>'+
+      '<p>Sun\'iy intellekt orqali klinik tashxis yoki hayotiy birinchi yordam amaliyotini o\'ting.</p>'+
+    '</div>'+
+    '<div class="modeToggle" id="modeToggle">'+
+      '<button class="modeBtn" data-m="doctor">🩺 Shifokorlar Rejimi</button>'+
+      '<button class="modeBtn" data-m="citizen">🚑 Birinchi Yordam (Aholi)</button>'+
+    '</div>'+
+    '<div class="stepCard">'+
+      '<div class="stepLabelRow"><span class="stepLabel">1. Case bo\'limini tanlang</span><span class="modeTag" id="modeTag"></span></div>'+
+      '<select id="categorySel"><option value="">Yuklanmoqda...</option></select>'+
+    '</div>'+
+    '<div class="stepCard">'+
+      '<div class="stepLabelRow"><span class="stepLabel">⏱ 2. Qiyinchilik darajasini tanlang</span></div>'+
+      '<div class="pillGroup" id="diffGroup">'+
+        '<button data-v="easy">Oson</button><button data-v="medium" class="active">O\'rta</button><button data-v="hard">Qiyin</button>'+
+      '</div>'+
+    '</div>'+
+    '<div class="stepCard">'+
+      '<div class="stepLabelRow"><span class="stepLabel">🕐 3. Davomiylik (duration) ni tanlang</span></div>'+
+      '<div class="pillGroup" id="durGroup">'+
+        '<button data-v="5">5 daqiqa</button><button data-v="10" class="active">10 daqiqa</button><button data-v="15">15 daqiqa</button>'+
+      '</div>'+
+    '</div>'+
+    '<button class="ctaBtn" id="startCtaBtn">✨ Boshlash &gt;</button>'+
+    '<div id="promoBox"></div>';
+
+  const modeToggle = document.getElementById('modeToggle');
+  const catSel = document.getElementById('categorySel');
+  const modeTag = document.getElementById('modeTag');
+  const cta = document.getElementById('startCtaBtn');
+
+  function applyModeUI(){
+    modeToggle.querySelectorAll('.modeBtn').forEach(b=>{ b.classList.add(b.dataset.m); b.classList.toggle('active', b.dataset.m===homeMode); });
+    modeTag.textContent = homeMode==='doctor' ? 'Clinical Mode' : 'Citizen Mode';
+    modeTag.className = 'modeTag ' + homeMode;
+    cta.className = 'ctaBtn' + (homeMode==='citizen' ? ' citizen' : '');
+  }
+  applyModeUI();
+
+  async function loadCategories(){
+    catSel.innerHTML = '<option value="">Yuklanmoqda...</option>';
+    let items = [];
+    try{ const r = await api('/mobile/category', {query:{audience:homeMode, limit:100, page:1}, silent:true}); items = extractList(r).items; }catch(e){}
+    if(!items.length){ catSel.innerHTML = '<option value="">— Bu rejimda bo\'lim yo\'q —</option>'; return; }
+    catSel.innerHTML = '<option value="">— Istalgan bo\'lim —</option>' + items.map(c=>'<option value="'+esc(c.id)+'">'+esc(ml(c.name))+'</option>').join('');
+  }
+  await loadCategories();
+
+  modeToggle.addEventListener('click', e=>{
+    const b = e.target.closest('.modeBtn'); if(!b) return;
+    homeMode = b.dataset.m; localStorage.setItem('tu_home_mode', homeMode);
+    applyModeUI(); loadCategories();
+  });
+
+  document.getElementById('diffGroup').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    homeDifficulty = b.dataset.v;
+    e.currentTarget.querySelectorAll('button').forEach(x=>x.classList.toggle('active', x===b));
+  });
+  document.getElementById('durGroup').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    homeDuration = Number(b.dataset.v);
+    e.currentTarget.querySelectorAll('button').forEach(x=>x.classList.toggle('active', x===b));
+  });
+
+  cta.onclick = async ()=>{
+    cta.disabled = true; const orig = cta.innerHTML; cta.innerHTML = '⏳ Qidirilmoqda...';
+    try{
+      const rndRes = await api('/mobile/case/random', {query:{category_id:catSel.value, difficulty:homeDifficulty}});
+      const startRes = await api('/mobile/simulation/start', {method:'POST', body:{case_id:rndRes.id, duration_minutes:homeDuration}});
+      startRes.case_id = startRes.case_id || rndRes.id;
+      openSimulation(startRes);
+    }catch(e){}
+    cta.disabled = false; cta.innerHTML = orig;
+  };
+
+  const promoBox = document.getElementById('promoBox');
+  try{
+    const p = await api('/mobile/partner', {silent:true});
+    const {items} = extractList(p);
+    if(items.length){
+      const x = items[0];
+      promoBox.innerHTML = '<div class="promoCard"><span class="ic">🚗</span><div><span class="tag">B2B HAMKORLIK</span><span class="sub">'+esc(x.name)+'</span>'+
+        '<p>"'+esc(x.description ? ml(x.description) : 'Hamkor kurslarimizni sotib oling va MedicAI obunasini bepul qo\'lga kiriting!')+'"</p></div></div>';
+    }
+  }catch(e){}
+}
+
+/* ============================================================
+   PROFILE (view/edit/delete + device + activity + rating)
+   ============================================================ */
+async function renderProfile(){
+  const main = document.getElementById('main');
+  main.innerHTML = '<h2 class="pageTitle">Profil</h2><p class="pageDesc">/mobile/user/*</p>';
+
+  const langRow = document.createElement('div'); langRow.style.marginBottom='12px'; langRow.style.display='flex'; langRow.style.gap='8px'; langRow.style.alignItems='center';
+  langRow.innerHTML = '<label class="muted" style="font-size:12px">Til:</label>';
+  const langSel = document.createElement('select');
+  [['uz','UZ'],['ru','RU'],['en','EN']].forEach(([v,l])=>{ const o=document.createElement('option'); o.value=v; o.textContent=l; langSel.appendChild(o); });
+  langSel.value = state.lang;
+  langSel.onchange = ()=>{ state.lang = langSel.value; localStorage.setItem('tu_lang', langSel.value); toast('Til: '+langSel.value,'ok'); };
+  langRow.appendChild(langSel);
+  main.appendChild(langRow);
+
+  const sub = document.createElement('div'); sub.className='subtabs'; main.appendChild(sub);
+  const body = document.createElement('div'); main.appendChild(body);
+  const tabs = [
+    {key:'info', label:'ℹ️ Ma\'lumot', render: renderProfileInfo},
+    {key:'device', label:'📲 Qurilmalar', render: renderProfileDevice},
+    {key:'activity', label:'📈 Faollik', render: renderProfileActivity},
+    {key:'rating', label:'🏆 Reyting', render: renderProfileRating},
+    {key:'studyplan', label:'🗓 O\'quv rejasi', render: renderStudyPlan},
+    {key:'notifications', label:'🔔 Bildirishnomalar', render: renderNotifications},
+    {key:'tariffs', label:'💳 Tariflar', render: renderTariffs},
+    {key:'promocode', label:'🎟 Promokod', render: renderPromocode},
+    {key:'info2', label:'ℹ️ Ilova haqida', render: renderInfo},
+    {key:'logout', label:'🚪 Chiqish', render: (body)=>{ body.innerHTML=''; logout(); }},
+  ];
+  function selectSub(key){
+    sub.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.k===key));
+    body.innerHTML='';
+    tabs.find(t=>t.key===key).render(body);
+  }
+  tabs.forEach((t,i)=>{
+    const b=document.createElement('button'); b.textContent=t.label; b.dataset.k=t.key;
+    if(i===0) b.classList.add('active');
+    b.onclick=()=>selectSub(t.key);
+    sub.appendChild(b);
+  });
+  selectSub('info');
+}
+
+async function renderProfileInfo(body){
+  body.innerHTML = '<p class="muted">Yuklanmoqda...</p>';
+  let me;
+  try{ me = await api('/mobile/user/get/profile'); }catch(e){ body.innerHTML='<p class="muted">Xatolik</p>'; return; }
+  const kv = document.createElement('div'); kv.className='kv card'; kv.style.maxWidth='460px';
+  kv.innerHTML =
+    '<div><span class="k">ID</span>'+esc(me.id)+'</div>'+
+    '<div><span class="k">Ism</span>'+esc(me.name||'—')+'</div>'+
+    '<div><span class="k">Telefon</span>'+esc(me.phone_number||'—')+'</div>'+
+    '<div><span class="k">Email</span>'+esc(me.email||'—')+'</div>'+
+    '<div><span class="k">Til</span>'+esc(me.language||'—')+'</div>'+
+    '<div><span class="k">Mutaxassislik</span>'+esc(me.specialization||'—')+'</div>'+
+    '<div><span class="k">Level / XP / Coins</span>'+esc(me.level)+' / '+esc(me.xp)+' / '+esc(me.coins)+'</div>'+
+    '<div><span class="k">Streak</span>'+esc(me.streak_count)+' kun</div>'+
+    '<div><span class="k">Ro\'yxatdan o\'tgan</span>'+esc(me.created_at||'—')+'</div>';
+  body.appendChild(kv);
+
+  const btnRow = document.createElement('div'); btnRow.style.marginTop='14px'; btnRow.style.display='flex'; btnRow.style.gap='8px';
+  const editBtn = document.createElement('button'); editBtn.className='primary'; editBtn.textContent='✏️ Tahrirlash';
+  editBtn.onclick = ()=>{
+    openModal({
+      title:'Profilni tahrirlash',
+      fields:[
+        {name:'name', label:'Ism', type:'text'},
+        {name:'phone_number', label:'Telefon (+998XXXXXXXXX)', type:'text'},
+        {name:'email', label:'Email', type:'text'},
+        {name:'language', label:'Til', type:'select', options:[{value:'uz',label:'uz'},{value:'ru',label:'ru'},{value:'en',label:'en'}]},
+        {name:'specialization', label:'Mutaxassislik', type:'select', options:[{value:'student',label:'student'},{value:'resident',label:'resident'},{value:'doctor',label:'doctor'}]},
+        {name:'image', label:'Profil rasmi', type:'file', full:true},
+      ],
+      values: me,
+      onSubmit: async (out)=>{
+        const fd = new FormData();
+        ['name','phone_number','email','language','specialization'].forEach(k=>{ if(out[k]) fd.append(k, out[k]); });
+        if(out.image) fd.append('image', out.image);
+        await api('/mobile/user/update/profile', {method:'PUT', body:fd, isForm:true});
+        toast('Profil yangilandi','ok');
+        renderProfileInfo(body);
+      }
+    });
+  };
+  const delBtn = document.createElement('button'); delBtn.className='danger'; delBtn.textContent='🗑 Profilni o\'chirish';
+  delBtn.onclick = async ()=>{
+    if(!confirmDialog('Profil butunlay o\'chiriladi. Davom etasizmi?')) return;
+    try{ await api('/mobile/user/delete/profile', {method:'DELETE'}); toast('Profil o\'chirildi','ok'); logout(); }catch(e){}
+  };
+  btnRow.appendChild(editBtn); btnRow.appendChild(delBtn);
+  body.appendChild(btnRow);
+}
+
+function renderProfileDevice(body){
+  body.innerHTML = '<p class="pageDesc">Push-token ro\'yxatdan o\'tkazish (ko\'p qurilma qo\'llab-quvvatlash).</p>';
+  const grid = document.createElement('div'); grid.className='formGrid'; grid.style.maxWidth='500px';
+  const tokenF = document.createElement('div'); tokenF.className='field';
+  tokenF.innerHTML = '<label>FCM token</label>';
+  const tokenInp = document.createElement('input'); tokenInp.placeholder='test-token-'+Math.random().toString(36).slice(2,10);
+  tokenF.appendChild(tokenInp);
+  const platF = document.createElement('div'); platF.className='field';
+  platF.innerHTML='<label>Platforma</label>';
+  const platSel = document.createElement('select');
+  [['android','android'],['ios','ios'],['web','web']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;platSel.appendChild(o);});
+  platF.appendChild(platSel);
+  grid.appendChild(tokenF); grid.appendChild(platF);
+  body.appendChild(grid);
+  const row = document.createElement('div'); row.style.marginTop='10px'; row.style.display='flex'; row.style.gap='8px';
+  const regBtn = document.createElement('button'); regBtn.className='primary'; regBtn.textContent='📲 Ro\'yxatdan o\'tkazish';
+  regBtn.onclick = async ()=>{
+    if(!tokenInp.value){ toast('Token kiriting','err'); return; }
+    try{ await api('/mobile/user/device', {method:'POST', body:{fcm_token:tokenInp.value, platform:platSel.value}}); toast('Qurilma qo\'shildi','ok'); }catch(e){}
+  };
+  const unregBtn = document.createElement('button'); unregBtn.className='danger'; unregBtn.textContent='🗑 O\'chirish';
+  unregBtn.onclick = async ()=>{
+    if(!tokenInp.value){ toast('Token kiriting','err'); return; }
+    try{ await api('/mobile/user/device', {method:'DELETE', body:{fcm_token:tokenInp.value}}); toast('Qurilma o\'chirildi','ok'); }catch(e){}
+  };
+  row.appendChild(regBtn); row.appendChild(unregBtn);
+  body.appendChild(row);
+}
+
+function renderProfileActivity(body){
+  body.innerHTML = '<p class="pageDesc">Kunlik faollik (masalan: sessiyada o\'tkazilgan vaqt, soniyada) qo\'shish va statistikani ko\'rish.</p>';
+  const addRow = document.createElement('div'); addRow.style.display='flex'; addRow.style.gap='8px'; addRow.style.marginBottom='16px';
+  const valInp = document.createElement('input'); valInp.type='number'; valInp.placeholder='activity (masalan 300)'; valInp.style.width='200px';
+  const addBtn = document.createElement('button'); addBtn.className='primary'; addBtn.textContent='+ Faollik qo\'shish';
+  addBtn.onclick = async ()=>{
+    if(!valInp.value){ toast('Qiymat kiriting','err'); return; }
+    try{ await api('/mobile/user/activity', {method:'POST', body:{activity:Number(valInp.value)}}); toast('Qo\'shildi','ok'); valInp.value=''; }catch(e){}
+  };
+  addRow.appendChild(valInp); addRow.appendChild(addBtn);
+  body.appendChild(addRow);
+
+  const toolbar = document.createElement('div'); toolbar.className='toolbar';
+  const typeSel = document.createElement('select');
+  [['day','Kun'],['week','Hafta'],['month','Oy'],['year','Yil'],['range','Oraliq']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;typeSel.appendChild(o);});
+  const dateInp = document.createElement('input'); dateInp.type='date';
+  const fromInp = document.createElement('input'); fromInp.type='date';
+  const toInp = document.createElement('input'); toInp.type='date';
+  [['Turi',typeSel],['Kun (day uchun)',dateInp],['Dan (range)',fromInp],['Gacha (range)',toInp]].forEach(([lb,el])=>{
+    const f=document.createElement('div'); f.className='field'; const l=document.createElement('label'); l.textContent=lb;
+    f.appendChild(l); f.appendChild(el); toolbar.appendChild(f);
+  });
+  const loadBtn = document.createElement('button'); loadBtn.textContent='Ko\'rish'; loadBtn.onclick=load;
+  toolbar.appendChild(loadBtn);
+  body.appendChild(toolbar);
+
+  const out = document.createElement('div'); body.appendChild(out);
+
+  async function load(){
+    const query = {type:typeSel.value};
+    if(typeSel.value==='day') query.date = dateInp.value;
+    if(typeSel.value==='range'){ query.from = fromInp.value; query.to = toInp.value; }
+    let res;
+    try{ res = await api('/mobile/user/activity', {query}); }catch(e){ out.innerHTML='<p class="muted">Xatolik</p>'; return; }
+    out.innerHTML = '<div class="card stat" style="max-width:200px;margin-bottom:10px"><div class="v">'+esc(res.total)+'</div><p>Jami</p></div>';
+    const tblWrap = document.createElement('div'); out.appendChild(tblWrap);
+    renderSimpleTable(tblWrap, res.items||[], [{key:'date',label:'Sana'},{key:'value',label:'Qiymat'}]);
+  }
+  load();
+}
+
+function renderProfileRating(body){
+  const toolbar = document.createElement('div'); toolbar.className='toolbar';
+  const typeSel = document.createElement('select');
+  [['total','Umumiy'],['day','Kun'],['week','Hafta'],['month','Oy'],['year','Yil']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;typeSel.appendChild(o);});
+  const f=document.createElement('div'); f.className='field'; f.innerHTML='<label>Davr</label>'; f.appendChild(typeSel);
+  toolbar.appendChild(f);
+  const loadBtn=document.createElement('button'); loadBtn.textContent='Ko\'rish'; loadBtn.onclick=load;
+  toolbar.appendChild(loadBtn);
+  body.appendChild(toolbar);
+  const meBox = document.createElement('div'); body.appendChild(meBox);
+  const out = document.createElement('div'); body.appendChild(out);
+
+  async function load(){
+    let res;
+    try{ res = await api('/mobile/user/rating', {query:{type:typeSel.value, limit:20}}); }catch(e){ out.innerHTML='<p class="muted">Xatolik</p>'; return; }
+    meBox.innerHTML = res.me ? ('<p class="pill">Mening o\'rnim: #'+esc(res.me.rank)+' — '+esc(res.me.activity)+' ball</p>') : '';
+    renderSimpleTable(out, res.items||[], [
+      {key:'rank', label:'#'}, {key:'name', label:'Ism'}, {key:'activity', label:'Ball'},
+      {get:r=>r.is_me?'✅':'', label:'Men', raw:true},
+    ]);
+  }
+  load();
+}
+
+/* ============================================================
+   CATALOG: Category -> Topic -> Case  (drill-down)
+   ============================================================ */
+function keysSubnav(main, activeKey){
+  const bar = document.createElement('div'); bar.className='subtabs';
+  [['catalog','📁 Bo\'limlar',renderCatalog],['favorites','⭐ Sevimlilar',renderFavorites],['history','🕘 Tarix',renderHistory]].forEach(([k,l,fn])=>{
+    const b=document.createElement('button'); b.textContent=l; if(k===activeKey) b.classList.add('active');
+    b.onclick=fn;
+    bar.appendChild(b);
+  });
+  main.appendChild(bar);
+}
+
+async function renderCatalog(){
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+  keysSubnav(main, 'catalog');
+  main.insertAdjacentHTML('beforeend', '<h2 class="pageTitle">Bo\'limlar</h2><p class="pageDesc">/mobile/category → /mobile/topic → /mobile/case</p>');
+  const crumb = document.createElement('div'); crumb.className='breadcrumb'; main.appendChild(crumb);
+  const body = document.createElement('div'); main.appendChild(body);
+
+  const stack = [{level:'category', title:'Bo\'limlar'}];
+
+  function renderCrumbs(){
+    crumb.innerHTML='';
+    stack.forEach((s,i)=>{
+      if(i>0){ const sep=document.createElement('span'); sep.className='muted'; sep.textContent='›'; crumb.appendChild(sep); }
+      const b=document.createElement('button'); b.textContent=s.title;
+      b.onclick=()=>{ stack.length=i+1; go(); };
+      crumb.appendChild(b);
+    });
+  }
+
+  async function go(){
+    renderCrumbs();
+    const cur = stack[stack.length-1];
+    body.innerHTML = '<p class="muted">Yuklanmoqda...</p>';
+    if(cur.level === 'category'){
+      let json;
+      try{ json = await api('/mobile/category', {query:{limit:100,page:1}}); }catch(e){ body.innerHTML='<p class="muted">Xatolik</p>'; return; }
+      const {items} = extractList(json);
+      const grid = document.createElement('div'); grid.className='grid';
+      items.forEach(cat=>{
+        const c=document.createElement('div'); c.className='card';
+        c.innerHTML = '<h4>'+esc(ml(cat.name))+'</h4><p>Case narxi: '+esc(cat.coins_per_case)+' tanga · Qolgan: '+esc(cat.cases_remaining)+'</p>';
+        c.onclick=()=>{ stack.push({level:'unlock', id:cat.id, title: ml(cat.name), cat}); go(); };
+        grid.appendChild(c);
+      });
+      body.innerHTML=''; body.appendChild(grid);
+    } else if(cur.level === 'unlock'){
+      const box = document.createElement('div'); box.className='card'; box.style.maxWidth='420px';
+      let status;
+      try{ status = await api('/mobile/category/'+cur.id+'/unlock'); }catch(e){ status = null; }
+      box.innerHTML = status ? (
+        '<div class="kv"><div><span class="k">Case narxi</span>'+esc(status.coins_per_case)+' tanga</div>'+
+        '<div><span class="k">Qolgan huquq</span>'+esc(status.cases_remaining)+' ta case</div></div>'
+      ) : '<p class="muted">Holat topilmadi</p>';
+      body.innerHTML=''; body.appendChild(box);
+
+      const buyRow = document.createElement('div'); buyRow.style.display='flex'; buyRow.style.gap='8px'; buyRow.style.margin='12px 0';
+      const cntInp = document.createElement('input'); cntInp.type='number'; cntInp.value=1; cntInp.style.width='100px';
+      const buyBtn = document.createElement('button'); buyBtn.className='primary'; buyBtn.textContent='🪙 Tanga evaziga ochish';
+      buyBtn.onclick = async ()=>{
+        try{
+          const res = await api('/mobile/category/'+cur.id+'/unlock', {method:'POST', body:{case_count:Number(cntInp.value||1)}});
+          toast('Ochildi: '+res.cases_remaining+' ta case huquqi, '+res.coins_spent+' tanga sarflandi', 'ok');
+          go();
+        }catch(e){}
+      };
+      buyRow.appendChild(cntInp); buyRow.appendChild(buyBtn);
+      body.appendChild(buyRow);
+
+      const nextBtn = document.createElement('button'); nextBtn.className='primary'; nextBtn.textContent='📑 Mavzularni ko\'rish →';
+      nextBtn.onclick = ()=>{ stack.push({level:'topic', catId:cur.id, title:'Mavzular'}); go(); };
+      body.appendChild(nextBtn);
+    } else if(cur.level === 'topic'){
+      let json;
+      try{ json = await api('/mobile/topic', {query:{category_id:cur.catId, limit:100,page:1}}); }catch(e){ body.innerHTML='<p class="muted">Xatolik</p>'; return; }
+      const {items} = extractList(json);
+      const grid = document.createElement('div'); grid.className='grid';
+      if(!items.length) grid.innerHTML='<p class="muted">Mavzu topilmadi.</p>';
+      items.forEach(t=>{
+        const c=document.createElement('div'); c.className='card';
+        c.innerHTML = '<h4>'+esc(ml(t.name))+'</h4>';
+        c.onclick = ()=>{ stack.push({level:'case', topicId:t.id, title: ml(t.name)}); go(); };
+        grid.appendChild(c);
+      });
+      body.innerHTML=''; body.appendChild(grid);
+    } else if(cur.level === 'case'){
+      const toolbar = document.createElement('div'); toolbar.className='toolbar';
+      const diffSel = document.createElement('select');
+      [['','— barcha qiyinlik —'],['easy','Easy'],['medium','Medium'],['hard','Hard']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;diffSel.appendChild(o);});
+      const searchI = document.createElement('input'); searchI.placeholder='Qidiruv';
+      [['Qiyinlik',diffSel],['Qidiruv',searchI]].forEach(([lb,el])=>{
+        const f=document.createElement('div'); f.className='field'; const l=document.createElement('label'); l.textContent=lb;
+        f.appendChild(l); f.appendChild(el); toolbar.appendChild(f);
+      });
+      const goBtn=document.createElement('button'); goBtn.textContent='🔍'; goBtn.onclick=loadCases;
+      toolbar.appendChild(goBtn);
+      body.innerHTML=''; body.appendChild(toolbar);
+      const grid = document.createElement('div'); grid.className='grid'; body.appendChild(grid);
+
+      async function loadCases(){
+        grid.innerHTML = '<p class="muted">Yuklanmoqda...</p>';
+        let json;
+        try{ json = await api('/mobile/case', {query:{topic_id:cur.topicId, difficulty:diffSel.value, search:searchI.value, limit:50,page:1}}); }
+        catch(e){ grid.innerHTML='<p class="muted">Xatolik</p>'; return; }
+        const {items} = extractList(json);
+        grid.innerHTML = items.length ? '' : '<p class="muted">Case topilmadi.</p>';
+        items.forEach(cs=>{
+          const c=document.createElement('div'); c.className='card';
+          c.innerHTML = '<h4>'+esc(cs.title)+'</h4><p>'+esc(cs.difficulty)+' · '+esc(cs.patient_age)+' yosh · '+(cs.is_favorite?'⭐':'')+'</p>';
+          c.onclick = ()=> showCaseDetail(cs.id);
+          grid.appendChild(c);
+        });
+      }
+      loadCases();
+    }
+  }
+
+  async function showCaseDetail(id){
+    let cs;
+    try{ cs = await api('/mobile/case/'+id); }catch(e){ return; }
+    const overlay = document.createElement('div'); overlay.className='modalOverlay';
+    overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+    const modal = document.createElement('div'); modal.className='modal'; modal.style.width='640px';
+    modal.innerHTML =
+      '<h3>'+esc(cs.title)+'</h3>'+
+      '<div class="kv"><div><span class="k">Mavzu</span>'+esc(cs.topic_name)+'</div>'+
+      '<div><span class="k">Bo\'lim</span>'+esc(cs.category_name)+'</div>'+
+      '<div><span class="k">Qiyinlik</span>'+esc(cs.difficulty)+'</div>'+
+      '<div><span class="k">Bemor</span>'+esc(cs.patient_age)+' yosh, '+esc(cs.patient_gender)+'</div>'+
+      '<div><span class="k">Shikoyat</span>'+esc(cs.chief_complaint)+'</div>'+
+      '<div><span class="k">Kutilgan davomiylik</span>'+esc(cs.expected_duration_minutes)+' min</div>'+
+      '<div><span class="k">Status</span>'+esc(cs.status)+'</div></div>';
+    const footer = document.createElement('div'); footer.className='modalFooter';
+    const favBtn = document.createElement('button'); favBtn.textContent = cs.is_favorite ? '⭐ Sevimlida' : '☆ Sevimliga qo\'shish';
+    favBtn.onclick = async ()=>{
+      try{ const r = await api('/mobile/favorite', {method:'POST', body:{case_id:cs.id}}); favBtn.textContent = r.is_favorite ? '⭐ Sevimlida' : '☆ Sevimliga qo\'shish'; }catch(e){}
+    };
+    const startBtn = document.createElement('button'); startBtn.className='primary'; startBtn.textContent='🩺 Simulyatsiyani boshlash';
+    startBtn.onclick = async ()=>{
+      try{
+        const res = await api('/mobile/simulation/start', {method:'POST', body:{case_id:cs.id}});
+        overlay.remove();
+        openSimulation(res);
+      }catch(e){}
+    };
+    const closeBtn = document.createElement('button'); closeBtn.textContent='Yopish'; closeBtn.onclick=()=>overlay.remove();
+    footer.appendChild(favBtn); footer.appendChild(startBtn); footer.appendChild(closeBtn);
+    modal.appendChild(footer);
+    overlay.appendChild(modal); document.body.appendChild(overlay);
+  }
+
+  go();
+}
+
+/* ============================================================
+   FAVORITES
+   ============================================================ */
+async function renderFavorites(){
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+  keysSubnav(main, 'favorites');
+  main.insertAdjacentHTML('beforeend', '<h2 class="pageTitle">Sevimlilar</h2><p class="pageDesc">/mobile/favorite</p>');
+  const grid = document.createElement('div'); grid.className='grid'; main.appendChild(grid);
+  let json;
+  try{ json = await api('/mobile/favorite', {query:{limit:100,page:1}}); }catch(e){ grid.innerHTML='<p class="muted">Xatolik</p>'; return; }
+  const {items} = extractList(json);
+  grid.innerHTML = items.length ? '' : '<p class="muted">Sevimlilar bo\'sh.</p>';
+  items.forEach(cs=>{
+    const c=document.createElement('div'); c.className='card';
+    c.innerHTML = '<h4>'+esc(cs.title)+'</h4><p>'+esc(cs.difficulty)+'</p>';
+    const rm = document.createElement('button'); rm.className='sm danger'; rm.textContent='☆ Olib tashlash';
+    rm.onclick = async (e)=>{ e.stopPropagation(); try{ await api('/mobile/favorite',{method:'POST',body:{case_id:cs.id}}); toast('Olib tashlandi','ok'); renderFavorites(); }catch(err){} };
+    c.appendChild(rm);
+    grid.appendChild(c);
+  });
+}
+
+/* ============================================================
+   ACTIVE SIMULATION
+   ============================================================ */
+/* ============================================================
+   SIMULATION (fullscreen, reference: medicai-mvp.vercel.app)
+   ============================================================ */
+let sim = null; // {sessionId, caseId, timeLimitSec, elapsedSec, ws, timerInt, beepInt, muted}
+
+function svgAvatar(){
+  return '<svg viewBox="0 0 96 120" class="breathe" xmlns="http://www.w3.org/2000/svg">'+
+    '<circle cx="48" cy="24" r="18" fill="#cbd5e1"/>'+
+    '<circle cx="41" cy="22" r="2.4" fill="#0b1420" class="eye"/><circle cx="55" cy="22" r="2.4" fill="#0b1420" class="eye"/>'+
+    '<path d="M40 30 Q48 33 56 30" stroke="#0b1420" stroke-width="1.6" fill="none" stroke-linecap="round" class="mouth"/>'+
+    '<rect x="30" y="44" width="36" height="52" rx="14" fill="#e2e8f0"/>'+
+    '<rect x="10" y="48" width="14" height="38" rx="7" fill="#cbd5e1"/>'+
+    '<rect x="72" y="48" width="14" height="38" rx="7" fill="#cbd5e1"/>'+
+    '<rect x="34" y="96" width="12" height="22" rx="6" fill="#cbd5e1"/>'+
+    '<rect x="50" y="96" width="12" height="22" rx="6" fill="#cbd5e1"/>'+
+  '</svg>';
+}
+function svgEcgOnce(){
+  return '<path d="M0 22 L14 22 L20 22 L24 6 L28 38 L32 22 L46 22 L52 22 L56 12 L60 22 L100 22" fill="none" stroke="#22ee99" stroke-width="2"/>';
+}
+function svgEcg(){
+  return '<svg viewBox="0 0 200 44" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">'+
+    '<g transform="scale(2,1)">'+svgEcgOnce()+'</g>'+
+    '<g transform="translate(100,0) scale(2,1)">'+svgEcgOnce()+'</g>'+
+  '</svg>';
+}
+
+function simBeepOnce(){
+  try{
+    if(!sim || sim.muted) return;
+    if(!sim.audioCtx) sim.audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const ctx = sim.audioCtx;
+    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+    osc.frequency.value = 880; osc.type='sine';
+    gain.gain.setValueAtTime(0.06, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.12);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime+0.12);
+  }catch(e){}
+}
+function simSetBeepRate(hr){
+  if(!sim) return;
+  if(sim.beepInt) clearInterval(sim.beepInt);
+  if(sim.muted || !hr || hr<=0) return;
+  sim.beepInt = setInterval(simBeepOnce, Math.max(280, 60000/hr));
+}
+
+function closeSimView(){
+  document.getElementById('simView').classList.remove('show');
+  if(sim){
+    if(sim.ws) try{ sim.ws.close(); }catch(e){}
+    if(sim.timerInt) clearInterval(sim.timerInt);
+    if(sim.beepInt) clearInterval(sim.beepInt);
+  }
+  sim = null;
+  state.activeSession = null;
+  localStorage.removeItem('tu_active_session');
+}
+
+// openSimulation - startRes ({session_id,case_id,time_limit_seconds,initial_vitals,visual_state,ws_url,case_title?})
+// yoki oddiy {session_id} (Tarix/Davom ettirish orqali qayta ochilganda) bilan chaqiriladi.
+async function openSimulation(startRes){
+  sim = {
+    sessionId: startRes.session_id,
+    caseId: startRes.case_id || null,
+    timeLimitSec: startRes.time_limit_seconds || null,
+    elapsedSec: 0,
+    ws: null, timerInt: null, beepInt: null, audioCtx: null,
+    muted: true,
+  };
+  state.activeSession = {session_id: sim.sessionId};
+  localStorage.setItem('tu_active_session', JSON.stringify(state.activeSession));
+
+  const view = document.getElementById('simView'); view.classList.add('show');
+  const topbar = document.getElementById('simTopbar');
+  const body = document.getElementById('simBody');
+  const picker = document.getElementById('simEventPicker');
+  const inputBar = document.getElementById('simInputBar');
+
+  let caseInfo = {title:'Simulyatsiya', difficulty:'', chief_complaint:''};
+  if(sim.caseId){
+    try{ const c = await api('/mobile/case/'+sim.caseId, {silent:true}); if(c) caseInfo = c; }catch(e){}
+  }
+
+  topbar.innerHTML =
+    '<div><div class="ttl">'+esc(caseInfo.title||'Simulyatsiya')+'</div><div class="sub">'+esc(caseInfo.difficulty||'')+'</div></div>'+
+    '<div style="display:flex;gap:6px">'+
+      '<button class="simIconBtn" id="simMuteBtn" title="Ovoz">🔇</button>'+
+      '<button class="simIconBtn" id="simResetBtn" title="Qayta boshlash">🔄</button>'+
+      '<button class="simIconBtn" id="simExitBtn" title="Chiqish">↩️</button>'+
+      '<button class="simIconBtn" id="simFinishBtn" title="Yakunlash">🏁</button>'+
+    '</div>';
+  document.getElementById('simMuteBtn').onclick = ()=>{
+    sim.muted = !sim.muted;
+    document.getElementById('simMuteBtn').textContent = sim.muted ? '🔇' : '🔊';
+    if(!sim.muted) simBeepOnce();
+  };
+  document.getElementById('simExitBtn').onclick = ()=>{ closeSimView(); selectTab('home'); };
+  document.getElementById('simResetBtn').onclick = async ()=>{
+    if(!confirmDialog('Case qayta boshlansinmi? Joriy urinish bekor qilinadi.')) return;
+    try{ await api('/mobile/simulation/'+sim.sessionId+'/finish', {method:'PUT', body:{reason:'manual'}, silent:true}); }catch(e){}
+    if(sim.caseId){
+      try{
+        const res = await api('/mobile/simulation/start', {method:'POST', body:{case_id:sim.caseId, duration_minutes: sim.timeLimitSec?Math.round(sim.timeLimitSec/60):0}});
+        closeSimView(); openSimulation(res);
+      }catch(e){}
+    }
+  };
+  document.getElementById('simFinishBtn').onclick = ()=>finishSimulation('manual');
+
+  body.innerHTML =
+    '<div class="statusRow" id="simStatus"><span><span class="dot"></span>Barqaror</span><span id="simHealthPct">100%</span></div>'+
+    '<div class="avatarStage">'+
+      '<div class="avatarFig" id="simAvatar">'+svgAvatar()+'</div>'+
+      '<div class="ecgWrap" id="simEcgWrap">'+svgEcg()+'</div>'+
+      '<div class="avatarMeta"><span>Teri: <b id="simSkin">—</b></span><span>SpO2: <b id="simSpo2m">—</b></span><span><b id="simHrm">—</b> bpm</span></div>'+
+    '</div>'+
+    '<div class="barRow"><div class="lbl"><span>Bemor holati</span><b id="simHealthLbl">100%</b></div><div class="miniBar"><div class="fill" id="simHealthFill" style="width:100%"></div></div></div>'+
+    '<div class="barRow"><div class="lbl"><span>Vaqt</span><b id="simTimeLbl">—</b></div><div class="miniBar"><div class="fill" id="simTimeFill" style="width:0%;background:linear-gradient(90deg,var(--doc2),var(--doc1))"></div></div></div>'+
+    '<div class="vitalsGrid">'+
+      '<div class="vitalCard"><span class="ic">❤️</span><div><div class="v" id="vHr">—</div><div class="l">Yurak urishi (bpm)</div></div></div>'+
+      '<div class="vitalCard"><span class="ic">🩸</span><div><div class="v" id="vBp">—</div><div class="l">Qon bosimi</div></div></div>'+
+      '<div class="vitalCard"><span class="ic">🫁</span><div><div class="v" id="vSpo2">—</div><div class="l">SpO2</div></div></div>'+
+      '<div class="vitalCard"><span class="ic">💨</span><div><div class="v" id="vRr">—</div><div class="l">Nafas olish</div></div></div>'+
+    '</div>'+
+    '<div class="chatLog" id="simChatLog"></div>';
+
+  const chatLog = document.getElementById('simChatLog');
+  const sysMsg = document.createElement('div'); sysMsg.className='msg sys';
+  sysMsg.innerHTML = '<b>DASTLABKI HOLAT</b>'+esc(caseInfo.chief_complaint ? ('Bemor shikoyati: '+caseInfo.chief_complaint) : 'Bemor bilan simulyatsiya boshlandi.');
+  chatLog.appendChild(sysMsg);
+
+  ['question','exam','lab','imaging','medication','procedure'].forEach((t,i)=>{
+    const b=document.createElement('button'); b.textContent = ({question:'❓ Savol',exam:'🩺 Ko\'rik',lab:'🧪 Tahlil',imaging:'📷 Instrumental',medication:'💊 Dori',procedure:'⚙️ Protsedura'})[t];
+    b.dataset.t=t; if(i===0) b.classList.add('active');
+    b.onclick=()=>{ picker.querySelectorAll('button').forEach(x=>x.classList.toggle('active', x===b)); };
+    picker.appendChild(b);
+  });
+
+  inputBar.innerHTML =
+    '<button class="round" id="simMicBtn" title="Ovozli (tez kunda)">🎤</button>'+
+    '<input id="simMsgInput" placeholder="Javobingiz yoki savolingizni yozing...">'+
+    '<button class="round primary" id="simSendBtn" title="Yuborish">➤</button>';
+  document.getElementById('simMicBtn').onclick = ()=>toast('Ovozli kiritish tez kunda qo\'shiladi','ok');
+  const msgInput = document.getElementById('simMsgInput');
+  const sendBtnEl = document.getElementById('simSendBtn');
+  const sendMsg = async ()=>{
+    const text = msgInput.value.trim();
+    if(!text || sendBtnEl.disabled) return;
+    const type = picker.querySelector('button.active')?.dataset.t || 'question';
+    const doctorDiv = document.createElement('div'); doctorDiv.className='msg doctor'; doctorDiv.textContent = text;
+    chatLog.appendChild(doctorDiv); msgInput.value=''; chatLog.scrollTop = chatLog.scrollHeight;
+    const payload = type === 'question' ? {question:text} : {text};
+
+    // "Yozayapti..." indikatori - Gemini javobi 1-3 soniya kutilishi mumkin,
+    // shu vaqt oralig'ida chat "muzlab qolgandek" ko'rinmasin uchun.
+    msgInput.disabled = true; sendBtnEl.disabled = true;
+    const typingDiv = document.createElement('div'); typingDiv.className = 'msg patient typing';
+    typingDiv.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+    chatLog.appendChild(typingDiv); chatLog.scrollTop = chatLog.scrollHeight;
+
+    try{
+      const res = await api('/mobile/simulation/'+sim.sessionId+'/event', {method:'POST', body:{session_id:sim.sessionId, type, payload}});
+      typingDiv.remove();
+      if(res.response && res.response.patient_reply){
+        const pDiv = document.createElement('div'); pDiv.className='msg patient'; pDiv.textContent = res.response.patient_reply;
+        chatLog.appendChild(pDiv);
+      } else if(res.response && res.response.patient_reply_error){
+        const eDiv = document.createElement('div'); eDiv.className='msg err'; eDiv.textContent = 'AI javob bera olmadi: '+res.response.patient_reply_error;
+        chatLog.appendChild(eDiv);
+      } else if(res.response && res.response.feedback){
+        // ActionEvaluatorAI klinik bahosi (ko'rik/tahlil/dori/protsedura) - to'g'ri/noto'g'ri + qisqa izoh + sog'liq o'zgarishi.
+        const fDiv = document.createElement('div'); fDiv.className='msg ' + (res.is_correct?'patient':'err');
+        const sign = res.health_delta > 0 ? '+' : '';
+        fDiv.innerHTML = (res.is_correct?'✅ ':'⚠️ ')+esc(res.response.feedback)+' <span class="muted">('+sign+res.health_delta+'% sog\'liq)</span>';
+        chatLog.appendChild(fDiv);
+      } else if(res.response && res.response.feedback_error){
+        const eDiv = document.createElement('div'); eDiv.className='msg err'; eDiv.textContent = 'AI baho bera olmadi: '+res.response.feedback_error;
+        chatLog.appendChild(eDiv);
+      } else {
+        const iDiv = document.createElement('div'); iDiv.className='msg sys'; iDiv.textContent = (res.is_correct?'✅ ':'❌ ')+'health_delta: '+res.health_delta;
+        chatLog.appendChild(iDiv);
+      }
+      chatLog.scrollTop = chatLog.scrollHeight;
+      applyHealth(res.health_percent);
+      if(res.health_percent <= 0) finishSimulation('health_zero');
+    }catch(e){
+      typingDiv.remove();
+    } finally {
+      msgInput.disabled = false; sendBtnEl.disabled = false; msgInput.focus();
+    }
+  };
+  sendBtnEl.onclick = sendMsg;
+  msgInput.addEventListener('keydown', e=>{ if(e.key==='Enter') sendMsg(); });
+
+  // Timer (faqat yangi Start'da bor - resume qilinganda ko'rsatilmaydi)
+  if(sim.timeLimitSec){
+    document.getElementById('simTimeLbl').textContent = fmtMMSS(sim.timeLimitSec);
+    sim.timerInt = setInterval(()=>{
+      sim.elapsedSec++;
+      const remain = Math.max(0, sim.timeLimitSec - sim.elapsedSec);
+      document.getElementById('simTimeLbl').textContent = fmtMMSS(remain);
+      document.getElementById('simTimeFill').style.width = Math.min(100, (sim.elapsedSec/sim.timeLimitSec)*100)+'%';
+      if(remain<=0){ clearInterval(sim.timerInt); finishSimulation('timeout'); }
+    }, 1000);
+  } else {
+    document.getElementById('simTimeLbl').textContent = 'davom etmoqda';
+  }
+
+  applyHealth(startRes.health_percent ?? 100);
+  if(startRes.initial_vitals) applyVitals(startRes.initial_vitals, '');
+
+  // WS - real-vaqt vitallar (token query orqali, browser WS header qo'sha olmasligi tuzatildi)
+  try{
+    const wsPath = startRes.ws_url || ('/mobile/simulation/'+sim.sessionId+'/ws');
+    const wsUrl = state.baseUrl.replace(/^http/,'ws') + wsPath + '?token=' + encodeURIComponent(state.access);
+    const ws = new WebSocket(wsUrl);
+    sim.ws = ws;
+    ws.onmessage = (ev)=>{
+      let data; try{ data = JSON.parse(ev.data); }catch(e){ return; }
+      if(!sim) return;
+      if(typeof data.health_percent === 'number') applyHealth(data.health_percent);
+      if(data.vitals) applyVitals(data.vitals, data.alarm||'');
+    };
+  }catch(e){}
+}
+
+function fmtMMSS(sec){ sec=Math.max(0,Math.round(sec)); return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'); }
+
+function applyHealth(pct){
+  pct = Math.max(0, Math.min(100, Math.round(pct ?? 100)));
+  const fill = document.getElementById('simHealthFill'); if(fill) fill.style.width = pct+'%';
+  const lbl = document.getElementById('simHealthLbl'); if(lbl) lbl.textContent = pct+'%';
+  const pctEl = document.getElementById('simHealthPct'); if(pctEl) pctEl.textContent = pct+'%';
+}
+
+function applyVitals(v, alarm){
+  const set = (id,val)=>{ const el=document.getElementById(id); if(el) el.textContent = val; };
+  set('vHr', (v.hr??'—')); set('vBp', v.bp||'—'); set('vSpo2', (v.spo2!=null?v.spo2+'%':'—')); set('vRr', (v.rr??'—'));
+  set('simHrm', v.hr??'—'); set('simSpo2m', v.spo2!=null?v.spo2+'%':'—');
+  set('simSkin', alarm==='critical'||alarm==='flatline' ? 'Rangpar' : (alarm==='warning' ? 'Nam' : 'Normal'));
+
+  const statusRow = document.getElementById('simStatus');
+  const avatar = document.getElementById('simAvatar');
+  const ecgWrap = document.getElementById('simEcgWrap');
+  if(statusRow){
+    statusRow.className = 'statusRow' + (alarm?(' '+(alarm==='flatline'?'flat':alarm)):'');
+    const label = {warning:'Og\'riqda', critical:'Og\'ir holat', flatline:'YURAK TO\'XTADI', '':'Barqaror'}[alarm||''];
+    statusRow.querySelector('span').innerHTML = '<span class="dot"></span>'+esc(label);
+  }
+  if(avatar){
+    avatar.className = 'avatarFig' + (alarm==='critical'?' severity-high':(alarm==='warning'?' severity-mid':''));
+    avatar.querySelector('svg')?.classList.toggle('shake', false);
+  }
+  if(ecgWrap) ecgWrap.classList.toggle('flat', alarm==='flatline');
+  if(v.hr) simSetBeepRate(v.hr);
+}
+
+async function finishSimulation(reason){
+  if(!sim) return;
+  const sid = sim.sessionId;
+  try{
+    const res = await api('/mobile/simulation/'+sid+'/finish', {method:'PUT', body:{reason}});
+    toast('Yakunlandi. Ball: '+res.final_score+' · XP: +'+res.xp_earned+' · Tanga: +'+res.coins_earned, 'ok');
+  }catch(e){}
+  closeSimView();
+  selectTab('home');
+  awaitDebrief(sid);
+}
+
+// awaitDebrief - Finish chaqirilgach debriefing hisoboti fonda (Gemini orqali)
+// tayyorlanadi - shu sabab bir martalik so'rov ko'pincha 400 qaytaradi ("hali
+// tayyor emas"). Tayyor bo'lguncha jim (silent) qayta-qayta so'raymiz.
+async function awaitDebrief(sessionId, attempt){
+  attempt = attempt || 0;
+  if(attempt === 0) toast('⏳ Hisobot (debrief) tayyorlanmoqda...', 'ok');
+  let d;
+  try{ d = await api('/mobile/debrief/'+sessionId, {silent:true}); }catch(e){ d = null; }
+  if(d){ showDebriefData(d); return; }
+  if(attempt >= 9){ toast('Hisobot hali tayyor emas - Profil → Tarix bo\'limidan keyinroq ko\'ring.', 'err'); return; }
+  setTimeout(()=>awaitDebrief(sessionId, attempt+1), 2000);
+}
+
+async function showDebrief(sessionId){
+  let d;
+  try{ d = await api('/mobile/debrief/'+sessionId); }catch(e){ return; }
+  showDebriefData(d);
+}
+
+function showDebriefData(d){
+  const overlay = document.createElement('div'); overlay.className='modalOverlay';
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+  const modal = document.createElement('div'); modal.className='modal'; modal.style.width='640px';
+  modal.innerHTML = '<h3>📋 Debriefing hisoboti</h3>'+
+    '<div class="kv">'+
+    '<div><span class="k">Yakuniy ball</span>'+esc(d.final_score)+'</div>'+
+    '<div><span class="k">XP</span>'+esc(d.xp_earned)+'</div>'+
+    '<div><span class="k">Coins</span>'+esc(d.coins_earned)+'</div>'+
+    '<div><span class="k">To\'g\'ri qadamlar</span>'+esc((d.correct_steps||[]).join(', ')||'—')+'</div>'+
+    '<div><span class="k">Noto\'g\'ri qadamlar</span>'+esc((d.incorrect_steps||[]).join(', ')||'—')+'</div>'+
+    '<div><span class="k">Zaif mavzular</span>'+esc((d.weak_topics||[]).join(', ')||'—')+'</div>'+
+    '<div><span class="k">Guideline izoh</span>'+esc(d.guideline_notes||'—')+'</div>'+
+    '</div>';
+  const footer = document.createElement('div'); footer.className='modalFooter';
+  const closeBtn = document.createElement('button'); closeBtn.textContent='Yopish'; closeBtn.onclick=()=>overlay.remove();
+  footer.appendChild(closeBtn); modal.appendChild(footer);
+  overlay.appendChild(modal); document.body.appendChild(overlay);
+}
+
+/* ============================================================
+   HISTORY (ongoing + completed)
+   ============================================================ */
+async function renderHistory(){
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+  keysSubnav(main, 'history');
+  main.insertAdjacentHTML('beforeend', '<h2 class="pageTitle">Simulyatsiyalar tarixi</h2><p class="pageDesc">/mobile/simulation/ongoing, /completed</p>');
+
+  main.insertAdjacentHTML('beforeend', '<h3 class="secTitle">Davom etayotganlar</h3>');
+  const ongoingWrap = document.createElement('div'); main.appendChild(ongoingWrap);
+  try{
+    const json = await api('/mobile/simulation/ongoing');
+    const {items} = extractList(json);
+    renderSimpleTable(ongoingWrap, items, [
+      {key:'case_title', label:'Case'}, {key:'status', label:'Status'}, {key:'health_percent', label:'Health %'}, {key:'started_at', label:'Boshlangan'},
+    ], row=>{
+      const b=document.createElement('button'); b.className='sm primary'; b.textContent='▶️ Ochish';
+      b.onclick=()=>openSimulation({session_id:row.id, case_id:row.case_id});
+      return [b];
+    });
+  }catch(e){ ongoingWrap.innerHTML='<p class="muted">Xatolik</p>'; }
+
+  main.insertAdjacentHTML('beforeend', '<h3 class="secTitle">Yakunlanganlar</h3>');
+  const doneWrap = document.createElement('div'); main.appendChild(doneWrap);
+  try{
+    const json = await api('/mobile/simulation/completed');
+    const {items} = extractList(json);
+    renderSimpleTable(doneWrap, items, [
+      {key:'case_title', label:'Case'}, {key:'status', label:'Status'}, {key:'final_score', label:'Ball'},
+      {key:'xp_earned', label:'XP'}, {key:'coins_earned', label:'Coins'}, {key:'ended_at', label:'Tugagan'},
+    ], row=>{
+      const b=document.createElement('button'); b.className='sm'; b.textContent='📋 Debrief';
+      b.onclick=()=>showDebrief(row.id);
+      return [b];
+    });
+  }catch(e){ doneWrap.innerHTML='<p class="muted">Xatolik</p>'; }
+}
+
+/* ============================================================
+   NOTIFICATIONS
+   ============================================================ */
+async function renderNotifications(main){
+  main.innerHTML = '<p class="pageDesc">/mobile/notification/user</p>';
+  const toolbar = document.createElement('div'); toolbar.className='toolbar';
+  const readSel = document.createElement('select');
+  [['','— hammasi —'],['false','O\'qilmagan'],['true','O\'qilgan']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;readSel.appendChild(o);});
+  const f=document.createElement('div'); f.className='field'; f.innerHTML='<label>Holat</label>'; f.appendChild(readSel);
+  toolbar.appendChild(f);
+  const btn=document.createElement('button'); btn.textContent='🔍'; btn.onclick=load;
+  toolbar.appendChild(btn);
+  main.appendChild(toolbar);
+  const wrap = document.createElement('div'); main.appendChild(wrap);
+
+  async function load(){
+    wrap.innerHTML='<p class="muted">Yuklanmoqda...</p>';
+    let json;
+    try{ json = await api('/mobile/notification/user', {query:{is_read:readSel.value}}); }catch(e){ wrap.innerHTML='<p class="muted">Xatolik</p>'; return; }
+    const {items} = extractList(json);
+    renderSimpleTable(wrap, items, [
+      {key:'title', label:'Sarlavha'}, {key:'message', label:'Matn'},
+      {get:r=>r.is_read?'✅':'⬜️', label:'O\'qilgan', raw:true}, {key:'created_at', label:'Sana'},
+    ], row=>{
+      const actions=[];
+      if(!row.is_read){
+        const b=document.createElement('button'); b.className='sm ok'; b.textContent='✅ O\'qildi deb belgilash';
+        b.onclick = async ()=>{ try{ await api('/mobile/notification/'+row.id+'/read', {method:'PUT'}); toast('Belgilandi','ok'); load(); }catch(e){} };
+        actions.push(b);
+      }
+      return actions;
+    });
+  }
+  load();
+}
+
+/* ============================================================
+   STUDY PLAN
+   ============================================================ */
+async function renderStudyPlan(main){
+  main.innerHTML = '<p class="pageDesc">/mobile/study-plan — kunlik eslatma vaqti</p>';
+  let cur = {};
+  try{ cur = await api('/mobile/study-plan') || {}; }catch(e){}
+  const grid = document.createElement('div'); grid.className='formGrid'; grid.style.maxWidth='500px'; main.appendChild(grid);
+  const values = {
+    remind_time: cur.remind_time || '20:00',
+    remind_minutes_before: cur.remind_minutes_before ?? 15,
+    is_enabled: cur.is_enabled ?? true,
+  };
+  const timeWrap = buildFormField(grid, {name:'remind_time', label:'Eslatma vaqti (HH:MM)', type:'text'}, values);
+  const minWrap = buildFormField(grid, {name:'remind_minutes_before', label:'Necha daqiqa oldin', type:'number'}, values);
+  const enWrap = buildFormField(grid, {name:'is_enabled', label:'Yoqilgan', type:'checkbox'}, values);
+  const saveBtn = document.createElement('button'); saveBtn.className='primary'; saveBtn.style.marginTop='10px'; saveBtn.textContent='💾 Saqlash';
+  saveBtn.onclick = async ()=>{
+    const body = {remind_time: timeWrap._getValue(), remind_minutes_before: minWrap._getValue(), is_enabled: enWrap._getValue()};
+    try{ await api('/mobile/study-plan', {method:'PUT', body}); toast('Saqlandi','ok'); }catch(e){}
+  };
+  main.appendChild(saveBtn);
+}
+
+/* ============================================================
+   TARIFFS / SUBSCRIPTION
+   ============================================================ */
+async function renderTariffs(main){
+  main.innerHTML = '<p class="pageDesc">/mobile/tariff, /mobile/subscription</p>';
+  const grid = document.createElement('div'); grid.className='grid'; main.appendChild(grid);
+  let json;
+  try{ json = await api('/mobile/tariff'); }catch(e){ grid.innerHTML='<p class="muted">Xatolik</p>'; return; }
+  const {items} = extractList(json);
+  grid.innerHTML = items.length ? '' : '<p class="muted">Tarif topilmadi.</p>';
+  items.forEach(t=>{
+    const c = document.createElement('div'); c.className='card stat';
+    c.innerHTML = '<h4>'+esc(t.name)+'</h4><p>'+esc(t.duration)+' kun · '+esc(t.price)+' so\'m</p><p class="muted">'+esc(t.description||'')+'</p>';
+    const buyRow = document.createElement('div'); buyRow.style.display='flex'; buyRow.style.gap='6px'; buyRow.style.marginTop='8px';
+    const coinsInp = document.createElement('input'); coinsInp.type='number'; coinsInp.placeholder='Tanga (ixtiyoriy)'; coinsInp.style.width='100%';
+    const buyBtn = document.createElement('button'); buyBtn.className='primary'; buyBtn.textContent='💳 Sotib olish';
+    buyBtn.onclick = async ()=>{
+      try{
+        const res = await api('/mobile/subscription', {method:'POST', body:{tariff_id:t.id, coins_used:Number(coinsInp.value||0)}});
+        if(res.just_paid) toast('To\'liq tangadan to\'landi — obuna faollashdi!', 'ok');
+        else if(res.url) openPayLink(res.url);
+        else toast('Buyurtma yaratildi: '+res.order_id, 'ok');
+      }catch(e){}
+    };
+    buyRow.appendChild(coinsInp); buyRow.appendChild(buyBtn);
+    c.appendChild(buyRow);
+    grid.appendChild(c);
+  });
+}
+function openPayLink(url){
+  openModal({
+    title:'To\'lov havolasi',
+    fields:[{name:'url', label:'URL', type:'text', full:true}],
+    values:{url},
+    submitLabel:'Yopish',
+    onSubmit: async ()=>{},
+  });
+}
+
+/* ============================================================
+   PROMOCODE
+   ============================================================ */
+async function renderPromocode(main){
+  main.innerHTML = '<p class="pageDesc">/mobile/promocode</p>';
+  const row = document.createElement('div'); row.style.display='flex'; row.style.gap='8px'; row.style.maxWidth='420px'; row.style.marginBottom='16px';
+  const codeInp = document.createElement('input'); codeInp.placeholder='PROMO-CODE'; codeInp.style.flex='1';
+  const redeemBtn = document.createElement('button'); redeemBtn.className='primary'; redeemBtn.textContent='🎟 Faollashtirish';
+  redeemBtn.onclick = async ()=>{
+    if(!codeInp.value){ toast('Kod kiriting','err'); return; }
+    try{ const res = await api('/mobile/promocode/redeem', {method:'POST', body:{code:codeInp.value}}); toast('+'+res.coins_added+' tanga qo\'shildi!', 'ok'); codeInp.value=''; load(); }catch(e){}
+  };
+  row.appendChild(codeInp); row.appendChild(redeemBtn);
+  main.appendChild(row);
+  const wrap = document.createElement('div'); main.appendChild(wrap);
+
+  async function load(){
+    wrap.innerHTML='<p class="muted">Yuklanmoqda...</p>';
+    let json;
+    try{ json = await api('/mobile/promocode', {query:{limit:50,page:1}}); }catch(e){ wrap.innerHTML='<p class="muted">Xatolik</p>'; return; }
+    const {items} = extractList(json);
+    renderSimpleTable(wrap, items, [
+      {key:'code', label:'Kod'}, {key:'value', label:'Qiymat'}, {key:'status', label:'Status'}, {key:'used_at', label:'Ishlatilgan'},
+    ]);
+  }
+  load();
+}
+
+/* ============================================================
+   INFO (about / faq / contact / partner)
+   ============================================================ */
+async function renderInfo(main){
+  main.innerHTML = '<p class="pageDesc">/mobile/about, /mobile/faq, /mobile/contact, /mobile/app-route</p>';
+
+  main.insertAdjacentHTML('beforeend', '<h3 class="secTitle">Biz haqimizda</h3>');
+  const aboutWrap = document.createElement('div'); aboutWrap.className='grid'; main.appendChild(aboutWrap);
+  try{
+    const {items} = extractList(await api('/mobile/about'));
+    aboutWrap.innerHTML = items.length?'':'<p class="muted">Yo\'q</p>';
+    items.forEach(x=>{ const c=document.createElement('div'); c.className='card'; c.innerHTML='<h4>'+esc(ml(x.title))+'</h4><p>'+esc(ml(x.description))+'</p>'; aboutWrap.appendChild(c); });
+  }catch(e){}
+
+  main.insertAdjacentHTML('beforeend', '<h3 class="secTitle">FAQ</h3>');
+  const faqWrap = document.createElement('div'); main.appendChild(faqWrap);
+  try{
+    const {items} = extractList(await api('/mobile/faq'));
+    renderSimpleTable(faqWrap, items, [{get:r=>ml(r.question), label:'Savol', raw:true}, {get:r=>ml(r.answer), label:'Javob', raw:true}]);
+  }catch(e){}
+
+  main.insertAdjacentHTML('beforeend', '<h3 class="secTitle">Kontaktlar</h3>');
+  const contactWrap = document.createElement('div'); main.appendChild(contactWrap);
+  try{
+    const {items} = extractList(await api('/mobile/contact'));
+    renderSimpleTable(contactWrap, items, [{key:'name',label:'Ism'},{key:'phone_number',label:'Telefon'},{key:'link_url',label:'Havola'}]);
+  }catch(e){}
+
+  main.insertAdjacentHTML('beforeend', '<h3 class="secTitle">Ilova sozlamalari (call-center, versiya)</h3>');
+  const routeWrap = document.createElement('div'); main.appendChild(routeWrap);
+  try{
+    const route = await api('/mobile/app-route');
+    routeWrap.innerHTML = '<div class="kv card" style="max-width:420px">'+
+      '<div><span class="k">Call-center</span>'+esc(route.call_center)+'</div>'+
+      '<div><span class="k">Support</span>'+esc(route.support_url)+'</div>'+
+      '<div><span class="k">Android versiya</span>'+esc(route.app_version && route.app_version.android)+'</div>'+
+      '<div><span class="k">iOS versiya</span>'+esc(route.app_version && route.app_version.ios)+'</div></div>';
+  }catch(e){ routeWrap.innerHTML='<p class="muted">Xatolik</p>'; }
+}
+
+/* ============================================================
+   TOP PROFILE HEADER (home/keys/profil sahifalarida umumiy)
+   ============================================================ */
+async function renderTopProfile(){
+  const box = document.getElementById('topProfile');
+  let me, limit, levels;
+  try{ me = await api('/mobile/user/get/profile', {silent:true}); }catch(e){ me = {}; }
+  try{ limit = await api('/mobile/user/limit', {silent:true}); }catch(e){ limit = null; }
+  try{ const r = await api('/mobile/level', {silent:true}); levels = extractList(r).items; }catch(e){ levels = []; }
+
+  const xp = me.xp ?? 0;
+  const next = (levels||[]).map(l=>l.required_xp).filter(v=>typeof v==='number' && v>xp).sort((a,b)=>a-b)[0];
+  const xpLabel = next ? (xp+'/'+next+' XP') : (xp+' XP');
+  const initial = (me.name||'?').trim().charAt(0).toUpperCase() || '?';
+
+  let limitHtml = '';
+  if(limit){
+    limitHtml = limit.has_subscription
+      ? '<span class="statPill limit">⭐ Premium</span>'
+      : '<span class="statPill limit">🛡 '+esc(limit.remaining)+'/'+esc(limit.total)+' Limit</span>';
+  }
+
+  box.innerHTML =
+    '<div class="who">'+
+      '<div class="avatarCircle">'+esc(initial)+'</div>'+
+      '<div><div class="name">'+esc(me.name||'Foydalanuvchi')+' <span class="lvlPill">Lvl '+esc(me.level??1)+'</span></div>'+
+      '<div class="sub">🔥 '+esc(me.streak_count??0)+' kun · '+esc(xpLabel)+'</div></div>'+
+    '</div>'+
+    '<div class="topRight">'+
+      '<span class="statPill coins">🪙 '+esc(me.coins??0)+'</span>'+
+      limitHtml+
+    '</div>';
+}
+
+/* ============================================================
+   BOTTOM NAV / SHELL BOOT
+   ============================================================ */
+const BOTTOM_NAV = [
+  {key:'home', icon:'✨', label:'Bosh sahifa'},
+  {key:'keys', icon:'📁', label:'Keyslar'},
+  {key:'profile', icon:'👤', label:'Profil'},
+];
+
+function buildBottomNav(){
+  const nav = document.getElementById('bottomNav');
+  nav.innerHTML = '';
+  BOTTOM_NAV.forEach(item=>{
+    const b = document.createElement('button'); b.dataset.key = item.key;
+    b.innerHTML = '<span class="ic">'+item.icon+'</span><span>'+esc(item.label)+'</span>';
+    b.onclick = ()=>selectTab(item.key);
+    nav.appendChild(b);
+  });
+}
+
+function selectTab(key){
+  state.currentTab = key;
+  document.querySelectorAll('#bottomNav button').forEach(b=>b.classList.toggle('active', b.dataset.key===key));
+  const homeView = document.getElementById('homeView');
+  const main = document.getElementById('main');
+  if(key === 'home'){
+    homeView.style.display = ''; main.style.display = 'none';
+    renderHomeNew();
+  } else {
+    homeView.style.display = 'none'; main.style.display = '';
+    if(key === 'keys') renderCatalog();
+    else if(key === 'profile') renderProfile();
+  }
+  renderTopProfile();
+}
+
+function startApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('shell').classList.add('show');
+  buildBottomNav();
+  selectTab('home');
+}
+
+(function boot(){
+  document.getElementById('baseUrlInput').value = state.baseUrl;
+  if(state.access) startApp();
+})();
+</script>
+</body>
+</html>

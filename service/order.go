@@ -1,0 +1,162 @@
+package service
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"tibsphereai/internal/helper"
+	m "tibsphereai/pkg/models"
+	st "tibsphereai/storage/postgres"
+	"time"
+
+	"github.com/go-redis/redis"
+)
+
+type OrderService struct {
+	storage st.Storage
+	rdb     *redis.Client
+	push    *PushService
+}
+
+func NewOrderService(storage *st.Storage, rdb *redis.Client, push *PushService) *OrderService {
+	return &OrderService{storage: *storage, rdb: rdb, push: push}
+}
+
+// Create - TZ 2.3-bo'lim: to'liq tangaga yopilsa (CoinsUsed yetarli) storage darhol
+// PAID qilib qaytaradi (JustPaid=true) - shu holatda ham push/notification ishga tushadi,
+// xuddi Click/Payme muvaffaqiyatli to'lovi kabi.
+func (s *OrderService) Create(ctx context.Context, req *m.OrderCreateReq) (*m.OrderCreateRes, error) {
+	res, err := s.storage.OrderS.Create(req)
+	if err != nil || res == nil {
+		return res, err
+	}
+	if res.JustPaid {
+		s.onJustPaid(req.UserId, res.Id)
+	}
+	return res, nil
+}
+
+func (s *OrderService) GetById(ctx context.Context, req *m.ById) (*m.OrderStatisticRes, error) {
+	return s.storage.OrderS.GetById(req)
+}
+
+func (s *OrderService) GetAll(ctx context.Context, req *m.OrderGetListReq) (*m.PaginationResponse, *m.OrderList, error) {
+	res := &m.PaginationResponse{}
+
+	key := fmt.Sprintf("user_id:%s_tariff_id:%s_status:%s_payment_type:%s_type:%s_day:%s_from:%s_to:%s_page:%d_limit:%d",
+		req.UserId, req.TariffId, req.Status, req.PaymentType, req.Type, req.Day, req.From, req.To, req.Filter.Page, req.Filter.Limit)
+
+	if s.rdb != nil {
+		if b, err := s.rdb.Get(key).Bytes(); err == nil && len(b) > 0 {
+			_ = json.Unmarshal(b, &res)
+		}
+	}
+
+	if res.Total == 0 {
+		res, _, err := s.storage.OrderS.GetAll(req)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if s.rdb != nil {
+			if b, err := json.Marshal(res); err == nil {
+				_ = s.rdb.Set(key, b, 60*time.Second).Err()
+			}
+		}
+
+		return res, nil, nil
+	}
+
+	return res, nil, nil
+}
+
+func (s *OrderService) ApplyPrepare(ctx context.Context, req *m.ApplyPrepareParams) (*m.PrepareResult, error) {
+	return s.storage.OrderS.ApplyPrepare(req)
+}
+
+// ApplyComplete - to'lov muvaffaqiyatli tasdiqlangach (BACKEND_STRUCTURE.md 5-bo'lim):
+//  1. Premium obuna faollashtiriladi (storage qatlamida - subscriptions),
+//  2. Tizim avtomatik 1 martalik promokod yaratadi (aktiv hamkorga bog'langan holda),
+//  3. Push + in-app bildirishnoma yuboriladi.
+func (s *OrderService) ApplyComplete(ctx context.Context, req *m.ApplyCompleteParams) (*m.CompleteResult, error) {
+	res, err := s.storage.OrderS.ApplyComplete(req)
+	if err != nil || res == nil {
+		return res, err
+	}
+
+	if res.JustPaid {
+		s.onJustPaid(res.PaidUserId, res.PaidOrderId)
+	}
+
+	return res, nil
+}
+
+// onJustPaid - to'lov birinchi marta PAID bo'lganda ishga tushadigan umumiy oqim
+// (push + in-app bildirishnoma). Create (to'liq tanga), Click (ApplyComplete) va
+// Payme (PerformTransaction) - uchalasi ham shu orqali ishlaydi. Promokod endi
+// avtomatik chiqarilmaydi (TZ 5-6-bo'lim: hamkor o'zi oldindan yaratadi).
+func (s *OrderService) onJustPaid(userId, orderId string) {
+	go func(userId, orderId string) {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("order complete goroutine panic:", r)
+			}
+		}()
+
+		pushCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		pushEvent := m.PushEvent{Type: m.EventPaymentSuccess, OrderID: orderId}
+		pushTarget := m.PushTarget{Type: m.TargetUser, UserID: userId}
+		_ = s.push.SendPush(pushCtx, pushTarget, pushEvent)
+
+		msg := m.BuildLocalizedPushMessage(pushEvent, "uz")
+		title, body := helper.StringToJSON(msg.Title, msg.Body)
+		if _, err := s.storage.NotificationS.Create(&m.NotificationCreateReq{
+			Title: title, Message: body, Type: "selected", UserId: userId,
+		}); err != nil {
+			fmt.Println("failed to create notification:", err)
+		}
+	}(userId, orderId)
+}
+
+// ============ Payme JSON-RPC (docs: furasentr-payment) ============
+
+func (s *OrderService) PaymeCheckPerform(ctx context.Context, orderId string, amountTiyin int64) error {
+	return s.storage.OrderS.PaymeCheckPerform(orderId, amountTiyin)
+}
+
+func (s *OrderService) PaymeCreateTransaction(ctx context.Context, orderId, paymeId string, amountTiyin, timeMs int64) (*m.PaymeCreateResult, error) {
+	return s.storage.OrderS.PaymeCreateTransaction(orderId, paymeId, amountTiyin, timeMs)
+}
+
+func (s *OrderService) PaymePerformTransaction(ctx context.Context, paymeId string) (*m.PaymeTransactionResult, error) {
+	res, err := s.storage.OrderS.PaymePerformTransaction(paymeId)
+	if err != nil || res == nil {
+		return res, err
+	}
+
+	if res.JustPaid {
+		var userId string
+		if o, oerr := s.storage.OrderS.GetById(&m.ById{Id: res.OrderId}); oerr == nil && o != nil {
+			userId = o.UserId
+		}
+		if userId != "" {
+			s.onJustPaid(userId, res.OrderId)
+		}
+	}
+
+	return res, nil
+}
+
+func (s *OrderService) PaymeCancelTransaction(ctx context.Context, paymeId string, reason int) (*m.PaymeTransactionResult, error) {
+	return s.storage.OrderS.PaymeCancelTransaction(paymeId, reason)
+}
+
+func (s *OrderService) PaymeCheckTransaction(ctx context.Context, paymeId string) (*m.PaymeTransactionResult, error) {
+	return s.storage.OrderS.PaymeCheckTransaction(paymeId)
+}
+
+func (s *OrderService) PaymeGetStatement(ctx context.Context, fromMs, toMs int64) ([]m.PaymeStatementItem, error) {
+	return s.storage.OrderS.PaymeGetStatement(fromMs, toMs)
+}
