@@ -46,3 +46,5 @@ Swagger: `http://localhost:1001/api/swagger/index.html` (`task swag-init` orqali
 - Simulyatsiya scoring algoritmi (`service/simulation.go` — hozircha soddalashtirilgan)
 - Push-reminder scheduler (study_plans asosida cron — hozircha joy tayyor, ishga tushmaydi)
 - `api/docs` — `task swag-init` orqali to'liq swagger generatsiyasi
+
+<!-- ci test: 2026-09-21T18:58:02Z -->
