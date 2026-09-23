@@ -79,11 +79,14 @@ func (r *AdminRepo) GetById(req *m.ById) (*m.AdminRes, error) {
 		a.login,
 		a.role_id,
 		r.name,
+		a.partner_id,
+		p.name,
 		a.created_at::text,
 		a.updated_at::text
 	FROM
 		admins a
 	LEFT JOIN roles r ON r.id = a.role_id
+	LEFT JOIN partners p ON p.id = a.partner_id
 	WHERE
 		a.id = $1 AND a.deleted_at = 0
 	`
@@ -94,6 +97,8 @@ func (r *AdminRepo) GetById(req *m.ById) (*m.AdminRes, error) {
 		&admin.Login,
 		&admin.RoleId,
 		&admin.RoleName,
+		&admin.PartnerId,
+		&admin.PartnerName,
 		&admin.CreatedAt,
 		&admin.UpdatedAt,
 	)
@@ -123,11 +128,15 @@ func (r *AdminRepo) Create(req *m.AdminCreateReq) (*m.ById, error) {
 	if req.RoleId != "" && req.RoleId != "string" {
 		roleId = req.RoleId
 	}
+	var partnerId interface{}
+	if req.PartnerId != "" && req.PartnerId != "string" {
+		partnerId = req.PartnerId
+	}
 
 	id := uuid.NewString()
 	_, err = r.db.Exec(context.Background(), `
-		INSERT INTO admins (id, login, password, role_id) VALUES ($1, $2, $3, $4)
-	`, id, req.Login, string(hashed), roleId)
+		INSERT INTO admins (id, login, password, role_id, partner_id) VALUES ($1, $2, $3, $4, $5)
+	`, id, req.Login, string(hashed), roleId, partnerId)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating admin: %w", err)
 	}
@@ -138,9 +147,10 @@ func (r *AdminRepo) Create(req *m.AdminCreateReq) (*m.ById, error) {
 // GetAll - adminlar ro'yxati (login bo'yicha qidiruv + pagination).
 func (r *AdminRepo) GetAll(req *m.AdminGetListReq) (*m.PaginationResponse, *m.AdminList, error) {
 	query := `
-	SELECT COUNT(a.id) OVER() AS total_count, a.id, a.login, a.role_id, r.name, a.created_at::text, a.updated_at::text
+	SELECT COUNT(a.id) OVER() AS total_count, a.id, a.login, a.role_id, r.name, a.partner_id, p.name, a.created_at::text, a.updated_at::text
 	FROM admins a
 	LEFT JOIN roles r ON r.id = a.role_id
+	LEFT JOIN partners p ON p.id = a.partner_id
 	WHERE a.deleted_at = 0
 	`
 	var args []interface{}
@@ -162,7 +172,7 @@ func (r *AdminRepo) GetAll(req *m.AdminGetListReq) (*m.PaginationResponse, *m.Ad
 	for rows.Next() {
 		a := &m.AdminRes{}
 		var total int
-		if err := rows.Scan(&total, &a.Id, &a.Login, &a.RoleId, &a.RoleName, &a.CreatedAt, &a.UpdatedAt); err != nil {
+		if err := rows.Scan(&total, &a.Id, &a.Login, &a.RoleId, &a.RoleName, &a.PartnerId, &a.PartnerName, &a.CreatedAt, &a.UpdatedAt); err != nil {
 			return nil, nil, fmt.Errorf("error while scanning admin: %w", err)
 		}
 		list.Admins = append(list.Admins, a)
@@ -185,6 +195,10 @@ func (r *AdminRepo) Update(req *m.AdminUpdateReq) (*m.Void, error) {
 	if req.RoleId != "" && req.RoleId != "string" {
 		conditions = append(conditions, "role_id = $"+strconv.Itoa(len(args)+1))
 		args = append(args, req.RoleId)
+	}
+	if req.PartnerId != "" && req.PartnerId != "string" {
+		conditions = append(conditions, "partner_id = $"+strconv.Itoa(len(args)+1))
+		args = append(args, req.PartnerId)
 	}
 	if req.Password != "" && req.Password != "string" {
 		hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)

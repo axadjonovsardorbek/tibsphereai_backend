@@ -784,15 +784,17 @@ const MODULES = {
   admin: {
     label:'Adminlar', base:'/web/admin', listKey:'admins',
     search:[{name:'login', label:'Login (qidiruv)', type:'text'}],
-    columns:['id','login','role_name','created_at'],
+    columns:['id','login','role_name','partner_name','created_at'],
     fields:[
       {name:'login', label:'Login', type:'text', required:true},
       {name:'password', label:'Parol', type:'password', required:true},
       {name:'role_id', label:'Rol', type:'select', asyncOptions:'role', includeEmpty:true},
+      {name:'partner_id', label:'Hamkor (faqat "Hamkor Admin" roli uchun)', type:'select', asyncOptions:'partner', includeEmpty:true},
     ],
     updateFields:[
       {name:'login', label:'Login', type:'text', required:true},
       {name:'role_id', label:'Rol', type:'select', asyncOptions:'role', includeEmpty:true},
+      {name:'partner_id', label:'Hamkor (faqat "Hamkor Admin" roli uchun)', type:'select', asyncOptions:'partner', includeEmpty:true},
       {name:'password', label:'Yangi parol (bo\'sh — o\'zgarmaydi)', type:'password'},
     ],
     canCreate:true, canUpdate:true, canDelete:true,
