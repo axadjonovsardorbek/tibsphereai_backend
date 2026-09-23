@@ -21,7 +21,6 @@ import (
 // @Success 200 {object} string
 // @Failure 400 {object} string
 // @Failure 500 {object} string
-// @Security BearerAuth
 // @Router /mobile/auth/user/otp/send [post]
 func (h *Handler) SendConfirmation(c *gin.Context) {
 	var req m.SendConfirmationCodeReq
@@ -68,7 +67,6 @@ func (h *Handler) SendConfirmation(c *gin.Context) {
 // @Success 200 {object} string
 // @Failure 400 {object} string
 // @Failure 500 {object} string
-// @Security BearerAuth
 // @Router /mobile/auth/user/otp/confirm [post]
 func (h *Handler) VerifyConfirmation(c *gin.Context) {
 	var req m.ConfirmationReq

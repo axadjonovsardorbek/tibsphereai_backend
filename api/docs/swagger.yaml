@@ -2055,8 +2055,6 @@ paths:
           description: Server error
           schema:
             type: string
-      security:
-      - BearerAuth: []
       summary: Check user
       tags:
       - auth
@@ -2087,8 +2085,6 @@ paths:
           description: Internal Server Error
           schema:
             type: string
-      security:
-      - BearerAuth: []
       summary: Verify confirmation code
       tags:
       - auth
@@ -2119,8 +2115,6 @@ paths:
           description: Internal Server Error
           schema:
             type: string
-      security:
-      - BearerAuth: []
       summary: Send confirmation code to email
       tags:
       - auth

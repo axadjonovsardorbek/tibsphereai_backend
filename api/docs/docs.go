@@ -295,11 +295,6 @@ const docTemplate = `{
         },
         "/mobile/auth/user/check": {
             "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
                 "description": "Check user",
                 "consumes": [
                     "application/json"
@@ -346,11 +341,6 @@ const docTemplate = `{
         },
         "/mobile/auth/user/otp/confirm": {
             "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
                 "description": "Verify the provided confirmation code and return a token if valid",
                 "consumes": [
                     "application/json"
@@ -397,11 +387,6 @@ const docTemplate = `{
         },
         "/mobile/auth/user/otp/send": {
             "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
                 "description": "Send a confirmation code to the provided email address",
                 "consumes": [
                     "application/json"

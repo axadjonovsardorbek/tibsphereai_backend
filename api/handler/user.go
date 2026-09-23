@@ -130,7 +130,6 @@ func (h *Handler) RefreshPassword(c *gin.Context) {
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Security BearerAuth
 // @Param credentials body models.UserCheckReq true "User check credentials"
 // @Success 200 {object} models.UserCheckRes
 // @Failure 400 {object} string "Invalid request payload"
