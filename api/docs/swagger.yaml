@@ -1,0 +1,6117 @@
+basePath: /
+definitions:
+  models.AIPromptRes:
+    properties:
+      key:
+        type: string
+      model_params:
+        additionalProperties: {}
+        type: object
+      template:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.AIPromptUpsertReq:
+    properties:
+      key:
+        type: string
+      model_params:
+        additionalProperties: {}
+        type: object
+      template:
+        type: string
+    type: object
+  models.AITestDebriefReq:
+    properties:
+      case_id:
+        type: string
+      events:
+        items:
+          $ref: '#/definitions/models.SimulationEventReq'
+        type: array
+    type: object
+  models.AITestDebriefRes:
+    properties:
+      cost_usd:
+        type: number
+      report:
+        $ref: '#/definitions/models.DebriefReportCreateReq'
+      tokens:
+        type: integer
+    type: object
+  models.AITestPatientReq:
+    properties:
+      case_id:
+        type: string
+      question:
+        type: string
+    type: object
+  models.AITestPatientRes:
+    properties:
+      cost_usd:
+        type: number
+      feedback:
+        type: string
+      health_delta:
+        type: integer
+      is_action:
+        description: |-
+          IsAction - true bo'lsa, xabar bemor savoli emas, klinik qaror/harakat
+          bayonoti deb tanildi - shunda Reply o'rniga IsCorrect/HealthDelta/Feedback mazmunli.
+        type: boolean
+      is_correct:
+        type: boolean
+      reply:
+        type: string
+      tokens:
+        type: integer
+    type: object
+  models.AIUsageSummaryRes:
+    properties:
+      total_cost_usd:
+        type: number
+      total_tokens:
+        type: integer
+    type: object
+  models.AboutCreateBody:
+    properties:
+      description:
+        additionalProperties:
+          type: string
+        type: object
+      link_url:
+        type: string
+      order_num:
+        type: integer
+      title:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  models.AboutList:
+    properties:
+      abouts:
+        items:
+          $ref: '#/definitions/models.AboutRes'
+        type: array
+      count:
+        type: integer
+    type: object
+  models.AboutMobileList:
+    properties:
+      abouts:
+        items:
+          $ref: '#/definitions/models.AboutMobileRes'
+        type: array
+      count:
+        type: integer
+    type: object
+  models.AboutMobileRes:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      link_url:
+        type: string
+      order_num:
+        type: integer
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.AboutRes:
+    properties:
+      created_at:
+        type: string
+      description:
+        additionalProperties:
+          type: string
+        type: object
+      id:
+        type: string
+      link_url:
+        type: string
+      order_num:
+        type: integer
+      title:
+        additionalProperties:
+          type: string
+        type: object
+      updated_at:
+        type: string
+    type: object
+  models.AboutUpdateBody:
+    properties:
+      description:
+        additionalProperties:
+          type: string
+        type: object
+      link_url:
+        type: string
+      order_num:
+        type: integer
+      title:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  models.ActivityStatItem:
+    properties:
+      date:
+        description: 'day/week/month/range: YYYY-MM-DD, year: YYYY-MM-01'
+        type: string
+      value:
+        type: integer
+    type: object
+  models.ActivityStatsResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.ActivityStatItem'
+        type: array
+      total:
+        type: integer
+      type:
+        description: day|week|month|year|range
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.AdminCreateReq:
+    properties:
+      login:
+        type: string
+      partner_id:
+        type: string
+      password:
+        type: string
+      role_id:
+        type: string
+    type: object
+  models.AdminList:
+    properties:
+      admins:
+        items:
+          $ref: '#/definitions/models.AdminRes'
+        type: array
+      count:
+        type: integer
+    type: object
+  models.AdminRes:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      login:
+        type: string
+      partner_id:
+        type: string
+      partner_name:
+        type: string
+      role_id:
+        type: string
+      role_name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.AdminUpdateReq:
+    properties:
+      id:
+        type: string
+      login:
+        type: string
+      partner_id:
+        type: string
+      password:
+        type: string
+      role_id:
+        type: string
+    type: object
+  models.AppRouteCreateReq:
+    properties:
+      app_links:
+        type: object
+      app_version:
+        type: object
+      call_center:
+        example: "+998901234567"
+        type: string
+      payment_min_version:
+        example: 1.0.5
+        type: string
+      support_url:
+        example: https://t.me/support
+        type: string
+    type: object
+  models.AppRouteList:
+    properties:
+      app_routes:
+        items:
+          $ref: '#/definitions/models.AppRouteRes'
+        type: array
+      count:
+        type: integer
+    type: object
+  models.AppRouteRes:
+    properties:
+      app_links:
+        type: object
+      app_version:
+        type: object
+      buy_course:
+        example: true
+        type: boolean
+      call_center:
+        example: "+998901234567"
+        type: string
+      created_at:
+        example: "2026-02-10T10:00:00Z"
+        type: string
+      id:
+        example: uuid-string
+        type: string
+      payment_min_version:
+        example: 1.0.5
+        type: string
+      support_url:
+        example: https://t.me/support
+        type: string
+      updated_at:
+        example: "2026-02-10T10:00:00Z"
+        type: string
+    type: object
+  models.AppRouteUpdateBody:
+    properties:
+      app_links:
+        type: object
+      app_version:
+        type: object
+      buy_course:
+        example: true
+        type: boolean
+      call_center:
+        example: "+998901234567"
+        type: string
+      payment_min_version:
+        example: 1.0.5
+        type: string
+      support_url:
+        example: https://t.me/support
+        type: string
+    type: object
+  models.AppSettingRes:
+    properties:
+      key:
+        type: string
+      updated_at:
+        type: string
+      value:
+        type: string
+    type: object
+  models.AppSettingSetReq:
+    properties:
+      key:
+        type: string
+      value:
+        description: JSON string sifatida saqlanadi
+        type: string
+    type: object
+  models.BannerCreateBody:
+    properties:
+      description:
+        additionalProperties:
+          type: string
+        type: object
+      image_url:
+        additionalProperties:
+          type: string
+        type: object
+      link_url:
+        type: string
+      order_num:
+        type: integer
+      title:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  models.BannerList:
+    properties:
+      banners:
+        items:
+          $ref: '#/definitions/models.BannerRes'
+        type: array
+      count:
+        type: integer
+    type: object
+  models.BannerMobileList:
+    properties:
+      banners:
+        items:
+          $ref: '#/definitions/models.BannerMobileRes'
+        type: array
+      count:
+        type: integer
+    type: object
+  models.BannerMobileRes:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      image_url:
+        type: string
+      link_url:
+        type: string
+      order_num:
+        type: integer
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.BannerRes:
+    properties:
+      created_at:
+        type: string
+      description:
+        additionalProperties:
+          type: string
+        type: object
+      id:
+        type: string
+      image_url:
+        additionalProperties:
+          type: string
+        type: object
+      link_url:
+        type: string
+      order_num:
+        type: integer
+      title:
+        additionalProperties:
+          type: string
+        type: object
+      updated_at:
+        type: string
+    type: object
+  models.BannerUpdateBody:
+    properties:
+      description:
+        additionalProperties:
+          type: string
+        type: object
+      image_url:
+        additionalProperties:
+          type: string
+        type: object
+      link_url:
+        type: string
+      order_num:
+        type: integer
+      title:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  models.CaseCreateReq:
+    properties:
+      chief_complaint:
+        additionalProperties:
+          type: string
+        type: object
+      cover_image_url:
+        type: string
+      difficulty:
+        description: easy|medium|hard
+        type: string
+      expected_answer:
+        type: string
+      expected_duration_minutes:
+        type: integer
+      initial_vitals:
+        $ref: '#/definitions/models.CaseVitals'
+      is_ai_generated:
+        type: boolean
+      order_num:
+        type: integer
+      patient_age:
+        type: integer
+      patient_gender:
+        type: string
+      scenario:
+        additionalProperties: {}
+        type: object
+      subtitle:
+        additionalProperties:
+          type: string
+        type: object
+      title:
+        additionalProperties:
+          type: string
+        type: object
+      topic_id:
+        type: string
+      visual_state:
+        type: string
+    type: object
+  models.CaseGenReq:
+    properties:
+      chief_complaint:
+        type: string
+      difficulty:
+        type: string
+      expected_answer:
+        type: string
+      topic:
+        type: string
+    type: object
+  models.CaseList:
+    properties:
+      cases:
+        items:
+          $ref: '#/definitions/models.CaseRes'
+        type: array
+      count:
+        type: integer
+    type: object
+  models.CaseMobileList:
+    properties:
+      cases:
+        items:
+          $ref: '#/definitions/models.CaseMobileRes'
+        type: array
+      count:
+        type: integer
+    type: object
+  models.CaseMobileRes:
+    properties:
+      category_id:
+        type: string
+      category_name:
+        type: string
+      chief_complaint:
+        type: string
+      cover_image_url:
+        type: string
+      difficulty:
+        type: string
+      expected_duration_minutes:
+        type: integer
+      id:
+        type: string
+      is_favorite:
+        type: boolean
+      patient_age:
+        type: integer
+      patient_gender:
+        type: string
+      status:
+        description: new|active|completed|failed|abandoned (foydalanuvchi holati)
+        type: string
+      subtitle:
+        type: string
+      title:
+        type: string
+      topic_id:
+        type: string
+      topic_name:
+        type: string
+    type: object
+  models.CaseRes:
+    properties:
+      category_id:
+        type: string
+      category_name:
+        additionalProperties:
+          type: string
+        type: object
+      chief_complaint:
+        additionalProperties:
+          type: string
+        type: object
+      cover_image_url:
+        type: string
+      created_at:
+        type: string
+      difficulty:
+        type: string
+      expected_answer:
+        type: string
+      expected_duration_minutes:
+        type: integer
+      id:
+        type: string
+      initial_vitals:
+        $ref: '#/definitions/models.CaseVitals'
+      is_ai_generated:
+        type: boolean
+      order_num:
+        type: integer
+      patient_age:
+        type: integer
+      patient_gender:
+        type: string
+      scenario:
+        additionalProperties: {}
+        type: object
+      status:
+        description: draft|published
+        type: string
+      subtitle:
+        additionalProperties:
+          type: string
+        type: object
+      title:
+        additionalProperties:
+          type: string
+        type: object
+      topic_id:
+        type: string
+      topic_name:
+        additionalProperties:
+          type: string
+        type: object
+      updated_at:
+        type: string
+      visual_state:
+        type: string
+    type: object
+  models.CaseUpdateReq:
+    properties:
+      chief_complaint:
+        additionalProperties:
+          type: string
+        type: object
+      cover_image_url:
+        type: string
+      difficulty:
+        type: string
+      expected_answer:
+        type: string
+      expected_duration_minutes:
+        type: integer
+      id:
+        type: string
+      initial_vitals:
+        $ref: '#/definitions/models.CaseVitals'
+      order_num:
+        type: integer
+      patient_age:
+        type: integer
+      patient_gender:
+        type: string
+      scenario:
+        additionalProperties: {}
+        type: object
+      subtitle:
+        additionalProperties:
+          type: string
+        type: object
+      title:
+        additionalProperties:
+          type: string
+        type: object
+      topic_id:
+        type: string
+      visual_state:
+        type: string
+    type: object
+  models.CaseVitals:
+    properties:
+      bp:
+        type: string
+      gcs:
+        type: integer
+      hr:
+        type: integer
+      rr:
+        type: integer
+      spo2:
+        type: integer
+      temp:
+        type: number
+    type: object
+  models.CategoryCreateReq:
+    properties:
+      audience:
+        description: doctor|citizen, bo'sh - doctor
+        type: string
+      icon_url:
+        type: string
+      name:
+        additionalProperties:
+          type: string
+        type: object
+      order_num:
+        type: integer
+    type: object
+  models.CategoryList:
+    properties:
+      categories:
+        items:
+          $ref: '#/definitions/models.CategoryRes'
+        type: array
+      count:
+        type: integer
+    type: object
+  models.CategoryMobileList:
+    properties:
+      categories:
+        items:
+          $ref: '#/definitions/models.CategoryMobileRes'
+        type: array
+      count:
+        type: integer
+    type: object
+  models.CategoryMobileRes:
+    properties:
+      audience:
+        type: string
+      cases_count:
+        type: integer
+      icon_url:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      order_num:
+        type: integer
+    type: object
+  models.CategoryRes:
+    properties:
+      audience:
+        type: string
+      created_at:
+        type: string
+      icon_url:
+        type: string
+      id:
+        type: string
+      name:
+        additionalProperties:
+          type: string
+        type: object
+      order_num:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  models.CategoryUpdateReq:
+    properties:
+      audience:
+        type: string
+      icon_url:
+        type: string
+      id:
+        type: string
+      name:
+        additionalProperties:
+          type: string
+        type: object
+      order_num:
+        type: integer
+    type: object
+  models.ChangePasswordBody:
+    properties:
+      confirm_password:
+        type: string
+      new_password:
+        type: string
+      old_password:
+        type: string
+    type: object
+  models.CoinMonitoringSummaryRes:
+    properties:
+      coins_in_circulation:
+        description: barcha userlar coins yig'indisi (hozirgi balans)
+        type: integer
+      total_earned:
+        description: referral_reward + promo_redeem + simulation_finish (musbat)
+        type: integer
+      total_purchased:
+        description: coin_purchase orqali sotib olingan (pul evaziga)
+        type: integer
+      total_spent:
+        description: category_unlock va h.k. (manfiy tranzaksiyalar, musbat songa
+          aylantirilgan)
+        type: integer
+    type: object
+  models.CoinTransactionList:
+    properties:
+      count:
+        type: integer
+      transactions:
+        items:
+          $ref: '#/definitions/models.CoinTransactionRes'
+        type: array
+    type: object
+  models.CoinTransactionRes:
+    properties:
+      created_at:
+        type: string
+      delta:
+        description: musbat - qo'shilgan, manfiy - sarflangan
+        type: integer
+      id:
+        type: string
+      reason:
+        type: string
+      reference_id:
+        type: string
+      reference_type:
+        type: string
+      user_id:
+        type: string
+      user_name:
+        type: string
+    type: object
+  models.ConfirmationReq:
+    properties:
+      confirmation_code:
+        type: string
+      identifier:
+        type: string
+      referral_code:
+        description: ReferralCode - ixtiyoriy, faqat yangi user yaratilayotganda ishlatiladi.
+        type: string
+      type:
+        description: '"email" or "telegram"'
+        type: string
+    type: object
+  models.ContactCreateReq:
+    properties:
+      link_url:
+        type: string
+      name:
+        type: string
+      phone_number:
+        type: string
+    type: object
+  models.ContactList:
+    properties:
+      contacts:
+        items:
+          $ref: '#/definitions/models.ContactRes'
+        type: array
+      count:
+        type: integer
+    type: object
+  models.ContactRes:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      link_url:
+        type: string
+      name:
+        type: string
+      phone_number:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.ContactUpdateBody:
+    properties:
+      link_url:
+        type: string
+      name:
+        type: string
+      phone_number:
+        type: string
+    type: object
+  models.CustomPermissionCreateReq:
+    properties:
+      attributes:
+        additionalProperties: {}
+        type: object
+      order_num:
+        type: integer
+      parent_id:
+        type: string
+      title:
+        type: string
+    type: object
+  models.CustomPermissionList:
+    properties:
+      count:
+        type: integer
+      modules:
+        items:
+          $ref: '#/definitions/models.CustomPermissionRes'
+        type: array
+    type: object
+  models.CustomPermissionRes:
+    properties:
+      attributes:
+        additionalProperties: {}
+        type: object
+      created_at:
+        type: string
+      id:
+        type: string
+      order_num:
+        type: integer
+      parent_id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.CustomPermissionUpdateReq:
+    properties:
+      attributes:
+        additionalProperties: {}
+        type: object
+      id:
+        type: string
+      order_num:
+        type: integer
+      title:
+        type: string
+    type: object
+  models.DashboardRes:
+    properties:
+      active_subscriptions:
+        type: integer
+      active_users:
+        type: integer
+      ai_total_cost_usd:
+        type: number
+      cases:
+        type: integer
+      categories:
+        type: integer
+      completed_sessions:
+        type: integer
+      users:
+        type: integer
+    type: object
+  models.DebriefReportCreateReq:
+    properties:
+      correct_steps:
+        items:
+          type: string
+        type: array
+      guideline_notes:
+        type: string
+      incorrect_steps:
+        items:
+          type: string
+        type: array
+      session_id:
+        type: string
+      weak_topics:
+        items:
+          type: string
+        type: array
+    type: object
+  models.DebriefReportRes:
+    properties:
+      coins_earned:
+        type: integer
+      correct_steps:
+        items:
+          type: string
+        type: array
+      created_at:
+        type: string
+      final_score:
+        type: integer
+      guideline_notes:
+        type: string
+      incorrect_steps:
+        items:
+          type: string
+        type: array
+      session_id:
+        type: string
+      weak_topics:
+        items:
+          type: string
+        type: array
+      xp_earned:
+        type: integer
+    type: object
+  models.FaqCreateBody:
+    properties:
+      answer:
+        additionalProperties:
+          type: string
+        type: object
+      order_num:
+        type: integer
+      question:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  models.FaqList:
+    properties:
+      count:
+        type: integer
+      faqs:
+        items:
+          $ref: '#/definitions/models.FaqRes'
+        type: array
+    type: object
+  models.FaqMobileList:
+    properties:
+      count:
+        type: integer
+      faqs:
+        items:
+          $ref: '#/definitions/models.FaqMobileRes'
+        type: array
+    type: object
+  models.FaqMobileRes:
+    properties:
+      answer:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      order_num:
+        type: integer
+      question:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.FaqRes:
+    properties:
+      answer:
+        additionalProperties:
+          type: string
+        type: object
+      created_at:
+        type: string
+      id:
+        type: string
+      order_num:
+        type: integer
+      question:
+        additionalProperties:
+          type: string
+        type: object
+      updated_at:
+        type: string
+    type: object
+  models.FaqUpdateBody:
+    properties:
+      answer:
+        additionalProperties:
+          type: string
+        type: object
+      order_num:
+        type: integer
+      question:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  models.FavoriteToggleRes:
+    properties:
+      is_favorite:
+        type: boolean
+    type: object
+  models.GoogleLoginReq:
+    properties:
+      id_token:
+        type: string
+      referral_code:
+        type: string
+    type: object
+  models.LevelCreateReq:
+    properties:
+      badge_image_url:
+        type: string
+      level_number:
+        type: integer
+      required_xp:
+        type: integer
+      slug:
+        type: string
+      title:
+        type: string
+    type: object
+  models.LevelRes:
+    properties:
+      badge_image_url:
+        type: string
+      id:
+        type: string
+      level_number:
+        type: integer
+      required_xp:
+        type: integer
+      slug:
+        type: string
+      title:
+        type: string
+    type: object
+  models.LevelUpdateReq:
+    properties:
+      badge_image_url:
+        type: string
+      id:
+        type: string
+      level_number:
+        type: integer
+      required_xp:
+        type: integer
+      slug:
+        type: string
+      title:
+        type: string
+    type: object
+  models.LoginReq:
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+    type: object
+  models.MasterNotificationList:
+    properties:
+      count:
+        type: integer
+      notifications:
+        items:
+          $ref: '#/definitions/models.MasterNotificationRes'
+        type: array
+    type: object
+  models.MasterNotificationRes:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      message:
+        additionalProperties:
+          type: string
+        type: object
+      title:
+        additionalProperties:
+          type: string
+        type: object
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.MasterNotificationUpdateBody:
+    properties:
+      message:
+        additionalProperties:
+          type: string
+        type: object
+      title:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  models.NotificationCreateBody:
+    properties:
+      message:
+        additionalProperties:
+          type: string
+        type: object
+      title:
+        additionalProperties:
+          type: string
+        type: object
+      type:
+        description: selected | all
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.OrderCreateBody:
+    properties:
+      coins_used:
+        type: integer
+      tariff_id:
+        type: string
+    type: object
+  models.OrderList:
+    properties:
+      count:
+        type: integer
+      orders:
+        items:
+          $ref: '#/definitions/models.OrderStatisticRes'
+        type: array
+    type: object
+  models.OrderStatisticRes:
+    properties:
+      amount:
+        type: number
+      coins_used:
+        type: integer
+      created_at:
+        type: string
+      duration:
+        type: integer
+      id:
+        type: string
+      paid_at:
+        type: string
+      payment_type:
+        type: string
+      status:
+        type: string
+      tariff_amount:
+        type: number
+      tariff_id:
+        type: string
+      tariff_name:
+        type: string
+      user_id:
+        type: string
+      user_name:
+        type: string
+      user_phone:
+        type: string
+    type: object
+  models.PartnerCreateReq:
+    properties:
+      description:
+        additionalProperties:
+          type: string
+        type: object
+      image_url:
+        type: string
+      link_url:
+        type: string
+      name:
+        type: string
+    type: object
+  models.PartnerList:
+    properties:
+      count:
+        type: integer
+      partners:
+        items:
+          $ref: '#/definitions/models.PartnerRes'
+        type: array
+    type: object
+  models.PartnerMobileList:
+    properties:
+      count:
+        type: integer
+      partners:
+        items:
+          $ref: '#/definitions/models.PartnerMobileRes'
+        type: array
+    type: object
+  models.PartnerMobileRes:
+    properties:
+      id:
+        type: string
+      image_url:
+        type: string
+      link_url:
+        type: string
+      name:
+        type: string
+    type: object
+  models.PartnerRes:
+    properties:
+      created_at:
+        type: string
+      description:
+        additionalProperties:
+          type: string
+        type: object
+      id:
+        type: string
+      image_url:
+        type: string
+      link_url:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.PartnerUpdateReq:
+    properties:
+      description:
+        additionalProperties:
+          type: string
+        type: object
+      id:
+        type: string
+      image_url:
+        type: string
+      link_url:
+        type: string
+      name:
+        type: string
+    type: object
+  models.PromoCodeCreateReq:
+    properties:
+      created_by:
+        type: string
+      expires_at:
+        type: string
+      partner_id:
+        type: string
+      value:
+        description: tanga miqdori
+        type: integer
+    type: object
+  models.PromoCodeList:
+    properties:
+      count:
+        type: integer
+      promocodes:
+        items:
+          $ref: '#/definitions/models.PromoCodeRes'
+        type: array
+    type: object
+  models.PromoCodeRedeemRes:
+    properties:
+      coins_added:
+        type: integer
+    type: object
+  models.PromoCodeRes:
+    properties:
+      code:
+        type: string
+      created_by:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      issued_at:
+        type: string
+      partner_id:
+        type: string
+      partner_name:
+        type: string
+      status:
+        description: active | used | expired
+        type: string
+      used_at:
+        type: string
+      used_by:
+        type: string
+      value:
+        type: integer
+    type: object
+  models.RatingResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.RatingUserItem'
+        type: array
+      limit:
+        type: integer
+      me:
+        $ref: '#/definitions/models.RatingUserItem'
+      type:
+        $ref: '#/definitions/models.RatingType'
+    type: object
+  models.RatingType:
+    enum:
+    - total
+    - day
+    - week
+    - month
+    - year
+    type: string
+    x-enum-varnames:
+    - RatingTotal
+    - RatingDay
+    - RatingWeek
+    - RatingMonth
+    - RatingYear
+  models.RatingUserItem:
+    properties:
+      activity:
+        type: integer
+      image_url:
+        type: string
+      is_me:
+        type: boolean
+      name:
+        type: string
+      rank:
+        type: integer
+      user_id:
+        type: string
+    type: object
+  models.ReferralInfoRes:
+    properties:
+      invited:
+        items:
+          $ref: '#/definitions/models.ReferralInvitedItem'
+        type: array
+      invited_count:
+        type: integer
+      referral_code:
+        type: string
+      referred_reward:
+        description: taklif qilinganga necha tanga beriladi
+        type: integer
+      referrer_reward:
+        description: 1ta taklif uchun necha tanga beriladi (app_settings)
+        type: integer
+      total_coins_earned:
+        type: integer
+    type: object
+  models.ReferralInvitedItem:
+    properties:
+      coins_given:
+        type: integer
+      joined_at:
+        type: string
+      name:
+        type: string
+    type: object
+  models.RefreshPassword:
+    properties:
+      password:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.RefreshPasswordReq:
+    properties:
+      role:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.RefreshTokenReq:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  models.RoleAccessItem:
+    properties:
+      attributes:
+        additionalProperties: {}
+        type: object
+      custom_permission_id:
+        type: string
+      delete:
+        type: boolean
+      has_children:
+        type: boolean
+      read:
+        type: boolean
+      title:
+        type: string
+      update:
+        type: boolean
+      write:
+        type: boolean
+    type: object
+  models.RoleAccessList:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.RoleAccessItem'
+        type: array
+    type: object
+  models.RoleAccessUpsertReq:
+    properties:
+      custom_permission_id:
+        type: string
+      delete:
+        type: boolean
+      read:
+        type: boolean
+      role_id:
+        type: string
+      update:
+        type: boolean
+      write:
+        type: boolean
+    type: object
+  models.RoleCreateReq:
+    properties:
+      name:
+        type: string
+      slug:
+        type: string
+    type: object
+  models.RoleList:
+    properties:
+      count:
+        type: integer
+      roles:
+        items:
+          $ref: '#/definitions/models.RoleRes'
+        type: array
+    type: object
+  models.RoleRes:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      is_system:
+        type: boolean
+      name:
+        type: string
+      slug:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.RoleUpdateReq:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      slug:
+        type: string
+    type: object
+  models.SendConfirmationCodeReq:
+    properties:
+      identifier:
+        type: string
+      type:
+        description: '"email" or "telegram"'
+        type: string
+    type: object
+  models.SimulationEventReq:
+    properties:
+      payload:
+        additionalProperties: {}
+        type: object
+      session_id:
+        type: string
+      type:
+        description: question|exam|lab|imaging|medication|procedure
+        type: string
+    type: object
+  models.SimulationEventRes:
+    properties:
+      health_delta:
+        type: integer
+      health_percent:
+        type: integer
+      is_correct:
+        type: boolean
+      response:
+        additionalProperties: {}
+        description: AI javobi / lab natijasi va h.k.
+        type: object
+    type: object
+  models.SimulationFinishRes:
+    properties:
+      coins_earned:
+        type: integer
+      debrief_ready:
+        type: boolean
+      final_score:
+        type: integer
+      session_id:
+        type: string
+      xp_earned:
+        type: integer
+    type: object
+  models.SimulationSessionList:
+    properties:
+      count:
+        type: integer
+      sessions:
+        items:
+          $ref: '#/definitions/models.SimulationSessionRes'
+        type: array
+    type: object
+  models.SimulationSessionRes:
+    properties:
+      case_id:
+        type: string
+      case_title:
+        type: string
+      coins_earned:
+        type: integer
+      ended_at:
+        type: string
+      final_score:
+        type: integer
+      health_percent:
+        type: integer
+      id:
+        type: string
+      started_at:
+        type: string
+      status:
+        type: string
+      user_id:
+        type: string
+      xp_earned:
+        type: integer
+    type: object
+  models.SimulationStartRes:
+    properties:
+      case_id:
+        type: string
+      health_percent:
+        type: integer
+      initial_vitals:
+        $ref: '#/definitions/models.CaseVitals'
+      session_id:
+        type: string
+      time_limit_seconds:
+        type: integer
+      visual_state:
+        type: string
+      ws_url:
+        type: string
+    type: object
+  models.StudyPlanRes:
+    properties:
+      is_enabled:
+        type: boolean
+      remind_minutes_before:
+        type: integer
+      remind_time:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.StudyPlanUpsertReq:
+    properties:
+      is_enabled:
+        type: boolean
+      remind_minutes_before:
+        type: integer
+      remind_time:
+        description: '"20:00"'
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.TariffCreateReq:
+    properties:
+      coins:
+        description: faqat kind="coin_package" uchun
+        type: integer
+      description:
+        type: string
+      duration:
+        type: integer
+      kind:
+        description: '"subscription" | "coin_package", bo''sh bo''lsa "subscription"'
+        type: string
+      name:
+        type: string
+      price:
+        type: number
+    type: object
+  models.TariffList:
+    properties:
+      count:
+        type: integer
+      tariffs:
+        items:
+          $ref: '#/definitions/models.TariffRes'
+        type: array
+    type: object
+  models.TariffRes:
+    properties:
+      coins:
+        type: integer
+      created_at:
+        type: string
+      description:
+        type: string
+      duration:
+        type: integer
+      id:
+        type: string
+      kind:
+        type: string
+      name:
+        type: string
+      price:
+        type: number
+      updated_at:
+        type: string
+    type: object
+  models.TariffUpdateBody:
+    properties:
+      coins:
+        type: integer
+      description:
+        type: string
+      duration:
+        type: integer
+      kind:
+        type: string
+      name:
+        type: string
+      price:
+        type: number
+    type: object
+  models.TokenRes:
+    properties:
+      access_token:
+        type: string
+      id:
+        type: string
+      refresh_token:
+        type: string
+      role:
+        type: string
+    type: object
+  models.TopicCreateReq:
+    properties:
+      category_id:
+        type: string
+      name:
+        additionalProperties:
+          type: string
+        type: object
+      order_num:
+        type: integer
+    type: object
+  models.TopicList:
+    properties:
+      count:
+        type: integer
+      topics:
+        items:
+          $ref: '#/definitions/models.TopicRes'
+        type: array
+    type: object
+  models.TopicMobileList:
+    properties:
+      count:
+        type: integer
+      topics:
+        items:
+          $ref: '#/definitions/models.TopicMobileRes'
+        type: array
+    type: object
+  models.TopicMobileRes:
+    properties:
+      category_id:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      order_num:
+        type: integer
+    type: object
+  models.TopicRes:
+    properties:
+      category_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        additionalProperties:
+          type: string
+        type: object
+      order_num:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  models.TopicUpdateReq:
+    properties:
+      category_id:
+        type: string
+      id:
+        type: string
+      name:
+        additionalProperties:
+          type: string
+        type: object
+      order_num:
+        type: integer
+    type: object
+  models.UserActivityCreateBody:
+    properties:
+      activity:
+        type: integer
+    type: object
+  models.UserCheckReq:
+    properties:
+      identifier:
+        type: string
+    type: object
+  models.UserCheckRes:
+    properties:
+      has_account:
+        type: boolean
+    type: object
+  models.UserLimitStatusRes:
+    properties:
+      has_subscription:
+        description: true - limit cheksiz (Premium)
+        type: boolean
+      remaining:
+        type: integer
+      total:
+        type: integer
+      used:
+        type: integer
+    type: object
+  models.UserList:
+    properties:
+      count:
+        type: integer
+      users:
+        items:
+          $ref: '#/definitions/models.UserRes'
+        type: array
+    type: object
+  models.UserNotificationList:
+    properties:
+      count:
+        type: integer
+      notifications:
+        items:
+          $ref: '#/definitions/models.UserNotificationRes'
+        type: array
+    type: object
+  models.UserNotificationRes:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      is_read:
+        type: boolean
+      message:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.UserRes:
+    properties:
+      coins:
+        type: integer
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      image_url:
+        type: string
+      language:
+        type: string
+      level:
+        type: integer
+      name:
+        type: string
+      phone_number:
+        type: string
+      specialization:
+        description: student|resident|doctor
+        type: string
+      streak_count:
+        type: integer
+      updated_at:
+        type: string
+      xp:
+        type: integer
+    type: object
+  models.VoiceSettingRes:
+    properties:
+      enabled:
+        type: boolean
+    type: object
+info:
+  contact: {}
+  description: API for MedicAI clinical simulation platform
+  title: MedicAI API
+  version: "1.0"
+paths:
+  /auth/token/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Middleware "access token expired" (401) qaytarganda shu endpoint
+        orqali yangi access+refresh token juftini oling
+      parameters:
+      - description: refresh_token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.RefreshTokenReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TokenRes'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      summary: Access token'ni refresh_token orqali yangilash
+      tags:
+      - auth
+  /mobile/about:
+    get:
+      consumes:
+      - application/json
+      description: Get all about with optional filtering
+      parameters:
+      - description: Title
+        in: query
+        name: title
+        type: string
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AboutMobileList'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get all about
+      tags:
+      - about
+  /mobile/about/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a about by their ID
+      parameters:
+      - description: About ID
+        in: path
+        name: id
+        type: string
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AboutMobileRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get about by ID
+      tags:
+      - about
+  /mobile/app-route:
+    get:
+      consumes:
+      - application/json
+      description: Get all appRoute with optional filtering
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AppRouteList'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get all appRoute
+      tags:
+      - appRoute
+  /mobile/app-route/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a appRoute by their ID
+      parameters:
+      - description: AppRoute ID
+        in: path
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AppRouteRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get appRoute by ID
+      tags:
+      - appRoute
+  /mobile/auth/google:
+    post:
+      consumes:
+      - application/json
+      description: 'BACKEND_STRUCTURE.md 1-bo''lim: Google ID token orqali bir bosqichli
+        kirish'
+      parameters:
+      - description: Google ID token
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.GoogleLoginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TokenRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Google orqali kirish (1 bosqichli)
+      tags:
+      - auth
+  /mobile/auth/user/check:
+    post:
+      consumes:
+      - application/json
+      description: Check user
+      parameters:
+      - description: User check credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserCheckReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserCheckRes'
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Check user
+      tags:
+      - auth
+  /mobile/auth/user/otp/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Verify the provided confirmation code and return a token if valid
+      parameters:
+      - description: Code Details
+        in: body
+        name: banner
+        required: true
+        schema:
+          $ref: '#/definitions/models.ConfirmationReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Verify confirmation code
+      tags:
+      - auth
+  /mobile/auth/user/otp/send:
+    post:
+      consumes:
+      - application/json
+      description: Send a confirmation code to the provided email address
+      parameters:
+      - description: Code Details
+        in: body
+        name: banner
+        required: true
+        schema:
+          $ref: '#/definitions/models.SendConfirmationCodeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Send confirmation code to email
+      tags:
+      - auth
+  /mobile/banner:
+    get:
+      consumes:
+      - application/json
+      description: Get all banner with optional filtering
+      parameters:
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.BannerMobileList'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get all banner
+      tags:
+      - banner
+  /mobile/banner/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a banner by their ID
+      parameters:
+      - description: Banner ID
+        in: path
+        name: id
+        type: string
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.BannerMobileRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get banner by ID
+      tags:
+      - banner
+  /mobile/case:
+    get:
+      parameters:
+      - description: Topic ID
+        in: query
+        name: topic_id
+        type: string
+      - description: Category ID
+        in: query
+        name: category_id
+        type: string
+      - description: easy|medium|hard
+        in: query
+        name: difficulty
+        type: string
+      - description: new|active|completed|failed|abandoned (foydalanuvchi holati)
+        in: query
+        name: status
+        type: string
+      - description: Search
+        in: query
+        name: search
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CaseMobileList'
+      security:
+      - BearerAuth: []
+      summary: Get cases catalog (mobile)
+      tags:
+      - case
+  /mobile/case/{id}:
+    get:
+      parameters:
+      - description: Case ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CaseMobileRes'
+      security:
+      - BearerAuth: []
+      summary: Get case detail (mobile)
+      tags:
+      - case
+  /mobile/case/random:
+    get:
+      parameters:
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CaseMobileRes'
+      security:
+      - BearerAuth: []
+      summary: '"Try your luck" - tasodifiy keys (BACKEND_STRUCTURE.md 3-bo''lim)'
+      tags:
+      - case
+  /mobile/category:
+    get:
+      parameters:
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CategoryMobileList'
+      security:
+      - BearerAuth: []
+      summary: Get all categories (mobile)
+      tags:
+      - category
+  /mobile/category/{id}:
+    get:
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CategoryMobileRes'
+      security:
+      - BearerAuth: []
+      summary: Get category by ID (mobile)
+      tags:
+      - category
+  /mobile/contact:
+    get:
+      consumes:
+      - application/json
+      description: Get all contact with optional filtering
+      parameters:
+      - description: Name
+        in: query
+        name: name
+        type: string
+      - description: PhoneNumber
+        in: query
+        name: phone_number
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ContactList'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get all contact
+      tags:
+      - contact
+  /mobile/contact/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a contact by their ID
+      parameters:
+      - description: Contact ID
+        in: path
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ContactRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get contact by ID
+      tags:
+      - contact
+  /mobile/debrief/{session_id}:
+    get:
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.DebriefReportRes'
+      security:
+      - BearerAuth: []
+      summary: AI orqali Debriefing hisoboti (BACKEND_STRUCTURE.md 5-bo'lim)
+      tags:
+      - debrief
+  /mobile/faq:
+    get:
+      consumes:
+      - application/json
+      description: Get all faq with optional filtering
+      parameters:
+      - description: Question
+        in: query
+        name: question
+        type: string
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.FaqMobileList'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get all faq
+      tags:
+      - faq
+  /mobile/faq/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a faq by their ID
+      parameters:
+      - description: Faq ID
+        in: path
+        name: id
+        type: string
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.FaqMobileRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get faq by ID
+      tags:
+      - faq
+  /mobile/favorite:
+    get:
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CaseMobileList'
+      security:
+      - BearerAuth: []
+      summary: Sevimlilar ro'yxati (GET /api/v1/favorites - BACKEND_STRUCTURE.md 3-bo'lim)
+      tags:
+      - favorite
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Case ID
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            case_id:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.FavoriteToggleRes'
+      security:
+      - BearerAuth: []
+      summary: Sevimlilarga qo'shish/olib tashlash (BACKEND_STRUCTURE.md 3-bo'lim)
+      tags:
+      - favorite
+  /mobile/notification/{id}/read:
+    put:
+      consumes:
+      - application/json
+      description: Read notification
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Notification updated
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Read notification
+      tags:
+      - notification
+  /mobile/notification/user:
+    get:
+      consumes:
+      - application/json
+      description: Get all notification with optional filtering
+      parameters:
+      - description: Is Read
+        in: query
+        name: is_read
+        type: boolean
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserNotificationList'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get all notification
+      tags:
+      - notification
+  /mobile/partner:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PartnerMobileList'
+      security:
+      - BearerAuth: []
+      summary: Home ekranidagi "Hamkor kurslari" banneri (TZ 2.1-bo'lim)
+      tags:
+      - partner
+  /mobile/promocode:
+    get:
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PromoCodeList'
+      security:
+      - BearerAuth: []
+      summary: Mening Promokodlarim (ishlatganlarim, BACKEND_STRUCTURE.md 5-bo'lim)
+      tags:
+      - promocode
+  /mobile/promocode/redeem:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Promo code
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            code:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PromoCodeRedeemRes'
+      security:
+      - BearerAuth: []
+      summary: Promokodni kiritib tanga olish (TZ 2.3-bo'lim)
+      tags:
+      - promocode
+  /mobile/referral:
+    get:
+      description: O'z referral_code'i, taklif qilganlar soni va ular evaziga olingan
+        tangalar
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ReferralInfoRes'
+      security:
+      - BearerAuth: []
+      summary: Referral ma'lumotlari (do'stlarni taklif qilish)
+      tags:
+      - user
+  /mobile/setting/voice:
+    get:
+      description: |-
+        Audio backendda generatsiya qilinmaydi - frontend shu bayroqqa qarab
+        qurilma TTS'idan (device text-to-speech) foydalanadi yoki yashiradi.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.VoiceSettingRes'
+      security:
+      - BearerAuth: []
+      summary: Ovozli funksiya (shikoyat/chat matnini o'qib berish) global yoqilganmi
+      tags:
+      - setting
+  /mobile/simulation/{id}:
+    get:
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SimulationSessionRes'
+      security:
+      - BearerAuth: []
+      tags:
+      - simulation
+  /mobile/simulation/{id}/event:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Event
+        in: body
+        name: event
+        required: true
+        schema:
+          $ref: '#/definitions/models.SimulationEventReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SimulationEventRes'
+      security:
+      - BearerAuth: []
+      summary: Anamnez/ko'rik/tahlil/dori qadamini yuborish (BACKEND_STRUCTURE.md
+        4-bo'lim)
+      tags:
+      - simulation
+  /mobile/simulation/{id}/finish:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: manual|health_zero|timeout
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            reason:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SimulationFinishRes'
+      security:
+      - BearerAuth: []
+      summary: Sessiyani yakunlash (BACKEND_STRUCTURE.md 4,5-bo'lim)
+      tags:
+      - simulation
+  /mobile/simulation/{id}/ws:
+    get:
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      summary: Real-vaqt vitallar monitori (BACKEND_STRUCTURE.md 4-bo'lim, WebSocket)
+      tags:
+      - simulation
+  /mobile/simulation/completed:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SimulationSessionList'
+      security:
+      - BearerAuth: []
+      summary: Profile -> Completed (BACKEND_STRUCTURE.md 1-bo'lim)
+      tags:
+      - simulation
+  /mobile/simulation/ongoing:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SimulationSessionList'
+      security:
+      - BearerAuth: []
+      summary: Profile -> Ongoing (BACKEND_STRUCTURE.md 1-bo'lim)
+      tags:
+      - simulation
+  /mobile/simulation/start:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Case ID
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            case_id:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SimulationStartRes'
+      security:
+      - BearerAuth: []
+      summary: Sessiyani boshlash (BACKEND_STRUCTURE.md 4-bo'lim)
+      tags:
+      - simulation
+  /mobile/study-plan:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.StudyPlanRes'
+      security:
+      - BearerAuth: []
+      tags:
+      - study-plan
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Study plan
+        in: body
+        name: plan
+        required: true
+        schema:
+          $ref: '#/definitions/models.StudyPlanUpsertReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: O'quv rejasi va eslatma vaqtini belgilash (BACKEND_STRUCTURE.md 2-bo'lim)
+      tags:
+      - study-plan
+  /mobile/subscription:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Tariff
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/models.OrderCreateBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Premium obunaga buyurtma (BACKEND_STRUCTURE.md 5-bo'lim, Click orqali
+        to'lov)
+      tags:
+      - subscription
+  /mobile/tariff:
+    get:
+      consumes:
+      - application/json
+      description: Get all tariff with optional filtering
+      parameters:
+      - description: Duration
+        in: query
+        name: duration
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TariffList'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get all tariff
+      tags:
+      - tariff
+  /mobile/tariff/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a tariff by their ID
+      parameters:
+      - description: Tariff ID
+        in: path
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TariffRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get tariff by ID
+      tags:
+      - tariff
+  /mobile/topic:
+    get:
+      parameters:
+      - description: Category ID
+        in: query
+        name: category_id
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TopicMobileList'
+      security:
+      - BearerAuth: []
+      summary: Mavzular ro'yxati (mobile)
+      tags:
+      - topic
+  /mobile/user/activity:
+    get:
+      consumes:
+      - application/json
+      description: 'Returns user activity stats by type: day|week|month|year|range.
+        For day: optional ?date=YYYY-MM-DD. For range: required ?from=YYYY-MM-DD&to=YYYY-MM-DD'
+      parameters:
+      - description: 'Stats type: day|week|month|year|range'
+        in: query
+        name: type
+        required: true
+        type: string
+      - description: 'For day only: YYYY-MM-DD (default: today)'
+        in: query
+        name: date
+        type: string
+      - description: 'For range only: YYYY-MM-DD'
+        in: query
+        name: from
+        type: string
+      - description: 'For range only: YYYY-MM-DD'
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Activity stats
+          schema:
+            $ref: '#/definitions/models.ActivityStatsResponse'
+        "400":
+          description: Invalid request params
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get user activity stats
+      tags:
+      - profile
+    post:
+      consumes:
+      - application/json
+      description: Activity user
+      parameters:
+      - description: User activity credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserActivityCreateBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Activity created
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Activity user
+      tags:
+      - profile
+  /mobile/user/delete/profile:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Profile deleted
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete a profile
+      tags:
+      - profile
+  /mobile/user/device:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Device
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            fcm_token:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Push token'ni o'chirish (logout)
+      tags:
+      - profile
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Device
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            fcm_token:
+              type: string
+            platform:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Push token ro'yxatdan o'tkazish (ko'p qurilma support)
+      tags:
+      - profile
+  /mobile/user/get/profile:
+    get:
+      consumes:
+      - application/json
+      description: Get user profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get user profile
+      tags:
+      - profile
+  /mobile/user/limit:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserLimitStatusRes'
+      security:
+      - BearerAuth: []
+      summary: Kunlik bepul urinish limiti holati (home ekranidagi "35/50 Limit" belgisi)
+      tags:
+      - profile
+  /mobile/user/rating:
+    get:
+      consumes:
+      - application/json
+      description: 'Reytingni qaytaradi: day|week|month|year|total. Default: total.
+        0 activity bo''lgan userlar avtomatik oxirida turadi. Response ichida TOP
+        list va "Me" (mening o''rnim) qaytadi.'
+      parameters:
+      - description: 'Filter type: day|week|month|year|total (default: total)'
+        enum:
+        - day
+        - week
+        - month
+        - year
+        - total
+        in: query
+        name: type
+        type: string
+      - description: 'Top list limit (default: 10, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Rating response
+          schema:
+            $ref: '#/definitions/models.RatingResponse'
+        "400":
+          description: Invalid request params
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Reyting (leaderboard) olish
+      tags:
+      - profile
+  /mobile/user/update/profile:
+    put:
+      consumes:
+      - multipart/form-data
+      description: Updates user profile fields via multipart/form-data. Image is optional.
+      parameters:
+      - description: User name
+        in: formData
+        name: name
+        type: string
+      - description: Phone number
+        in: formData
+        name: phone_number
+        type: string
+      - description: Email
+        in: formData
+        name: email
+        type: string
+      - description: Language (e.g. uz, ru, en)
+        in: formData
+        name: language
+        type: string
+      - description: Profile image (jpg/png/webp)
+        in: formData
+        name: image
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Profile updated
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update a user profile
+      tags:
+      - profile
+  /web/about:
+    get:
+      consumes:
+      - application/json
+      description: Get all about with optional filtering
+      parameters:
+      - description: Title
+        in: query
+        name: title
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AboutList'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get all about
+      tags:
+      - about
+    post:
+      consumes:
+      - application/json
+      description: Create a new about with the provided details
+      parameters:
+      - description: About Details
+        in: body
+        name: about
+        required: true
+        schema:
+          $ref: '#/definitions/models.AboutCreateBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create a new about
+      tags:
+      - about
+  /web/about/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a about by their ID
+      parameters:
+      - description: About ID
+        in: path
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AboutRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get about by ID
+      tags:
+      - about
+  /web/about/{id}/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Delete about
+      parameters:
+      - description: Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: About deleted
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete about
+      tags:
+      - about
+  /web/about/{id}/update:
+    put:
+      consumes:
+      - application/json
+      description: Update about
+      parameters:
+      - description: About ID
+        in: path
+        name: id
+        type: string
+      - description: About update credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.AboutUpdateBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: About updated
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update about
+      tags:
+      - about
+  /web/admin:
+    get:
+      parameters:
+      - description: Login
+        in: query
+        name: login
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AdminList'
+      security:
+      - BearerAuth: []
+      summary: Get all admins
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      description: Yangi admin panel foydalanuvchisi (xodim) qo'shish, rol biriktirish
+      parameters:
+      - description: Admin details
+        in: body
+        name: admin
+        required: true
+        schema:
+          $ref: '#/definitions/models.AdminCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create admin/employee
+      tags:
+      - admin
+  /web/admin/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a admin by their ID
+      parameters:
+      - description: Admin ID
+        in: path
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AdminRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get admin by ID
+      tags:
+      - admin
+  /web/admin/{id}/delete:
+    delete:
+      parameters:
+      - description: Admin ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete admin
+      tags:
+      - admin
+  /web/admin/{id}/update:
+    put:
+      consumes:
+      - application/json
+      description: login/rol va (ixtiyoriy) parolni yangilaydi
+      parameters:
+      - description: Admin ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Admin update
+        in: body
+        name: admin
+        required: true
+        schema:
+          $ref: '#/definitions/models.AdminUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update admin
+      tags:
+      - admin
+  /web/admin/profile:
+    get:
+      description: Tokendagi id bo'yicha o'z profilini olish
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AdminRes'
+      security:
+      - BearerAuth: []
+      summary: Get my admin profile
+      tags:
+      - admin
+  /web/ai-prompt:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.AIPromptRes'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: AI promptlarini ko'rish (BACKEND_STRUCTURE.md 7-bo'lim)
+      tags:
+      - ai-prompt
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Prompt
+        in: body
+        name: prompt
+        required: true
+        schema:
+          $ref: '#/definitions/models.AIPromptUpsertReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: AI promptni kodni o'zgartirmasdan sozlash
+      tags:
+      - ai-prompt
+  /web/ai-prompt/test-debrief:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: case_id + events
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.AITestDebriefReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AITestDebriefRes'
+      security:
+      - BearerAuth: []
+      summary: Debrief AI'sini bir martalik so'rov bilan sinash (qadamlar logi ->
+        hisobot)
+      tags:
+      - ai-prompt
+  /web/ai-prompt/test-patient:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: case_id + question
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.AITestPatientReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AITestPatientRes'
+      security:
+      - BearerAuth: []
+      summary: Bemor AI'sini bir martalik so'rov bilan sinash ("case yechish"ni tekshirish)
+      tags:
+      - ai-prompt
+  /web/ai-prompt/usage:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AIUsageSummaryRes'
+      security:
+      - BearerAuth: []
+      summary: Gemini AI xarajatlari va sarflangan tokenlar (BACKEND_STRUCTURE.md
+        7-bo'lim)
+      tags:
+      - ai-prompt
+  /web/app-route:
+    get:
+      consumes:
+      - application/json
+      description: Get all appRoute with optional filtering
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AppRouteList'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get all appRoute
+      tags:
+      - appRoute
+    post:
+      consumes:
+      - application/json
+      description: Create a new appRoute with the provided details
+      parameters:
+      - description: AppRoute Details
+        in: body
+        name: appRoute
+        required: true
+        schema:
+          $ref: '#/definitions/models.AppRouteCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create a new appRoute
+      tags:
+      - appRoute
+  /web/app-route/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a appRoute by their ID
+      parameters:
+      - description: AppRoute ID
+        in: path
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AppRouteRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get appRoute by ID
+      tags:
+      - appRoute
+  /web/app-route/{id}/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Delete appRoute
+      parameters:
+      - description: Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: AppRoute deleted
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete appRoute
+      tags:
+      - appRoute
+  /web/app-route/{id}/update:
+    put:
+      consumes:
+      - application/json
+      description: Update appRoute
+      parameters:
+      - description: AppRoute ID
+        in: path
+        name: id
+        type: string
+      - description: AppRoute update credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.AppRouteUpdateBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: AppRoute updated
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update appRoute
+      tags:
+      - appRoute
+  /web/auth/admin/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate admin with login and password
+      parameters:
+      - description: Admin login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JWT tokens
+          schema:
+            $ref: '#/definitions/models.TokenRes'
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Login admin
+      tags:
+      - auth
+  /web/auth/password/change:
+    put:
+      consumes:
+      - application/json
+      description: Change password
+      parameters:
+      - description: Change password credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.ChangePasswordBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password changed successfully
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Change password
+      tags:
+      - auth
+  /web/auth/password/refresh:
+    put:
+      consumes:
+      - application/json
+      - application/json
+      description: |-
+        Change password
+        Refresh password
+      parameters:
+      - description: Change password credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.ChangePasswordBody'
+      - description: Refresh password credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.RefreshPasswordReq'
+      produces:
+      - application/json
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.RefreshPassword'
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Refresh password
+      tags:
+      - auth
+      - auth
+  /web/banner:
+    get:
+      consumes:
+      - application/json
+      description: Get all banner with optional filtering
+      parameters:
+      - description: Title
+        in: query
+        name: title
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.BannerList'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get all banner
+      tags:
+      - banner
+    post:
+      consumes:
+      - application/json
+      description: Create a new banner with the provided details
+      parameters:
+      - description: Banner Details
+        in: body
+        name: banner
+        required: true
+        schema:
+          $ref: '#/definitions/models.BannerCreateBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create a new banner
+      tags:
+      - banner
+  /web/banner/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a banner by their ID
+      parameters:
+      - description: Banner ID
+        in: path
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.BannerRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get banner by ID
+      tags:
+      - banner
+  /web/banner/{id}/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Delete banner
+      parameters:
+      - description: Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Banner deleted
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete banner
+      tags:
+      - banner
+  /web/banner/{id}/update:
+    put:
+      consumes:
+      - application/json
+      description: Update banner
+      parameters:
+      - description: Banner ID
+        in: path
+        name: id
+        type: string
+      - description: Banner update credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.BannerUpdateBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Banner updated
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update banner
+      tags:
+      - banner
+  /web/case:
+    get:
+      parameters:
+      - description: Topic ID
+        in: query
+        name: topic_id
+        type: string
+      - description: Category ID
+        in: query
+        name: category_id
+        type: string
+      - description: easy|medium|hard
+        in: query
+        name: difficulty
+        type: string
+      - description: draft|published
+        in: query
+        name: status
+        type: string
+      - description: male|female
+        in: query
+        name: patient_gender
+        type: string
+      - description: true|false
+        in: query
+        name: is_ai_generated
+        type: string
+      - description: Search (title/subtitle/chief_complaint)
+        in: query
+        name: search
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CaseList'
+      security:
+      - BearerAuth: []
+      summary: Get all cases (admin)
+      tags:
+      - case
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Case details
+        in: body
+        name: case
+        required: true
+        schema:
+          $ref: '#/definitions/models.CaseCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create clinical case
+      tags:
+      - case
+  /web/case/{id}:
+    get:
+      parameters:
+      - description: Case ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CaseRes'
+      security:
+      - BearerAuth: []
+      summary: Get case by ID (admin)
+      tags:
+      - case
+  /web/case/{id}/delete:
+    delete:
+      parameters:
+      - description: Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete case
+      tags:
+      - case
+  /web/case/{id}/publish:
+    put:
+      parameters:
+      - description: Case ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Publish case (admin ko'rib chiqib tasdiqlaydi)
+      tags:
+      - case
+  /web/case/{id}/update:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Case ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Case update
+        in: body
+        name: case
+        required: true
+        schema:
+          $ref: '#/definitions/models.CaseUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update case
+      tags:
+      - case
+  /web/case/ai-generate:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Topic, difficulty va ixtiyoriy chief_complaint/expected_answer
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CaseGenReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: AI yordamida keys yaratish (BACKEND_STRUCTURE.md 7-bo'lim)
+      tags:
+      - case
+  /web/category:
+    get:
+      parameters:
+      - description: Name
+        in: query
+        name: name
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CategoryList'
+      security:
+      - BearerAuth: []
+      summary: Get all categories
+      tags:
+      - category
+    post:
+      consumes:
+      - application/json
+      description: 'BACKEND_STRUCTURE.md 2-bo''lim: tibbiy yo''nalishlar (Kardiologiya,
+        Terapiya va h.k.)'
+      parameters:
+      - description: Category Details
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/models.CategoryCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create a new category
+      tags:
+      - category
+  /web/category/{id}:
+    get:
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CategoryRes'
+      security:
+      - BearerAuth: []
+      summary: Get category by ID
+      tags:
+      - category
+  /web/category/{id}/delete:
+    delete:
+      parameters:
+      - description: Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete category
+      tags:
+      - category
+  /web/category/{id}/update:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Category update
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.CategoryUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update category
+      tags:
+      - category
+  /web/coin-transaction:
+    get:
+      description: 'point_transactions (kind=coin): coin_purchase, category_unlock,
+        referral_reward, promo_redeem, simulation_finish va h.k.'
+      parameters:
+      - description: User ID bo'yicha filter
+        in: query
+        name: user_id
+        type: string
+      - description: Sabab bo'yicha filter (coin_purchase, referral_reward, ...)
+        in: query
+        name: reason
+        type: string
+      - description: "2024-06-01"
+        in: query
+        name: from
+        type: string
+      - description: "2024-06-30"
+        in: query
+        name: to
+        type: string
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CoinTransactionList'
+      security:
+      - BearerAuth: []
+      summary: Tangalar savdosi monitoringi - tranzaksiyalar ro'yxati
+      tags:
+      - coin-transaction
+  /web/coin-transaction/summary:
+    get:
+      description: Sotib olingan, ishlab topilgan, sarflangan va aylanmadagi jami
+        tanga
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CoinMonitoringSummaryRes'
+      security:
+      - BearerAuth: []
+      summary: Tangalar savdosi monitoringi - umumiy ko'rinish
+      tags:
+      - coin-transaction
+  /web/contact:
+    get:
+      consumes:
+      - application/json
+      description: Get all contact with optional filtering
+      parameters:
+      - description: Name
+        in: query
+        name: name
+        type: string
+      - description: PhoneNumber
+        in: query
+        name: phone_number
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ContactList'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get all contact
+      tags:
+      - contact
+    post:
+      consumes:
+      - application/json
+      description: Create a new contact with the provided details
+      parameters:
+      - description: Contact Details
+        in: body
+        name: contact
+        required: true
+        schema:
+          $ref: '#/definitions/models.ContactCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create a new contact
+      tags:
+      - contact
+  /web/contact/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a contact by their ID
+      parameters:
+      - description: Contact ID
+        in: path
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ContactRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get contact by ID
+      tags:
+      - contact
+  /web/contact/{id}/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Delete contact
+      parameters:
+      - description: Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Contact deleted
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete contact
+      tags:
+      - contact
+  /web/contact/{id}/update:
+    put:
+      consumes:
+      - application/json
+      description: Update contact
+      parameters:
+      - description: Contact ID
+        in: path
+        name: id
+        type: string
+      - description: Contact update credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.ContactUpdateBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Contact updated
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update contact
+      tags:
+      - contact
+  /web/custom-permission:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CustomPermissionList'
+      security:
+      - BearerAuth: []
+      summary: Get root modules
+      tags:
+      - custom-permission
+    post:
+      consumes:
+      - application/json
+      description: parent_id bo'sh bo'lsa root modul, berilsa shu modulning bo'lim-moduli
+        (U-Code custom-permission patterni)
+      parameters:
+      - description: Module details
+        in: body
+        name: module
+        required: true
+        schema:
+          $ref: '#/definitions/models.CustomPermissionCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Add root or child module
+      tags:
+      - custom-permission
+  /web/custom-permission/{id}/children:
+    get:
+      parameters:
+      - description: Parent module ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CustomPermissionList'
+      security:
+      - BearerAuth: []
+      summary: Get child modules of a parent module
+      tags:
+      - custom-permission
+  /web/custom-permission/{id}/delete:
+    delete:
+      parameters:
+      - description: Module ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete module
+      tags:
+      - custom-permission
+  /web/custom-permission/{id}/update:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Module ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Module update
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.CustomPermissionUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update module
+      tags:
+      - custom-permission
+  /web/custom-permission/accesses:
+    get:
+      description: role_id majburiy; parent_id berilmasa root modullar, berilsa shu
+        modulning bo'lim-modullari qaytadi
+      parameters:
+      - description: Role ID
+        in: query
+        name: role_id
+        required: true
+        type: string
+      - description: Parent module ID
+        in: query
+        name: parent_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.RoleAccessList'
+      security:
+      - BearerAuth: []
+      summary: Get modules with a role's current permissions
+      tags:
+      - custom-permission
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Access details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.RoleAccessUpsertReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Grant/revoke a role's permissions for a module
+      tags:
+      - custom-permission
+  /web/dashboard:
+    get:
+      consumes:
+      - application/json
+      description: Get dashboard
+      parameters:
+      - description: Type (range, day, week, month, year)
+        enum:
+        - range
+        - day
+        - week
+        - month
+        - year
+        in: query
+        name: type
+        type: string
+      - description: Day (YYYY-MM-DD)
+        in: query
+        name: day
+        type: string
+      - description: From Date (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: To Date (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.DashboardRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get dashboard
+      tags:
+      - dashboard
+  /web/faq:
+    get:
+      consumes:
+      - application/json
+      description: Get all faq with optional filtering
+      parameters:
+      - description: Question
+        in: query
+        name: question
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.FaqList'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get all faq
+      tags:
+      - faq
+    post:
+      consumes:
+      - application/json
+      description: Create a new faq with the provided details
+      parameters:
+      - description: Faq Details
+        in: body
+        name: faq
+        required: true
+        schema:
+          $ref: '#/definitions/models.FaqCreateBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create a new faq
+      tags:
+      - faq
+  /web/faq/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a faq by their ID
+      parameters:
+      - description: Faq ID
+        in: path
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.FaqRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get faq by ID
+      tags:
+      - faq
+  /web/faq/{id}/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Delete faq
+      parameters:
+      - description: Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Faq deleted
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete faq
+      tags:
+      - faq
+  /web/faq/{id}/update:
+    put:
+      consumes:
+      - application/json
+      description: Update faq
+      parameters:
+      - description: Faq ID
+        in: path
+        name: id
+        type: string
+      - description: Faq update credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.FaqUpdateBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Faq updated
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update faq
+      tags:
+      - faq
+  /web/file-upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: File upload
+      parameters:
+      - description: File
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: File upload
+      tags:
+      - file-upload
+  /web/level:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.LevelRes'
+            type: array
+      security:
+      - BearerAuth: []
+      tags:
+      - level
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Level
+        in: body
+        name: level
+        required: true
+        schema:
+          $ref: '#/definitions/models.LevelCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Level qo'shish (statik jadval)
+      tags:
+      - level
+  /web/level/{id}/delete:
+    delete:
+      parameters:
+      - description: Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      tags:
+      - level
+  /web/level/{id}/update:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Level ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Level update
+        in: body
+        name: level
+        required: true
+        schema:
+          $ref: '#/definitions/models.LevelUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      tags:
+      - level
+  /web/notification:
+    get:
+      consumes:
+      - application/json
+      description: Get all notification with optional filtering
+      parameters:
+      - description: Title
+        in: query
+        name: title
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MasterNotificationList'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get all notification
+      tags:
+      - notification
+    post:
+      consumes:
+      - application/json
+      description: Create a new notification with the provided details
+      parameters:
+      - description: Notification Details
+        in: body
+        name: notification
+        required: true
+        schema:
+          $ref: '#/definitions/models.NotificationCreateBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create a new notification
+      tags:
+      - notification
+  /web/notification/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a notification by their ID
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MasterNotificationRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get notification by ID
+      tags:
+      - notification
+  /web/notification/{id}/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Delete notification
+      parameters:
+      - description: Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Notification deleted
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete notification
+      tags:
+      - notification
+  /web/notification/{id}/update:
+    put:
+      consumes:
+      - application/json
+      description: Update notification
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        type: string
+      - description: Notification update credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.MasterNotificationUpdateBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Notification updated
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update notification
+      tags:
+      - notification
+  /web/order:
+    get:
+      parameters:
+      - description: User ID
+        in: query
+        name: user_id
+        type: string
+      - description: Tariff ID
+        in: query
+        name: tariff_id
+        type: string
+      - description: Order Status
+        enum:
+        - NEW
+        - PAID
+        - CANCELLED
+        - RESERVED
+        - EXPIRED
+        in: query
+        name: status
+        type: string
+      - description: Payment Type
+        enum:
+        - click
+        - admin
+        in: query
+        name: payment_type
+        type: string
+      - description: range, day, week, month, year
+        in: query
+        name: type
+        type: string
+      - description: YYYY-MM-DD
+        in: query
+        name: day
+        type: string
+      - description: YYYY-MM-DD
+        in: query
+        name: from
+        type: string
+      - description: YYYY-MM-DD
+        in: query
+        name: to
+        type: string
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.OrderList'
+      security:
+      - BearerAuth: []
+      tags:
+      - order
+  /web/order/{id}:
+    get:
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.OrderStatisticRes'
+      security:
+      - BearerAuth: []
+      tags:
+      - order
+  /web/partner:
+    get:
+      parameters:
+      - description: Name
+        in: query
+        name: name
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PartnerList'
+      security:
+      - BearerAuth: []
+      tags:
+      - partner
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Partner
+        in: body
+        name: partner
+        required: true
+        schema:
+          $ref: '#/definitions/models.PartnerCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Hamkor o'quv markazi qo'shish (BACKEND_STRUCTURE.md 7-bo'lim)
+      tags:
+      - partner
+  /web/partner/{id}:
+    get:
+      parameters:
+      - description: Partner ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PartnerRes'
+      security:
+      - BearerAuth: []
+      tags:
+      - partner
+  /web/partner/{id}/delete:
+    delete:
+      parameters:
+      - description: Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      tags:
+      - partner
+  /web/partner/{id}/update:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Partner ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Partner update
+        in: body
+        name: partner
+        required: true
+        schema:
+          $ref: '#/definitions/models.PartnerUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      tags:
+      - partner
+  /web/promocode:
+    get:
+      parameters:
+      - description: Partner ID
+        in: query
+        name: partner_id
+        type: string
+      - description: active|used|expired
+        in: query
+        name: status
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PromoCodeList'
+      security:
+      - BearerAuth: []
+      summary: Generatsiya qilingan promokodlar ro'yxati (BACKEND_STRUCTURE.md 7-bo'lim)
+      tags:
+      - promocode
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: PromoCode details
+        in: body
+        name: promocode
+        required: true
+        schema:
+          $ref: '#/definitions/models.PromoCodeCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Hamkor/admin tanga qiymatli promokod yaratadi (TZ 5-6-bo'lim)
+      tags:
+      - promocode
+  /web/promocode/{id}:
+    get:
+      parameters:
+      - description: PromoCode ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PromoCodeRes'
+      security:
+      - BearerAuth: []
+      tags:
+      - promocode
+  /web/promocode/{id}/delete:
+    delete:
+      parameters:
+      - description: Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      tags:
+      - promocode
+  /web/role:
+    get:
+      parameters:
+      - description: Name
+        in: query
+        name: name
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.RoleList'
+      security:
+      - BearerAuth: []
+      summary: Get all roles
+      tags:
+      - role
+    post:
+      consumes:
+      - application/json
+      description: Admin panel roli (superadmin tizim roli, o'zgartirilmaydi/o'chirilmaydi)
+      parameters:
+      - description: Role details
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/models.RoleCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create a new role
+      tags:
+      - role
+  /web/role/{id}:
+    get:
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.RoleRes'
+      security:
+      - BearerAuth: []
+      summary: Get role by ID
+      tags:
+      - role
+  /web/role/{id}/delete:
+    delete:
+      parameters:
+      - description: Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete role
+      tags:
+      - role
+  /web/role/{id}/update:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role update
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.RoleUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update role
+      tags:
+      - role
+  /web/setting:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.AppSettingRes'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: 'Tizim sozlamalari (BACKEND_STRUCTURE.md 7-bo''lim: masalan kunlik
+        bepul limit)'
+      tags:
+      - setting
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: key/value
+        in: body
+        name: setting
+        required: true
+        schema:
+          $ref: '#/definitions/models.AppSettingSetReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      tags:
+      - setting
+  /web/tariff:
+    get:
+      consumes:
+      - application/json
+      description: Get all tariff with optional filtering
+      parameters:
+      - description: Duration
+        in: query
+        name: duration
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TariffList'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get all tariff
+      tags:
+      - tariff
+    post:
+      consumes:
+      - application/json
+      description: Create a new tariff with the provided details
+      parameters:
+      - description: Tariff Details
+        in: body
+        name: tariff
+        required: true
+        schema:
+          $ref: '#/definitions/models.TariffCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create a new tariff
+      tags:
+      - tariff
+  /web/tariff/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a tariff by their ID
+      parameters:
+      - description: Tariff ID
+        in: path
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TariffRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get tariff by ID
+      tags:
+      - tariff
+  /web/tariff/{id}/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Delete tariff
+      parameters:
+      - description: Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Tariff deleted
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete tariff
+      tags:
+      - tariff
+  /web/tariff/{id}/update:
+    put:
+      consumes:
+      - application/json
+      description: Update tariff
+      parameters:
+      - description: Tariff ID
+        in: path
+        name: id
+        type: string
+      - description: Tariff update credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.TariffUpdateBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Tariff updated
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update tariff
+      tags:
+      - tariff
+  /web/topic:
+    get:
+      parameters:
+      - description: Category ID
+        in: query
+        name: category_id
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TopicList'
+      security:
+      - BearerAuth: []
+      tags:
+      - topic
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Topic details
+        in: body
+        name: topic
+        required: true
+        schema:
+          $ref: '#/definitions/models.TopicCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 'Bo''lim ichidagi mavzu yaratish (TZ 6-bo''lim: Bo''lim -> Mavzu ->
+        Keys)'
+      tags:
+      - topic
+  /web/topic/{id}:
+    get:
+      parameters:
+      - description: Topic ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TopicRes'
+      security:
+      - BearerAuth: []
+      tags:
+      - topic
+  /web/topic/{id}/delete:
+    delete:
+      parameters:
+      - description: Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      tags:
+      - topic
+  /web/topic/{id}/update:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Topic ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Topic update
+        in: body
+        name: topic
+        required: true
+        schema:
+          $ref: '#/definitions/models.TopicUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      tags:
+      - topic
+  /web/user:
+    get:
+      consumes:
+      - application/json
+      description: Get all user with optional filtering
+      parameters:
+      - description: Name
+        in: query
+        name: name
+        type: string
+      - description: PhoneNumber
+        in: query
+        name: phone_number
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserList'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get all user
+      tags:
+      - user
+  /web/user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get an user by their ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get user by ID
+      tags:
+      - user
+  /web/user/{id}/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Delete user
+      parameters:
+      - description: Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User deleted
+          schema:
+            type: string
+        "400":
+          description: Invalid request payload
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete user
+      tags:
+      - user
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

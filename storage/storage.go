@@ -221,17 +221,6 @@ type TopicI interface {
 	GetAllMobile(req *m.TopicGetListMobileReq) (*m.PaginationResponse, *m.TopicMobileList, error)
 }
 
-// CategoryUnlockI - Premium obunasiz, tanga evaziga bitta bo'limdan N ta case
-// ishlash huquqini sotib olish (BACKEND_STRUCTURE.md: "50 ta case = 50 tanga" pattern).
-type CategoryUnlockI interface {
-	// Purchase - atomik: userning tanga balansi tekshiriladi (yetarli bo'lmasa
-	// errs.ErrInsufficientCoins), yetarli bo'lsa ayiriladi va cases_remaining oshiriladi.
-	Purchase(req *m.CategoryUnlockPurchaseReq, coinCost int) (*m.CategoryUnlockRes, error)
-	GetRemaining(userId, categoryId string) (int, error)
-	// ConsumeOne - simulyatsiya boshlanganda 1 ta case-huquqini sarflaydi
-	// (cases_remaining - 1). Yetarli bo'lmasa false qaytaradi (xato emas).
-	ConsumeOne(userId, categoryId string) (bool, error)
-}
 
 type StudyPlanI interface {
 	Upsert(req *m.StudyPlanUpsertReq) (*m.Void, error)

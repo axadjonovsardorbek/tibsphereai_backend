@@ -962,37 +962,11 @@ async function renderCatalog(){
       const grid = document.createElement('div'); grid.className='grid';
       items.forEach(cat=>{
         const c=document.createElement('div'); c.className='card';
-        c.innerHTML = '<h4>'+esc(ml(cat.name))+'</h4><p>Case narxi: '+esc(cat.coins_per_case)+' tanga · Qolgan: '+esc(cat.cases_remaining)+'</p>';
-        c.onclick=()=>{ stack.push({level:'unlock', id:cat.id, title: ml(cat.name), cat}); go(); };
+        c.innerHTML = '<h4>'+esc(ml(cat.name))+'</h4>';
+        c.onclick=()=>{ stack.push({level:'topic', catId:cat.id, title: ml(cat.name)}); go(); };
         grid.appendChild(c);
       });
       body.innerHTML=''; body.appendChild(grid);
-    } else if(cur.level === 'unlock'){
-      const box = document.createElement('div'); box.className='card'; box.style.maxWidth='420px';
-      let status;
-      try{ status = await api('/mobile/category/'+cur.id+'/unlock'); }catch(e){ status = null; }
-      box.innerHTML = status ? (
-        '<div class="kv"><div><span class="k">Case narxi</span>'+esc(status.coins_per_case)+' tanga</div>'+
-        '<div><span class="k">Qolgan huquq</span>'+esc(status.cases_remaining)+' ta case</div></div>'
-      ) : '<p class="muted">Holat topilmadi</p>';
-      body.innerHTML=''; body.appendChild(box);
-
-      const buyRow = document.createElement('div'); buyRow.style.display='flex'; buyRow.style.gap='8px'; buyRow.style.margin='12px 0';
-      const cntInp = document.createElement('input'); cntInp.type='number'; cntInp.value=1; cntInp.style.width='100px';
-      const buyBtn = document.createElement('button'); buyBtn.className='primary'; buyBtn.textContent='🪙 Tanga evaziga ochish';
-      buyBtn.onclick = async ()=>{
-        try{
-          const res = await api('/mobile/category/'+cur.id+'/unlock', {method:'POST', body:{case_count:Number(cntInp.value||1)}});
-          toast('Ochildi: '+res.cases_remaining+' ta case huquqi, '+res.coins_spent+' tanga sarflandi', 'ok');
-          go();
-        }catch(e){}
-      };
-      buyRow.appendChild(cntInp); buyRow.appendChild(buyBtn);
-      body.appendChild(buyRow);
-
-      const nextBtn = document.createElement('button'); nextBtn.className='primary'; nextBtn.textContent='📑 Mavzularni ko\'rish →';
-      nextBtn.onclick = ()=>{ stack.push({level:'topic', catId:cur.id, title:'Mavzular'}); go(); };
-      body.appendChild(nextBtn);
     } else if(cur.level === 'topic'){
       let json;
       try{ json = await api('/mobile/topic', {query:{category_id:cur.catId, limit:100,page:1}}); }catch(e){ body.innerHTML='<p class="muted">Xatolik</p>'; return; }
@@ -1128,6 +1102,21 @@ function svgEcg(){
   '</svg>';
 }
 
+// speakText - platforma ovozli funksiyasi: backend audio generatsiya qilmaydi,
+// qurilma TTS'idan (window.speechSynthesis) foydalanamiz. sim.muted (🔇/🔊 tugmasi)
+// va sim.voiceGlobalEnabled (/mobile/setting/voice - admin killswitch) ikkalasi
+// ham yoqilgan bo'lsagina o'qiydi.
+function speakText(text){
+  try{
+    if(!sim || sim.muted || !sim.voiceGlobalEnabled) return;
+    if(!text || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(String(text));
+    u.lang = 'uz-UZ';
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+
 function simBeepOnce(){
   try{
     if(!sim || sim.muted) return;
@@ -1169,8 +1158,9 @@ async function openSimulation(startRes){
     timeLimitSec: startRes.time_limit_seconds || null,
     elapsedSec: 0,
     ws: null, timerInt: null, beepInt: null, audioCtx: null,
-    muted: true,
+    muted: true, voiceGlobalEnabled: false,
   };
+  try{ const vs = await api('/mobile/setting/voice', {silent:true}); sim.voiceGlobalEnabled = !!(vs && vs.enabled); }catch(e){}
   state.activeSession = {session_id: sim.sessionId};
   localStorage.setItem('tu_active_session', JSON.stringify(state.activeSession));
 
@@ -1188,7 +1178,7 @@ async function openSimulation(startRes){
   topbar.innerHTML =
     '<div><div class="ttl">'+esc(caseInfo.title||'Simulyatsiya')+'</div><div class="sub">'+esc(caseInfo.difficulty||'')+'</div></div>'+
     '<div style="display:flex;gap:6px">'+
-      '<button class="simIconBtn" id="simMuteBtn" title="Ovoz">🔇</button>'+
+      '<button class="simIconBtn" id="simMuteBtn" title="Ovoz (bip + shikoyat/chatni o\'qib berish)">🔇</button>'+
       '<button class="simIconBtn" id="simResetBtn" title="Qayta boshlash">🔄</button>'+
       '<button class="simIconBtn" id="simExitBtn" title="Chiqish">↩️</button>'+
       '<button class="simIconBtn" id="simFinishBtn" title="Yakunlash">🏁</button>'+
@@ -1232,6 +1222,7 @@ async function openSimulation(startRes){
   const sysMsg = document.createElement('div'); sysMsg.className='msg sys';
   sysMsg.innerHTML = '<b>DASTLABKI HOLAT</b>'+esc(caseInfo.chief_complaint ? ('Bemor shikoyati: '+caseInfo.chief_complaint) : 'Bemor bilan simulyatsiya boshlandi.');
   chatLog.appendChild(sysMsg);
+  if(caseInfo.chief_complaint) speakText(caseInfo.chief_complaint);
 
   ['question','exam','lab','imaging','medication','procedure'].forEach((t,i)=>{
     const b=document.createElement('button'); b.textContent = ({question:'❓ Savol',exam:'🩺 Ko\'rik',lab:'🧪 Tahlil',imaging:'📷 Instrumental',medication:'💊 Dori',procedure:'⚙️ Protsedura'})[t];
@@ -1268,6 +1259,7 @@ async function openSimulation(startRes){
       if(res.response && res.response.patient_reply){
         const pDiv = document.createElement('div'); pDiv.className='msg patient'; pDiv.textContent = res.response.patient_reply;
         chatLog.appendChild(pDiv);
+        speakText(res.response.patient_reply);
       } else if(res.response && res.response.patient_reply_error){
         const eDiv = document.createElement('div'); eDiv.className='msg err'; eDiv.textContent = 'AI javob bera olmadi: '+res.response.patient_reply_error;
         chatLog.appendChild(eDiv);
@@ -1277,6 +1269,7 @@ async function openSimulation(startRes){
         const sign = res.health_delta > 0 ? '+' : '';
         fDiv.innerHTML = (res.is_correct?'✅ ':'⚠️ ')+esc(res.response.feedback)+' <span class="muted">('+sign+res.health_delta+'% sog\'liq)</span>';
         chatLog.appendChild(fDiv);
+        speakText(res.response.feedback);
       } else if(res.response && res.response.feedback_error){
         const eDiv = document.createElement('div'); eDiv.className='msg err'; eDiv.textContent = 'AI baho bera olmadi: '+res.response.feedback_error;
         chatLog.appendChild(eDiv);

@@ -38,10 +38,27 @@ func newGeminiClient(cfg *config.Config, promptRepo storage.AIPromptI) *geminiCl
 // --- Default promptlar (admin panelda ai_prompts jadvali orqali kodni
 // o'zgartirmasdan qayta yozilishi mumkin, BACKEND_STRUCTURE.md 7-bo'lim) ---
 
-const defaultPatientPersonaPrompt = `Sen klinik simulyatsiyada bemor rolidasan. Quyidagi bemor holati (JSON) asosida, FAQAT bemor tilidan, tabiiy va klinik jihatdan to'g'ri javob ber. Tashxis qo'yma, tibbiy atamalarni bemor bilmaydigan darajada ishlatma, shifokorga maslahat berma - faqat bemor his-tuyg'usi va simptomlarini tasvirla.
+// defaultPatientPersonaPrompt - shifokorning chatdagi xabari ikki xil bo'ladi:
+// (1) bemordan anamnez so'ragan savol - shunda bemor tilidan tabiiy javob kerak;
+// (2) klinik qaror/harakat bayonoti ("epinefrin beraman", "EKG qilamiz") - bu ENDI
+// bemorga emas, platformaga aytilgan deb hisoblanadi va ExpectedAnswer/expected_steps'ga
+// solishtirib to'g'ri/xato deb baholanadi (bemor "aniq bo'lmagan javob" bermaydi).
+const defaultPatientPersonaPrompt = `Sen klinik simulyatsiya platformasidasan. Shifokor (foydalanuvchi) chatga bitta xabar yozdi. Avval shu xabar turini aniqla:
+- "question": bemordan anamnez/simptom haqida so'ralgan savol (masalan "qayerda og'riq bor?", "qachondan beri bezovta qiladi?").
+- "action": shifokorning klinik qaror yoki harakat bayonoti (masalan "epinefrin beraman", "EKG qilamiz", "operatsiyaga yuboraman").
 
-Bemor holati (case scenario):
-%s`
+Agar "question" bo'lsa: FAQAT bemor tilidan, tabiiy va klinik jihatdan to'g'ri javob ber (tashxis qo'yma, tibbiy atamalarni bemor bilmaydigan darajada ishlatma, shifokorga maslahat berma - faqat bemor his-tuyg'usi va simptomlarini tasvirla). is_action=false.
+
+Agar "action" bo'lsa: bemor sifatida EMAS, balki platforma (ekspert-baholovchi) sifatida javob ber - shifokor bayon qilgan harakat "Kutilgan to'g'ri javob" va bemor holatiga (pastda) mos keladimi, tekshir va to'g'ri/xato deb baho ber. is_action=true, health_delta: to'g'ri/o'z vaqtida bo'lsa +5..+20, foydasiz lekin zararsiz bo'lsa 0, noto'g'ri/xavfli/qarshi ko'rsatilgan bo'lsa -10..-40. feedback - qisqa (1-2 gap) klinik izoh.
+
+Bemor holati (case scenario, JSON):
+%s
+
+Kutilgan to'g'ri javob/davolash algoritmi (admin kiritgan, "action" turini baholashda asosiy mezon):
+%s
+
+Javobni FAQAT quyidagi JSON formatda qaytar, boshqa hech qanday matn yoki markdown qo'shma:
+{"is_action": false, "patient_reply": "bemor tilidan javob (faqat is_action=false bo'lsa)", "is_correct": true, "health_delta": 0, "feedback": "platforma tilidan izoh (faqat is_action=true bo'lsa)"}`
 
 const defaultDebriefPrompt = `Sen tibbiyot bo'yicha ekspert-baholovchisan. Quyidagi klinik simulyatsiya case'i va shifokor (foydalanuvchi) bosgan qadamlar logi asosida, AHA/ERC kabi xalqaro klinik qo'llanmalarga tayangan holda debriefing tahlili tuz.
 
@@ -71,21 +88,42 @@ Javobni FAQAT quyidagi JSON formatda qaytar (o'zbek tilida, boshqa hech qanday m
   "scenario": {"patient_persona": "bemor personaji tavsifi", "expected_steps": ["..."], "labs": {}, "imaging": {}, "medications": []}
 }`
 
-func (g *geminiClient) Reply(ctx context.Context, caseScenario map[string]any, question string) (string, *Usage, error) {
+func (g *geminiClient) Reply(ctx context.Context, caseScenario map[string]any, expectedAnswer, question string) (*PatientReplyRes, *Usage, error) {
 	tmpl, params := g.loadPrompt(models.AIPromptPatientPersona, defaultPatientPersonaPrompt)
 	scenarioJSON, _ := json.MarshalIndent(caseScenario, "", "  ")
 
 	system := tmpl
-	if strings.Contains(system, "%s") {
-		system = fmt.Sprintf(tmpl, string(scenarioJSON))
+	if n := strings.Count(system, "%s"); n > 0 {
+		args := []any{string(scenarioJSON), expectedAnswer}
+		if n < len(args) {
+			args = args[:n]
+		}
+		system = fmt.Sprintf(tmpl, args...)
 	}
-	prompt := system + "\n\nShifokor savoli: " + question + "\n\nBemor javobi (faqat bemor nutqi):"
+	prompt := system + "\n\nShifokorning chatdagi xabari: " + question
 
-	text, usage, err := g.generateContent(ctx, prompt, params, false)
+	text, usage, err := g.generateContent(ctx, prompt, params, true)
 	if err != nil {
-		return "", usage, err
+		return nil, usage, err
 	}
-	return strings.TrimSpace(text), usage, nil
+
+	var raw struct {
+		IsAction     bool   `json:"is_action"`
+		PatientReply string `json:"patient_reply"`
+		IsCorrect    bool   `json:"is_correct"`
+		HealthDelta  int    `json:"health_delta"`
+		Feedback     string `json:"feedback"`
+	}
+	if err := unmarshalJSONLoose(text, &raw); err != nil {
+		return nil, usage, fmt.Errorf("gemini chat response parse error: %w (raw: %s)", err, text)
+	}
+	return &PatientReplyRes{
+		IsAction:     raw.IsAction,
+		PatientReply: strings.TrimSpace(raw.PatientReply),
+		IsCorrect:    raw.IsCorrect,
+		HealthDelta:  raw.HealthDelta,
+		Feedback:     strings.TrimSpace(raw.Feedback),
+	}, usage, nil
 }
 
 func (g *geminiClient) Generate(ctx context.Context, caseScenario map[string]any, events []models.SimulationEventReq) (*models.DebriefReportCreateReq, *Usage, error) {
@@ -179,6 +217,9 @@ const defaultActionEvalPrompt = `Sen shoshilinch tibbiy yordam bo'yicha ekspert-
 Case scenario (JSON):
 %s
 
+Kutilgan to'g'ri javob/davolash algoritmi (admin kiritgan, baholashda asosiy mezon):
+%s
+
 Shifokor bajargan harakat turi: %s
 Harakat tafsilotlari (JSON): %s
 
@@ -193,10 +234,10 @@ Javobni FAQAT quyidagi JSON formatda qaytar, boshqa hech qanday matn yoki markdo
 // action_eval hozircha ai_prompts jadvalida yo'q (CHECK constraint faqat
 // patient_persona/debrief/case_generation'ni ruxsat beradi), shu sabab
 // hozircha faqat kod ichidagi default (defaultActionEvalPrompt) ishlatiladi.
-func (g *geminiClient) Evaluate(ctx context.Context, caseScenario map[string]any, eventType string, payload map[string]any) (*ActionEvalRes, *Usage, error) {
+func (g *geminiClient) Evaluate(ctx context.Context, caseScenario map[string]any, expectedAnswer, eventType string, payload map[string]any) (*ActionEvalRes, *Usage, error) {
 	scenarioJSON, _ := json.MarshalIndent(caseScenario, "", "  ")
 	payloadJSON, _ := json.MarshalIndent(payload, "", "  ")
-	prompt := fmt.Sprintf(defaultActionEvalPrompt, string(scenarioJSON), eventType, string(payloadJSON))
+	prompt := fmt.Sprintf(defaultActionEvalPrompt, string(scenarioJSON), expectedAnswer, eventType, string(payloadJSON))
 
 	text, usage, err := g.generateContent(ctx, prompt, nil, true)
 	if err != nil {

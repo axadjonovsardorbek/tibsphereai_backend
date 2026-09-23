@@ -51,6 +51,23 @@ func (s *AppSettingService) ConsumeFreeAttempt(ctx context.Context, userId strin
 	return s.storage.AppSettingS.IncrTodayFreeAttempts(userId)
 }
 
+// VoiceEnabled - platforma ovozli funksiyasi (case shikoyati va chat javoblarini
+// ovozda o'qib berish) global yoqilganmi (admin killswitch, BACKEND_STRUCTURE.md
+// 7-bo'lim). Audio backendda generatsiya qilinmaydi - frontend qurilma TTS'idan
+// (iOS/Android/brauzer) foydalanadi, backend faqat shu funksiyani ko'rsatish/yashirish
+// uchun bitta bool beradi. Sozlanmagan bo'lsa default yoqilgan (true).
+func (s *AppSettingService) VoiceEnabled(ctx context.Context) bool {
+	setting, err := s.storage.AppSettingS.Get(m.AppSettingVoiceEnabled)
+	if err != nil || setting == nil {
+		return true
+	}
+	v, err := strconv.ParseBool(setting.Value)
+	if err != nil {
+		return true
+	}
+	return v
+}
+
 // GetLimitStatus - home ekranidagi "35/50 Limit" belgisi uchun. Premium
 // obunachi bo'lsa cheksiz (has_subscription=true, total/used=0).
 func (s *AppSettingService) GetLimitStatus(ctx context.Context, userId string) (*m.UserLimitStatusRes, error) {

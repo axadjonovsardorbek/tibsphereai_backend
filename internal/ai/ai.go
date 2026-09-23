@@ -22,10 +22,28 @@ type Usage struct {
 	CostUSD      float64
 }
 
-// PatientAI - Anamnez (BACKEND_STRUCTURE.md 4-bo'lim): shifokor savoliga
-// bemor personajida klinik to'g'ri javob qaytaradi.
+// PatientReplyRes - chat xabariga javob: shifokor xabari ikki xil bo'lishi mumkin -
+// (1) bemordan anamnez so'ragan savol ("qayerda og'riq bor?") - shunda IsAction=false,
+// PatientReply bemor tilidan tabiiy javob; (2) klinik qaror/harakat bayonoti
+// ("epinefrin beraman", "EKG qilamiz") - shunda IsAction=true va bu ENDI bemorga emas,
+// balki platformaga aytilgan deb hisoblanadi: admin kiritgan ExpectedAnswer/expected_steps'ga
+// solishtirib to'g'ri/xato deb baholanadi (xuddi ActionEvaluatorAI kabi).
+// Ko'ring: "bemor bilan gaplashtirish xato, platforma bilan gaplashishi kerak" (audit talabi).
+type PatientReplyRes struct {
+	IsAction     bool
+	PatientReply string // faqat IsAction=false bo'lsa mazmunli
+	IsCorrect    bool   // faqat IsAction=true bo'lsa mazmunli
+	HealthDelta  int    // faqat IsAction=true bo'lsa mazmunli (-100..+100)
+	Feedback     string // faqat IsAction=true bo'lsa mazmunli - platforma tilidan qisqa klinik izoh
+}
+
+// PatientAI - Chat (BACKEND_STRUCTURE.md 4-bo'lim): shifokorning chatdagi xabari
+// anamnez savolimi yoki klinik qaror bayonotimi aniqlaydi va shunga qarab bemor
+// tilidan javob YOKI platforma tilidan to'g'ri/xato bahosini qaytaradi.
+// expectedAnswer - admin kiritgan kutilgan to'g'ri javob (Case.ExpectedAnswer),
+// baholash shu asosda amalga oshiriladi.
 type PatientAI interface {
-	Reply(ctx context.Context, caseScenario map[string]any, question string) (string, *Usage, error)
+	Reply(ctx context.Context, caseScenario map[string]any, expectedAnswer, question string) (*PatientReplyRes, *Usage, error)
 }
 
 // DebriefAI - Yakuniy hisobot (BACKEND_STRUCTURE.md 5-bo'lim): qadamlar logi
@@ -53,7 +71,7 @@ type ActionEvalRes struct {
 // asosida real vaqtda baholaydi - shu orqali Sog'liq shkalasi va Ball haqiqiy
 // klinik to'g'rilikka mos ravishda o'zgaradi (avval har doim health_delta=0 edi).
 type ActionEvaluatorAI interface {
-	Evaluate(ctx context.Context, caseScenario map[string]any, eventType string, payload map[string]any) (*ActionEvalRes, *Usage, error)
+	Evaluate(ctx context.Context, caseScenario map[string]any, expectedAnswer, eventType string, payload map[string]any) (*ActionEvalRes, *Usage, error)
 }
 
 // Client - AI xizmatlarini bitta joyda ushlab turadi.

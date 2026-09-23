@@ -41,8 +41,11 @@ type fakePatientAI struct {
 	err   error
 }
 
-func (f fakePatientAI) Reply(ctx context.Context, caseScenario map[string]any, question string) (string, *ai.Usage, error) {
-	return f.reply, nil, f.err
+func (f fakePatientAI) Reply(ctx context.Context, caseScenario map[string]any, expectedAnswer, question string) (*ai.PatientReplyRes, *ai.Usage, error) {
+	if f.err != nil {
+		return nil, nil, f.err
+	}
+	return &ai.PatientReplyRes{PatientReply: f.reply}, nil, nil
 }
 
 type fakeDebriefAI struct {
@@ -55,12 +58,8 @@ func (f fakeDebriefAI) Generate(ctx context.Context, caseScenario map[string]any
 }
 
 func newSimulationTestService(t *testing.T, sm *mocks.SimulationMock, cm *mocks.CaseMock, um *mocks.UserMock, dm *mocks.DebriefMock, am *mocks.AppSettingMock, aiClient *ai.Client) *SimulationService {
-	return newSimulationTestServiceWithUnlock(t, sm, cm, um, dm, am, mocks.NewCategoryUnlockMock(), aiClient)
-}
-
-func newSimulationTestServiceWithUnlock(t *testing.T, sm *mocks.SimulationMock, cm *mocks.CaseMock, um *mocks.UserMock, dm *mocks.DebriefMock, am *mocks.AppSettingMock, cum *mocks.CategoryUnlockMock, aiClient *ai.Client) *SimulationService {
 	pool := testSimulationDB(t)
-	pgStorage := &st.Storage{Db: pool, SimulationS: sm, CaseS: cm, UserS: um, DebriefS: dm, AppSettingS: am, CategoryUnlockS: cum}
+	pgStorage := &st.Storage{Db: pool, SimulationS: sm, CaseS: cm, UserS: um, DebriefS: dm, AppSettingS: am}
 	appSettings := NewAppSettingService(pgStorage, 3)
 	if aiClient == nil {
 		aiClient = &ai.Client{}
@@ -69,21 +68,16 @@ func newSimulationTestServiceWithUnlock(t *testing.T, sm *mocks.SimulationMock, 
 }
 
 // Start - hech qanday faol obunasi (real DB'da subscriptions yozuvi yo'q, tasodifiy
-// UUID), kunlik bepul urinishi va tanga evaziga sotib olingan bo'lim-huquqi ham
-// bo'lmagan foydalanuvchi uchun ErrDailyLimitReached qaytishi va SimulationS.Start
-// umuman chaqirilmasligi kerak.
+// UUID) va kunlik bepul urinishi ham bo'lmagan foydalanuvchi uchun ErrDailyLimitReached
+// qaytishi va SimulationS.Start umuman chaqirilmasligi kerak.
 func TestSimulationService_Start_NoSubscription_LimitReached(t *testing.T) {
 	sm := mocks.NewSimulationMock()
 	am := mocks.NewAppSettingMock()
-	cm := mocks.NewCaseMock()
-	cum := mocks.NewCategoryUnlockMock()
-	svc := newSimulationTestServiceWithUnlock(t, sm, cm, mocks.NewUserMock(), mocks.NewDebriefMock(), am, cum, nil)
+	svc := newSimulationTestService(t, sm, mocks.NewCaseMock(), mocks.NewUserMock(), mocks.NewDebriefMock(), am, nil)
 
 	userId := uuid.NewString()
 	am.On("Get", m.AppSettingDailyFreeLimit).Return(&m.AppSettingRes{Value: "3"}, nil)
 	am.On("GetTodayFreeAttemptsUsed", userId).Return(3, nil)
-	cm.On("GetCategoryId", "case-1").Return("cat-1", nil)
-	cum.On("GetRemaining", userId, "cat-1").Return(0, nil)
 
 	req := &m.SimulationStartReq{UserId: userId, CaseId: "case-1"}
 	got, err := svc.Start(context.Background(), req)
@@ -91,34 +85,6 @@ func TestSimulationService_Start_NoSubscription_LimitReached(t *testing.T) {
 	assert.Nil(t, got)
 	assert.Error(t, err)
 	sm.AssertNotCalled(t, "Start", mock.Anything)
-}
-
-// Start - bepul urinish tugagan, lekin foydalanuvchi shu bo'limdan tanga evaziga
-// case-huquqi sotib olgan bo'lsa - Start chaqiriladi va bitta huquq sarflanadi
-// (ConsumeOne), kunlik limit esa sarflanmaydi.
-func TestSimulationService_Start_NoSubscription_UsesCategoryUnlock(t *testing.T) {
-	sm := mocks.NewSimulationMock()
-	am := mocks.NewAppSettingMock()
-	cm := mocks.NewCaseMock()
-	cum := mocks.NewCategoryUnlockMock()
-	svc := newSimulationTestServiceWithUnlock(t, sm, cm, mocks.NewUserMock(), mocks.NewDebriefMock(), am, cum, nil)
-
-	userId := uuid.NewString()
-	am.On("Get", m.AppSettingDailyFreeLimit).Return(&m.AppSettingRes{Value: "3"}, nil)
-	am.On("GetTodayFreeAttemptsUsed", userId).Return(3, nil)
-	cm.On("GetCategoryId", "case-1").Return("cat-1", nil)
-	cum.On("GetRemaining", userId, "cat-1").Return(2, nil)
-	cum.On("ConsumeOne", userId, "cat-1").Return(true, nil)
-
-	req := &m.SimulationStartReq{UserId: userId, CaseId: "case-1"}
-	want := &m.SimulationStartRes{SessionId: "sess-1"}
-	sm.On("Start", req).Return(want, nil)
-
-	got, err := svc.Start(context.Background(), req)
-	require.NoError(t, err)
-	assert.Equal(t, want, got)
-	am.AssertNotCalled(t, "IncrTodayFreeAttempts", mock.Anything)
-	cum.AssertExpectations(t)
 }
 
 // Start - obunasi yo'q, lekin bepul urinish qolgan bo'lsa - Start chaqiriladi va
@@ -223,7 +189,7 @@ type fakeActionEvalAI struct {
 	err error
 }
 
-func (f fakeActionEvalAI) Evaluate(ctx context.Context, caseScenario map[string]any, eventType string, payload map[string]any) (*ai.ActionEvalRes, *ai.Usage, error) {
+func (f fakeActionEvalAI) Evaluate(ctx context.Context, caseScenario map[string]any, expectedAnswer, eventType string, payload map[string]any) (*ai.ActionEvalRes, *ai.Usage, error) {
 	return f.res, nil, f.err
 }
 

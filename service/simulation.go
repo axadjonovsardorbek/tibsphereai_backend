@@ -30,15 +30,11 @@ func (s *SimulationService) hasActiveSubscription(userId string) bool {
 	return active
 }
 
-// Start - kirish huquqi 3 bosqichda tekshiriladi: 1) faol Premium obuna (cheksiz),
-// 2) kunlik bepul urinish (appSettings), 3) shular tugagan bo'lsa - foydalanuvchi
-// shu case'ning bo'limidan (category) tanga evaziga oldindan sotib olgan case-huquqi
-// (category_unlocks, ko'ring [[CategoryUnlockService]]). Uchalasi ham yo'q bo'lsa
-// ErrDailyLimitReached.
+// Start - kirish huquqi 2 bosqichda tekshiriladi: 1) faol Premium obuna (cheksiz),
+// 2) kunlik bepul urinish (appSettings). Ikkalasi ham yo'q bo'lsa ErrDailyLimitReached
+// (bo'lim (category) tanga evaziga sotib olish - coin bilan narxlash - olib tashlangan).
 func (s *SimulationService) Start(ctx context.Context, req *m.SimulationStartReq) (*m.SimulationStartRes, error) {
 	hasSub := s.hasActiveSubscription(req.UserId)
-	needsCategoryUnlock := false
-	var categoryId string
 
 	if !hasSub {
 		ok, err := s.appSettings.HasFreeAttemptLeft(ctx, req.UserId)
@@ -46,19 +42,7 @@ func (s *SimulationService) Start(ctx context.Context, req *m.SimulationStartReq
 			return nil, err
 		}
 		if !ok {
-			cid, cErr := s.storage.CaseS.GetCategoryId(req.CaseId)
-			if cErr != nil {
-				return nil, cErr
-			}
-			remaining, rErr := s.storage.CategoryUnlockS.GetRemaining(req.UserId, cid)
-			if rErr != nil {
-				return nil, rErr
-			}
-			if remaining <= 0 {
-				return nil, errs.ErrDailyLimitReached
-			}
-			categoryId = cid
-			needsCategoryUnlock = true
+			return nil, errs.ErrDailyLimitReached
 		}
 	}
 
@@ -68,11 +52,7 @@ func (s *SimulationService) Start(ctx context.Context, req *m.SimulationStartReq
 	}
 
 	if !hasSub {
-		if needsCategoryUnlock {
-			if _, err := s.storage.CategoryUnlockS.ConsumeOne(req.UserId, categoryId); err != nil {
-				fmt.Println("failed to consume category unlock:", err)
-			}
-		} else if err := s.appSettings.ConsumeFreeAttempt(ctx, req.UserId); err != nil {
+		if err := s.appSettings.ConsumeFreeAttempt(ctx, req.UserId); err != nil {
 			fmt.Println("failed to consume free attempt:", err)
 		}
 	}
@@ -103,18 +83,29 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 		caseId = *session.CaseId
 	}
 
+	expectedAnswer := ""
+	if caseRes != nil && caseRes.ExpectedAnswer != nil {
+		expectedAnswer = *caseRes.ExpectedAnswer
+	}
+
 	if caseRes != nil {
 		if req.Type == "question" {
 			question, _ := req.Payload["question"].(string)
-			reply, usage, aiErr := s.ai.Patient.Reply(ctx, caseRes.Scenario, question)
+			reply, usage, aiErr := s.ai.Patient.Reply(ctx, caseRes.Scenario, expectedAnswer, question)
 			logAIUsage(&s.storage, "chat", usage, userId, caseId)
-			if aiErr == nil {
-				responseExtra["patient_reply"] = reply
-			} else {
+			if aiErr != nil {
 				responseExtra["patient_reply_error"] = aiErr.Error()
+			} else if reply.IsAction {
+				// Shifokor chatda qaror/harakat bayon qildi ("dori beraman", "tekshiruv
+				// qilamiz") - bu bemorga emas, platformaga aytilgan deb hisoblanadi va
+				// ExpectedAnswer'ga solishtirib to'g'ri/xato deb baholanadi.
+				isCorrect, healthDelta = reply.IsCorrect, reply.HealthDelta
+				responseExtra["feedback"] = reply.Feedback
+			} else {
+				responseExtra["patient_reply"] = reply.PatientReply
 			}
 		} else {
-			eval, usage, aiErr := s.ai.Action.Evaluate(ctx, caseRes.Scenario, req.Type, req.Payload)
+			eval, usage, aiErr := s.ai.Action.Evaluate(ctx, caseRes.Scenario, expectedAnswer, req.Type, req.Payload)
 			logAIUsage(&s.storage, "action_eval", usage, userId, caseId)
 			if aiErr == nil && eval != nil {
 				isCorrect, healthDelta = eval.IsCorrect, eval.HealthDelta

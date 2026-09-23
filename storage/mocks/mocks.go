@@ -1309,35 +1309,6 @@ func (mk *TopicMock) GetAllMobile(req *m.TopicGetListMobileReq) (*m.PaginationRe
 	return r0, r1, args.Error(2)
 }
 
-type CategoryUnlockMock struct {
-	mock.Mock
-}
-
-func NewCategoryUnlockMock() *CategoryUnlockMock { return &CategoryUnlockMock{} }
-
-var _ storage.CategoryUnlockI = (*CategoryUnlockMock)(nil)
-
-func (mk *CategoryUnlockMock) Purchase(req *m.CategoryUnlockPurchaseReq, coinCost int) (*m.CategoryUnlockRes, error) {
-	args := mk.Called(req, coinCost)
-	var r0 *m.CategoryUnlockRes
-	if args.Get(0) != nil {
-		r0 = args.Get(0).(*m.CategoryUnlockRes)
-	}
-	return r0, args.Error(1)
-}
-
-func (mk *CategoryUnlockMock) GetRemaining(userId string, categoryId string) (int, error) {
-	args := mk.Called(userId, categoryId)
-	r0, _ := args.Get(0).(int)
-	return r0, args.Error(1)
-}
-
-func (mk *CategoryUnlockMock) ConsumeOne(userId string, categoryId string) (bool, error) {
-	args := mk.Called(userId, categoryId)
-	r0, _ := args.Get(0).(bool)
-	return r0, args.Error(1)
-}
-
 type StudyPlanMock struct {
 	mock.Mock
 }

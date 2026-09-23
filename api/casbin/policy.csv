@@ -136,8 +136,7 @@ p, user, /mobile/contact, GET
 p, user, /mobile/contact/:id, GET
 p, user, /mobile/category, GET
 p, user, /mobile/category/:id, GET
-p, user, /mobile/category/:id/unlock, GET
-p, user, /mobile/category/:id/unlock, POST
+p, user, /mobile/setting/voice, GET
 p, user, /mobile/topic, GET
 p, user, /mobile/partner, GET
 p, user, /mobile/case, GET

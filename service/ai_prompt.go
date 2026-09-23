@@ -41,13 +41,24 @@ func (s *AIPromptService) TestPatient(ctx context.Context, req *m.AITestPatientR
 		return nil, fmt.Errorf("case topilmadi: %s", req.CaseId)
 	}
 
-	reply, usage, err := s.ai.Patient.Reply(ctx, caseRes.Scenario, req.Question)
+	expectedAnswer := ""
+	if caseRes.ExpectedAnswer != nil {
+		expectedAnswer = *caseRes.ExpectedAnswer
+	}
+
+	reply, usage, err := s.ai.Patient.Reply(ctx, caseRes.Scenario, expectedAnswer, req.Question)
 	logAIUsage(&s.storage, "chat_test", usage, "", req.CaseId)
 	if err != nil {
 		return nil, err
 	}
 
-	res := &m.AITestPatientRes{Reply: reply}
+	res := &m.AITestPatientRes{
+		IsAction:    reply.IsAction,
+		Reply:       reply.PatientReply,
+		IsCorrect:   reply.IsCorrect,
+		HealthDelta: reply.HealthDelta,
+		Feedback:    reply.Feedback,
+	}
 	if usage != nil {
 		res.Tokens = usage.TotalTokens
 		res.CostUSD = usage.CostUSD

@@ -8,22 +8,20 @@ const (
 )
 
 type CategoryCreateReq struct {
-	Name         map[string]string `json:"name"`
-	IconUrl      string            `json:"icon_url"`
-	OrderNum     int               `json:"order_num"`
-	CoinsPerCase int               `json:"coins_per_case"`
-	Audience     string            `json:"audience"` // doctor|citizen, bo'sh - doctor
+	Name     map[string]string `json:"name"`
+	IconUrl  string            `json:"icon_url"`
+	OrderNum int               `json:"order_num"`
+	Audience string            `json:"audience"` // doctor|citizen, bo'sh - doctor
 }
 
 type CategoryRes struct {
-	Id           *string           `json:"id"`
-	Name         map[string]string `json:"name"`
-	IconUrl      *string           `json:"icon_url"`
-	OrderNum     *int              `json:"order_num"`
-	CoinsPerCase *int              `json:"coins_per_case"`
-	Audience     *string           `json:"audience"`
-	CreatedAt    *string           `json:"created_at"`
-	UpdatedAt    *string           `json:"updated_at"`
+	Id        *string           `json:"id"`
+	Name      map[string]string `json:"name"`
+	IconUrl   *string           `json:"icon_url"`
+	OrderNum  *int              `json:"order_num"`
+	Audience  *string           `json:"audience"`
+	CreatedAt *string           `json:"created_at"`
+	UpdatedAt *string           `json:"updated_at"`
 }
 
 type CategoryList struct {
@@ -38,25 +36,20 @@ type CategoryGetListReq struct {
 }
 
 type CategoryUpdateReq struct {
-	Id           string            `json:"id"`
-	Name         map[string]string `json:"name"`
-	IconUrl      string            `json:"icon_url"`
-	OrderNum     int               `json:"order_num"`
-	CoinsPerCase int               `json:"coins_per_case"`
-	Audience     string            `json:"audience"`
+	Id       string            `json:"id"`
+	Name     map[string]string `json:"name"`
+	IconUrl  string            `json:"icon_url"`
+	OrderNum int               `json:"order_num"`
+	Audience string            `json:"audience"`
 }
 
 type CategoryMobileRes struct {
-	Id           *string `json:"id"`
-	Name         *string `json:"name"`
-	IconUrl      *string `json:"icon_url"`
-	OrderNum     *int    `json:"order_num"`
-	CasesCount   *int    `json:"cases_count"`
-	CoinsPerCase *int    `json:"coins_per_case"`
-	Audience     *string `json:"audience"`
-	// CasesRemaining - shu foydalanuvchi ushbu bo'limda tanga evaziga sotib olgan va
-	// hali sarflamagan case-huquqlari soni (Premium obunasiz kirish uchun).
-	CasesRemaining *int `json:"cases_remaining"`
+	Id         *string `json:"id"`
+	Name       *string `json:"name"`
+	IconUrl    *string `json:"icon_url"`
+	OrderNum   *int    `json:"order_num"`
+	CasesCount *int    `json:"cases_count"`
+	Audience   *string `json:"audience"`
 }
 
 type CategoryMobileList struct {
@@ -69,25 +62,4 @@ type CategoryGetListMobileReq struct {
 	UserId   string     `json:"user_id"`
 	Audience string     `json:"audience"` // doctor|citizen, bo'sh - hammasi
 	Filter   Pagination `json:"filter"`
-}
-
-// --- Category unlock (tanga evaziga bo'lim ochish, Premium obunaga alternativ) ---
-
-type CategoryUnlockPurchaseReq struct {
-	UserId     string `json:"user_id"`
-	CategoryId string `json:"category_id"`
-	// CaseCount - nechta case-huquqi sotib olinayotgani (masalan 10 ta case uchun 10*coins_per_case tanga).
-	CaseCount int `json:"case_count"`
-}
-
-type CategoryUnlockRes struct {
-	CategoryId     string `json:"category_id"`
-	CasesRemaining int    `json:"cases_remaining"`
-	CoinsSpent     int    `json:"coins_spent"`
-}
-
-type CategoryUnlockStatusRes struct {
-	CategoryId     string `json:"category_id"`
-	CoinsPerCase   int    `json:"coins_per_case"`
-	CasesRemaining int    `json:"cases_remaining"`
 }

@@ -29,7 +29,6 @@ type Clients struct {
 	UserDevice       *service.UserDeviceService
 
 	Category        *service.CategoryService
-	CategoryUnlock  *service.CategoryUnlockService
 	Topic           *service.TopicService
 	StudyPlan       *service.StudyPlanService
 	Case            *service.CaseService
@@ -67,7 +66,6 @@ func NewClients(cfg *config.Config, conn *postgres.Storage, rdb *redis.Client, p
 		UserDevice:       service.NewUserDeviceService(conn, pushClient),
 
 		Category:        service.NewCategoryService(conn),
-		CategoryUnlock:  service.NewCategoryUnlockService(conn),
 		Topic:           service.NewTopicService(conn),
 		StudyPlan:       service.NewStudyPlanService(conn),
 		Case:            service.NewCaseService(conn, aiClient),

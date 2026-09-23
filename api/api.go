@@ -303,12 +303,15 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			contact.GET("/:id", h.GetByIdContact)
 		}
 
+		mobileSetting := mobile.Group("/setting").Use(mid.NewAuth(enforcer, rdb))
+		{
+			mobileSetting.GET("/voice", h.GetVoiceSetting)
+		}
+
 		category := mobile.Group("/category").Use(mid.NewAuth(enforcer, rdb))
 		{
 			category.GET("", h.GetAllMobileCategories)
 			category.GET("/:id", h.GetByIdMobileCategory)
-			category.GET("/:id/unlock", h.GetCategoryUnlockStatus)
-			category.POST("/:id/unlock", h.PurchaseCategoryUnlock)
 		}
 
 		topic := mobile.Group("/topic").Use(mid.NewAuth(enforcer, rdb))

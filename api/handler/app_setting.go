@@ -46,3 +46,16 @@ func (h *Handler) SetSetting(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "setting saved"})
 }
+
+// GetVoiceSetting godoc
+// @Summary Ovozli funksiya (shikoyat/chat matnini o'qib berish) global yoqilganmi
+// @Description Audio backendda generatsiya qilinmaydi - frontend shu bayroqqa qarab
+// @Description qurilma TTS'idan (device text-to-speech) foydalanadi yoki yashiradi.
+// @Tags setting
+// @Produce json
+// @Success 200 {object} models.VoiceSettingRes
+// @Security BearerAuth
+// @Router /mobile/setting/voice [get]
+func (h *Handler) GetVoiceSetting(c *gin.Context) {
+	c.JSON(http.StatusOK, m.VoiceSettingRes{Enabled: h.Clients.AppSetting.VoiceEnabled(context.Background())})
+}

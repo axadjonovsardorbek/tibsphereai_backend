@@ -626,13 +626,12 @@ const MODULES = {
       {name:'name', label:'Nomi (qidiruv)', type:'text'},
       {name:'audience', label:'Rejim', type:'select', includeEmpty:true, options:[{value:'doctor',label:'👨‍⚕️ Shifokor'},{value:'citizen',label:'🚑 Aholi (Birinchi yordam)'}]},
     ],
-    columns:['id','name','audience','order_num','coins_per_case','created_at'],
+    columns:['id','name','audience','order_num','created_at'],
     fields:[
       {name:'name', label:'Nomi', type:'ml', required:true},
       {name:'icon_url', label:'Ikonka URL', type:'file'},
       {name:'audience', label:'Rejim (Home ekran toggle)', type:'select', options:[{value:'doctor',label:'👨‍⚕️ Shifokor'},{value:'citizen',label:'🚑 Aholi (Birinchi yordam)'}]},
       {name:'order_num', label:'Tartib raqami', type:'number'},
-      {name:'coins_per_case', label:'Case narxi (tanga)', type:'number'},
     ],
     canCreate:true, canUpdate:true, canDelete:true,
     onSaved:()=>invalidateRef('category'),
@@ -702,7 +701,10 @@ const MODULES = {
           values:{question:'Sizni qayerda og\'riq bezovta qilyapti?'},
           onSubmit: async(body)=>{
             const res = await api('/web/ai-prompt/test-patient', {method:'POST', body:{case_id:row.id, question:body.question}});
-            showInfoModal('Bemor AI javobi', '<p>'+esc(res.reply||'')+'</p>' + aiUsageBadge(res.tokens, res.cost_usd));
+            const html = res.is_action
+              ? '<p>'+(res.is_correct?'✅ To\'g\'ri':'⚠️ Xato')+' (sog\'liq: '+(res.health_delta>0?'+':'')+res.health_delta+'%)</p><p>'+esc(res.feedback||'')+'</p>'
+              : '<p>'+esc(res.reply||'')+'</p>';
+            showInfoModal('Chat javobi (bemor yoki platforma)', html + aiUsageBadge(res.tokens, res.cost_usd));
           }
         });
       };

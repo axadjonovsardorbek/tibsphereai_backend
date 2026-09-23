@@ -45,9 +45,15 @@ type AITestPatientReq struct {
 }
 
 type AITestPatientRes struct {
-	Reply   string  `json:"reply"`
-	Tokens  int     `json:"tokens"`
-	CostUSD float64 `json:"cost_usd"`
+	// IsAction - true bo'lsa, xabar bemor savoli emas, klinik qaror/harakat
+	// bayonoti deb tanildi - shunda Reply o'rniga IsCorrect/HealthDelta/Feedback mazmunli.
+	IsAction    bool    `json:"is_action"`
+	Reply       string  `json:"reply"`
+	IsCorrect   bool    `json:"is_correct"`
+	HealthDelta int     `json:"health_delta"`
+	Feedback    string  `json:"feedback"`
+	Tokens      int     `json:"tokens"`
+	CostUSD     float64 `json:"cost_usd"`
 }
 
 type AITestDebriefReq struct {
