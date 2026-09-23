@@ -268,6 +268,7 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			user.POST("/device", h.RegisterDevice)
 			user.DELETE("/device", h.UnregisterDevice)
 		}
+		mobile.GET("/referral", mid.NewAuth(enforcer, rdb), h.GetReferralInfo)
 
 		banner := mobile.Group("/banner").Use(mid.NewAuth(enforcer, rdb))
 		{

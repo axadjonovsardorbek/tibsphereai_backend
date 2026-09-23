@@ -61,6 +61,19 @@ func GeneratePassword() string {
 	return fmt.Sprintf("%06d", n.Int64())
 }
 
+// referralCodeAlphabet - chalkash bo'ladigan belgilar (0/O, 1/I) olib tashlangan.
+const referralCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+// GenerateReferralCode - 8 belgili random referral kod (users.referral_code).
+func GenerateReferralCode() string {
+	b := make([]byte, 8)
+	for i := range b {
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(referralCodeAlphabet))))
+		b[i] = referralCodeAlphabet[n.Int64()]
+	}
+	return string(b)
+}
+
 func GetStartEndDate(month int) (string, string) {
 	start := time.Now().UTC().Add(time.Hour * 5).Format("2006-01-02 15:04:05")
 	end := time.Now().UTC().AddDate(0, month, 0).Add(time.Hour * 5).Format("2006-01-02 15:04:05")

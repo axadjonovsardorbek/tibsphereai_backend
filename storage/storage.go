@@ -86,6 +86,9 @@ type UserI interface {
 	GetMe(req *m.RatingRequest) (*m.RatingUserItem, error)
 	// Gamifikatsiya: XP/Coin qo'shish va level'ni levels jadvaliga qarab qayta hisoblash
 	AddPoints(req *m.AddPointsReq) (*m.Void, error)
+	// GetReferralInfo - user'ning o'z referral_code'i, taklif qilganlari va ular
+	// evaziga olingan tangalar ro'yxati (mobile profil bo'limi).
+	GetReferralInfo(userId string) (*m.ReferralInfoRes, error)
 }
 
 // UserDeviceI - ko'p qurilma push token (users.fcm_token o'rnini bosadi). Register/Unregister

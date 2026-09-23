@@ -502,6 +502,15 @@ func (mk *UserMock) AddPoints(req *m.AddPointsReq) (*m.Void, error) {
 	return r0, args.Error(1)
 }
 
+func (mk *UserMock) GetReferralInfo(userId string) (*m.ReferralInfoRes, error) {
+	args := mk.Called(userId)
+	var r0 *m.ReferralInfoRes
+	if args.Get(0) != nil {
+		r0 = args.Get(0).(*m.ReferralInfoRes)
+	}
+	return r0, args.Error(1)
+}
+
 type UserDeviceMock struct {
 	mock.Mock
 }

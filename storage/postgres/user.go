@@ -95,20 +95,23 @@ func (r *UserRepo) EmailLogin(req *m.ConfirmationReq) (*m.TokenRes, error) {
 	}
 
 	id := uuid.New().String()
+	refCode := r.newReferralCode(ctx)
 
 	insertQuery := `
 		INSERT INTO users (
 			id,
 			email,
-			name
-		) VALUES($1, $2, $3)
+			name,
+			referral_code
+		) VALUES($1, $2, $3, $4)
 		`
 
-	_, err = r.db.Exec(ctx, insertQuery, id, req.Identifier, "Foydalanuvchi")
+	_, err = r.db.Exec(ctx, insertQuery, id, req.Identifier, "Foydalanuvchi", refCode)
 
 	if err != nil {
 		return nil, err
 	}
+	r.applyReferral(ctx, id, req.ReferralCode)
 	tkn = token.GenerateJWTToken(id, "user", r.rdb)
 	return &m.TokenRes{
 		AccessToken:  tkn.AccessToken,
@@ -160,20 +163,23 @@ func (r *UserRepo) TelegramLogin(req *m.TelegramLoginReq) (*m.TokenRes, error) {
 	}
 
 	id := uuid.New().String()
+	refCode := r.newReferralCode(ctx)
 
 	insertQuery := `
 		INSERT INTO users (
 			id,
 			phone_number,
-			name
-		) VALUES($1, $2, $3)
+			name,
+			referral_code
+		) VALUES($1, $2, $3, $4)
 		`
 
-	_, err = r.db.Exec(ctx, insertQuery, id, req.Phone, req.Name)
+	_, err = r.db.Exec(ctx, insertQuery, id, req.Phone, req.Name, refCode)
 
 	if err != nil {
 		return nil, err
 	}
+	r.applyReferral(ctx, id, req.ReferralCode)
 	tkn = token.GenerateJWTToken(id, "user", r.rdb)
 	return &m.TokenRes{
 		AccessToken:  tkn.AccessToken,
@@ -205,18 +211,25 @@ func (r *UserRepo) GoogleLogin(req *m.GoogleAuthReq) (*m.TokenRes, error) {
 		}
 	}
 
+	isNew := false
 	if user_id == "" {
+		isNew = true
 		user_id = uuid.NewString()
+		refCode := r.newReferralCode(ctx)
 		insertQuery := `
-		INSERT INTO users (id, google_id, email, name)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO users (id, google_id, email, name, referral_code)
+		VALUES ($1, $2, $3, $4, $5)
 		`
-		_, err = r.db.Exec(ctx, insertQuery, user_id, req.GoogleId, req.Email, req.Name)
+		_, err = r.db.Exec(ctx, insertQuery, user_id, req.GoogleId, req.Email, req.Name, refCode)
 		if err != nil {
 			return nil, fmt.Errorf("error while creating google user: %w", err)
 		}
 	} else {
 		_, _ = r.db.Exec(ctx, `UPDATE users SET google_id = $1 WHERE id = $2 AND google_id IS NULL`, req.GoogleId, user_id)
+	}
+
+	if isNew {
+		r.applyReferral(ctx, user_id, req.ReferralCode)
 	}
 
 	tkn := token.GenerateJWTToken(user_id, "user", r.rdb)
@@ -226,6 +239,136 @@ func (r *UserRepo) GoogleLogin(req *m.GoogleAuthReq) (*m.TokenRes, error) {
 		Role:         "user",
 		Id:           user_id,
 	}, nil
+}
+
+// newReferralCode - yangi user uchun noyob referral_code (3 urinishgacha,
+// deyarli hech qachon collision bo'lmaydi - lekin himoya bo'lsin).
+func (r *UserRepo) newReferralCode(ctx context.Context) string {
+	for i := 0; i < 3; i++ {
+		code := helper.GenerateReferralCode()
+		var exists bool
+		if err := r.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE referral_code = $1)`, code).Scan(&exists); err == nil && !exists {
+			return code
+		}
+	}
+	return uuid.New().String()[:8]
+}
+
+// applyReferral - registratsiyada referral_code yuborilgan bo'lsa, kodni
+// egasini topib referred_by'ni qo'yadi va ikkalasiga ham tanga beradi
+// (miqdorlar app_settings'dan). Xato bo'lsa ham registratsiyani buzmaydi -
+// shuning uchun error qaytarmaydi, faqat log qiladi.
+func (r *UserRepo) applyReferral(ctx context.Context, newUserId, referralCode string) {
+	if referralCode == "" {
+		return
+	}
+
+	var referrerId string
+	err := r.db.QueryRow(ctx, `SELECT id FROM users WHERE referral_code = $1 AND deleted_at = 0`, referralCode).Scan(&referrerId)
+	if err != nil {
+		if err != pgx.ErrNoRows {
+			slog.Error("applyReferral: lookup failed", "err", err)
+		}
+		return
+	}
+	if referrerId == newUserId {
+		return // o'zini o'zi taklif qilolmaydi
+	}
+
+	referrerCoins := 50
+	referredCoins := 20
+	if v, err := r.getAppSettingInt(ctx, "referral_reward_referrer_coins"); err == nil {
+		referrerCoins = v
+	}
+	if v, err := r.getAppSettingInt(ctx, "referral_reward_referred_coins"); err == nil {
+		referredCoins = v
+	}
+
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		slog.Error("applyReferral: begin tx failed", "err", err)
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `UPDATE users SET referred_by = $1 WHERE id = $2`, referrerId, newUserId); err != nil {
+		slog.Error("applyReferral: set referred_by failed", "err", err)
+		return
+	}
+	if _, err := tx.Exec(ctx, `UPDATE users SET coins = coins + $1 WHERE id = $2`, referrerCoins, referrerId); err != nil {
+		slog.Error("applyReferral: reward referrer failed", "err", err)
+		return
+	}
+	if _, err := tx.Exec(ctx, `UPDATE users SET coins = coins + $1 WHERE id = $2`, referredCoins, newUserId); err != nil {
+		slog.Error("applyReferral: reward referred failed", "err", err)
+		return
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO referral_rewards (referrer_id, referred_id, referrer_coins, referred_coins)
+		VALUES ($1, $2, $3, $4)
+	`, referrerId, newUserId, referrerCoins, referredCoins); err != nil {
+		slog.Error("applyReferral: insert reward row failed", "err", err)
+		return
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		slog.Error("applyReferral: commit failed", "err", err)
+	}
+}
+
+func (r *UserRepo) getAppSettingInt(ctx context.Context, key string) (int, error) {
+	var raw string
+	if err := r.db.QueryRow(ctx, `SELECT value FROM app_settings WHERE key = $1`, key).Scan(&raw); err != nil {
+		return 0, err
+	}
+	return strconv.Atoi(raw)
+}
+
+// GetReferralInfo - user'ning o'z referral_code'i, taklif qilganlar soni va
+// ular evaziga olingan jami tanga (mobile profil "do'stlarni taklif qilish" ekrani).
+func (r *UserRepo) GetReferralInfo(userId string) (*m.ReferralInfoRes, error) {
+	ctx := context.Background()
+	res := &m.ReferralInfoRes{}
+
+	if err := r.db.QueryRow(ctx, `SELECT referral_code FROM users WHERE id = $1`, userId).Scan(&res.ReferralCode); err != nil {
+		return nil, fmt.Errorf("error getting referral code: %w", err)
+	}
+
+	res.ReferrerReward = 50
+	res.ReferredReward = 20
+	if v, err := r.getAppSettingInt(ctx, "referral_reward_referrer_coins"); err == nil {
+		res.ReferrerReward = v
+	}
+	if v, err := r.getAppSettingInt(ctx, "referral_reward_referred_coins"); err == nil {
+		res.ReferredReward = v
+	}
+
+	rows, err := r.db.Query(ctx, `
+		SELECT u.name, rr.created_at, rr.referrer_coins
+		FROM referral_rewards rr
+		JOIN users u ON u.id = rr.referred_id
+		WHERE rr.referrer_id = $1
+		ORDER BY rr.created_at DESC
+	`, userId)
+	if err != nil {
+		return nil, fmt.Errorf("error getting referral history: %w", err)
+	}
+	defer rows.Close()
+
+	res.Invited = []m.ReferralInvitedItem{}
+	for rows.Next() {
+		var item m.ReferralInvitedItem
+		var createdAt time.Time
+		if err := rows.Scan(&item.Name, &createdAt, &item.CoinsGiven); err != nil {
+			return nil, fmt.Errorf("error scanning referral history: %w", err)
+		}
+		item.JoinedAt = createdAt.Format(time.RFC3339)
+		res.Invited = append(res.Invited, item)
+		res.InvitedCount++
+		res.TotalCoinsEarned += item.CoinsGiven
+	}
+
+	return res, nil
 }
 
 func (r *UserRepo) GetById(req *m.ById) (*m.UserRes, error) {

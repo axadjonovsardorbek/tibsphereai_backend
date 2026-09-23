@@ -134,10 +134,10 @@ func (s *UserService) Confirmation(ctx context.Context, req *m.ConfirmationReq) 
 
 	switch req.Type {
 	case "email":
-		return s.storage.UserS.EmailLogin(&m.ConfirmationReq{Identifier: req.Identifier})
+		return s.storage.UserS.EmailLogin(&m.ConfirmationReq{Identifier: req.Identifier, ReferralCode: req.ReferralCode})
 	case "telegram":
 		name, _ := s.rdb.Get(fmt.Sprintf("tg:%s", req.Identifier)).Result()
-		return s.storage.UserS.TelegramLogin(&m.TelegramLoginReq{Phone: req.Identifier, Name: name})
+		return s.storage.UserS.TelegramLogin(&m.TelegramLoginReq{Phone: req.Identifier, Name: name, ReferralCode: req.ReferralCode})
 	}
 
 	return nil, errors.New("invalid type")
@@ -163,14 +163,18 @@ func (s *UserService) GoogleLogin(ctx context.Context, req *m.GoogleLoginReq) (*
 	name, _ := payload.Claims["name"].(string)
 
 	return s.storage.UserS.GoogleLogin(&m.GoogleAuthReq{
-		GoogleId: payload.Subject,
-		Email:    email,
-		Name:     name,
+		GoogleId:     payload.Subject,
+		Email:        email,
+		Name:         name,
+		ReferralCode: req.ReferralCode,
 	})
 }
 
 func (s *UserService) Check(ctx context.Context, req *m.UserCheckReq) (*m.UserCheckRes, error) {
 	return s.storage.UserS.Check(req)
+}
+func (s *UserService) GetReferralInfo(ctx context.Context, userId string) (*m.ReferralInfoRes, error) {
+	return s.storage.UserS.GetReferralInfo(userId)
 }
 func (s *UserService) GetById(ctx context.Context, req *m.ById) (*m.UserRes, error) {
 	return s.storage.UserS.GetById(req)

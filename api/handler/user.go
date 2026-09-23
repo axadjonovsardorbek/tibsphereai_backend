@@ -167,6 +167,31 @@ func (h *Handler) CheckUser(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
+// GetReferralInfo godoc
+// @Summary Referral ma'lumotlari (do'stlarni taklif qilish)
+// @Description O'z referral_code'i, taklif qilganlar soni va ular evaziga olingan tangalar
+// @Tags user
+// @Produce json
+// @Success 200 {object} models.ReferralInfoRes
+// @Security BearerAuth
+// @Router /mobile/referral [get]
+func (h *Handler) GetReferralInfo(c *gin.Context) {
+	userId := claimData(c, "user_id")
+	if userId == "" {
+		errs.Bad(c, fmt.Errorf("unauthorized"))
+		return
+	}
+
+	res, err := h.Clients.User.GetReferralInfo(context.Background(), userId)
+	if err != nil {
+		errs.Bad(c, err)
+		slog.Error("Error while getting referral info", err)
+		return
+	}
+
+	c.JSON(http.StatusOK, res)
+}
+
 // GoogleLogin godoc
 // @Summary Google orqali kirish (1 bosqichli)
 // @Description BACKEND_STRUCTURE.md 1-bo'lim: Google ID token orqali bir bosqichli kirish

@@ -3,6 +3,9 @@ package models
 type TelegramLoginReq struct {
 	Phone string `json:"phone"`
 	Name  string `json:"name"`
+	// ReferralCode - ixtiyoriy, faqat yangi user yaratilayotganda ishlatiladi
+	// (mavjud user login qilayotganda e'tiborga olinmaydi). Ko'ring [[ReferralInfoRes]].
+	ReferralCode string `json:"referral_code"`
 }
 
 type SendConfirmationCodeReq struct {
@@ -14,6 +17,8 @@ type ConfirmationReq struct {
 	Identifier       string `json:"identifier"`
 	ConfirmationCode string `json:"confirmation_code"`
 	Type             string `json:"type"` // "email" or "telegram"
+	// ReferralCode - ixtiyoriy, faqat yangi user yaratilayotganda ishlatiladi.
+	ReferralCode string `json:"referral_code"`
 }
 type UserCheckReq struct {
 	Identifier string `json:"identifier"`
@@ -27,15 +32,33 @@ type UserCheckRes struct {
 // Handler shu raw id_token'ni service qatlamiga uzatadi, service Google
 // tokeninfo/idtoken orqali tekshirib GoogleAuthReq'ga aylantiradi.
 type GoogleLoginReq struct {
-	IdToken string `json:"id_token"`
+	IdToken      string `json:"id_token"`
+	ReferralCode string `json:"referral_code"`
 }
 
 // GoogleAuthReq - Google tomonidan allaqachon tasdiqlangan claim'lar
 // (storage qatlami hech qachon tashqi HTTP chaqirmaydi).
 type GoogleAuthReq struct {
-	GoogleId string `json:"google_id"`
-	Email    string `json:"email"`
-	Name     string `json:"name"`
+	GoogleId     string `json:"google_id"`
+	Email        string `json:"email"`
+	Name         string `json:"name"`
+	ReferralCode string `json:"referral_code"`
+}
+
+// ReferralInfoRes - "do'stlarni taklif qilish" ekrani uchun (mobile, profil bo'limi).
+type ReferralInfoRes struct {
+	ReferralCode     string                `json:"referral_code"`
+	InvitedCount     int                   `json:"invited_count"`
+	TotalCoinsEarned int                   `json:"total_coins_earned"`
+	ReferrerReward   int                   `json:"referrer_reward"` // 1ta taklif uchun necha tanga beriladi (app_settings)
+	ReferredReward   int                   `json:"referred_reward"` // taklif qilinganga necha tanga beriladi
+	Invited          []ReferralInvitedItem `json:"invited"`
+}
+
+type ReferralInvitedItem struct {
+	Name       *string `json:"name"`
+	JoinedAt   string  `json:"joined_at"`
+	CoinsGiven int     `json:"coins_given"`
 }
 
 type UserRes struct {
