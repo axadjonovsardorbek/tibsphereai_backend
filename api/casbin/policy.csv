@@ -114,6 +114,8 @@ p, admin, /web/notification/user, GET
 p, admin, /web/order/:id, GET
 p, admin, /web/order, GET
 p, admin, /web/dashboard, GET
+p, admin, /web/coin-transaction, GET
+p, admin, /web/coin-transaction/summary, GET
 p, admin, /web/file-upload, POST
 
 p, user, /mobile/auth/user/check, POST
@@ -165,6 +167,7 @@ p, user, /mobile/tariff, GET
 p, user, /mobile/tariff/:id, GET
 p, user, /mobile/promocode, GET
 p, user, /mobile/promocode/redeem, POST
+p, user, /mobile/referral, GET
 p, user, /web/file-upload, POST
 
 g, user, unauthorized
