@@ -78,17 +78,6 @@ func (h *Handler) ChangePasswordWeb(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "password changed successfully"})
 }
 
-// ChangePassword godoc
-// @Summary Change password
-// @Description Change password
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param credentials body models.ChangePasswordBody true "Change password credentials"
-// @Success 200 {object} string "Password changed successfully"
-// @Failure 400 {object} string "Invalid request payload"
-// @Failure 500 {object} string "Server error"
 // RefreshPassword godoc
 // @Summary Refresh password
 // @Description Refresh password

@@ -3181,11 +3181,6 @@ const docTemplate = `{
         },
         "/web/auth/admin/login": {
             "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
                 "description": "Authenticate admin with login and password",
                 "consumes": [
                     "application/json"
@@ -3286,35 +3281,20 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
-                    },
-                    {
-                        "BearerAuth": []
                     }
                 ],
-                "description": "Change password\nRefresh password",
+                "description": "Refresh password",
                 "consumes": [
-                    "application/json",
                     "application/json"
                 ],
                 "produces": [
-                    "application/json",
                     "application/json"
                 ],
                 "tags": [
-                    "auth",
                     "auth"
                 ],
                 "summary": "Refresh password",
                 "parameters": [
-                    {
-                        "description": "Change password credentials",
-                        "name": "credentials",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.ChangePasswordBody"
-                        }
-                    },
                     {
                         "description": "Refresh password credentials",
                         "name": "credentials",

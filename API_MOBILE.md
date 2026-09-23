@@ -5,7 +5,7 @@
 > generatsiya qilinadi: `swag init -g api/api.go -o api/docs && python3 scripts/gen_api_doc.py`).
 >
 > - **Base URL:** deploy qilingan domen (masalan `https://api.tibsphereai.uz`), path'lar shu yerda ko'rsatilganidek qo'shiladi (masalan `/mobile/category`).
-> - **Auth:** login/OTP oqimi orqali olingan `access_token`ni `Authorization: Bearer <access_token>` header bilan yuboring. Token muddati tugasa (`401 "access token expired"`), `POST /auth/token/refresh` ga `{"refresh_token": "..."}` yuborib yangi juft token oling (bu endpoint `/mobile` ostida emas, root'da).
+> - **Auth:** login/OTP oqimi orqali (`POST /mobile/auth/google` yoki `/mobile/auth/user/otp/*`) olingan `access_token`ni `Authorization: Bearer <access_token>` header bilan yuboring. Token muddati tugasa (`401 "access token expired"`), `POST /auth/token/refresh` ga `{"refresh_token": "..."}` yuborib yangi juft token oling (bu endpoint `/mobile` ostida emas, root'da).
 > - **Til:** ko'p javoblarda matnlar tilga bog'liq bo'lsa, `Accept-Language: uz|ru|en` header yuboriladi (default `uz`).
 > - **Pagination:** ro'yxat endpointlari odatda `limit`, `page` query parametr oladi.
 > - **Xatolik formati:** xatolik bo'lsa `4xx/5xx` status + `{"error": "..."}` shaklidagi JSON qaytadi.

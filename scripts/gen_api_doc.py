@@ -27,11 +27,25 @@ TAG_TITLES = {
     'appRoute': "App Route (ilova ichki linklar)",
     'partner': "Hamkorlar",
     'study-plan': "O'quv rejasi (eslatma)",
+    # /web (admin panel) uchun qo'shimcha guruhlar
+    'admin': "Adminlar",
+    'role': "Rollar (RBAC)",
+    'custom-permission': "Maxsus ruxsatlar",
+    'dashboard': "Dashboard/Analitika",
+    'ai-prompt': "AI Promptlari va sinov",
+    'coin-transaction': "Tangalar monitoringi",
+    'order': "Buyurtmalar/To'lovlar",
+    'level': "Levellar (XP)",
+    'file-upload': "Fayl yuklash",
 }
 
-TAG_ORDER = ['auth','profile','user','category','topic','case','favorite','simulation',
+MOBILE_TAG_ORDER = ['auth','profile','user','category','topic','case','favorite','simulation',
     'debrief','setting','promocode','tariff','subscription','study-plan',
     'notification','banner','about','faq','contact','appRoute','partner']
+
+WEB_TAG_ORDER = ['auth','admin','role','custom-permission','dashboard','category','topic','case',
+    'level','ai-prompt','tariff','order','promocode','partner','coin-transaction','setting',
+    'notification','banner','about','faq','contact','appRoute','user','file-upload']
 
 def resolve_ref(ref):
     name = ref.split('/')[-1]
@@ -133,7 +147,7 @@ def gen_tag(tag, ops):
         out.append("")
     return '\n'.join(out)
 
-def build(prefix, outfile, title):
+def build(prefix, outfile, title, tag_order):
     grouped = collections.defaultdict(list)
     for path, methods in paths.items():
         if not path.startswith(prefix):
@@ -142,6 +156,8 @@ def build(prefix, outfile, title):
             for tag in op.get('tags', ['other']):
                 grouped[tag].append((path, method, op))
 
+    login_note = ("login/OTP oqimi orqali (`POST /mobile/auth/google` yoki `/mobile/auth/user/otp/*`)"
+        if prefix == '/mobile' else "admin login orqali (`POST /web/auth/admin/login`, email+parol)")
     header = f"""# {title}
 
 > **Diqqat:** bu fayl `api/docs/swagger.json` asosida avtomatik generatsiya qilingan
@@ -149,7 +165,7 @@ def build(prefix, outfile, title):
 > generatsiya qilinadi: `swag init -g api/api.go -o api/docs && python3 scripts/gen_api_doc.py`).
 >
 > - **Base URL:** deploy qilingan domen (masalan `https://api.tibsphereai.uz`), path'lar shu yerda ko'rsatilganidek qo'shiladi (masalan `{prefix}/category`).
-> - **Auth:** login/OTP oqimi orqali olingan `access_token`ni `Authorization: Bearer <access_token>` header bilan yuboring. Token muddati tugasa (`401 "access token expired"`), `POST /auth/token/refresh` ga `{{"refresh_token": "..."}}` yuborib yangi juft token oling (bu endpoint `/mobile` ostida emas, root'da).
+> - **Auth:** {login_note} olingan `access_token`ni `Authorization: Bearer <access_token>` header bilan yuboring. Token muddati tugasa (`401 "access token expired"`), `POST /auth/token/refresh` ga `{{"refresh_token": "..."}}` yuborib yangi juft token oling (bu endpoint `{prefix}` ostida emas, root'da).
 > - **Til:** ko'p javoblarda matnlar tilga bog'liq bo'lsa, `Accept-Language: uz|ru|en` header yuboriladi (default `uz`).
 > - **Pagination:** ro'yxat endpointlari odatda `limit`, `page` query parametr oladi.
 > - **Xatolik formati:** xatolik bo'lsa `4xx/5xx` status + `{{"error": "..."}}` shaklidagi JSON qaytadi.
@@ -159,16 +175,17 @@ def build(prefix, outfile, title):
 
 """
     body_parts = [header]
-    for tag in TAG_ORDER:
+    for tag in tag_order:
         if tag in grouped:
             body_parts.append(gen_tag(tag, grouped[tag]))
-    # any leftover tags not in TAG_ORDER
+    # any leftover tags not in tag_order
     for tag in grouped:
-        if tag not in TAG_ORDER:
+        if tag not in tag_order:
             body_parts.append(gen_tag(tag, grouped[tag]))
 
     with open(outfile, 'w') as f:
         f.write('\n'.join(body_parts))
     print('wrote', outfile, 'paths:', sum(len(v) for v in grouped.values()))
 
-build('/mobile', 'API_MOBILE.md', "📱 Mobil ilova API — Frontend uchun qo'llanma")
+build('/mobile', 'API_MOBILE.md', "📱 Mobil ilova API — Frontend uchun qo'llanma", MOBILE_TAG_ORDER)
+build('/web', 'API_WEB.md', "🖥️ Admin panel API — Frontend (web) uchun qo'llanma", WEB_TAG_ORDER)

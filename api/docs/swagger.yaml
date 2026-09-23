@@ -3864,8 +3864,6 @@ paths:
           description: Server error
           schema:
             type: string
-      security:
-      - BearerAuth: []
       summary: Login admin
       tags:
       - auth
@@ -3905,17 +3903,8 @@ paths:
     put:
       consumes:
       - application/json
-      - application/json
-      description: |-
-        Change password
-        Refresh password
+      description: Refresh password
       parameters:
-      - description: Change password credentials
-        in: body
-        name: credentials
-        required: true
-        schema:
-          $ref: '#/definitions/models.ChangePasswordBody'
       - description: Refresh password credentials
         in: body
         name: credentials
@@ -3923,7 +3912,6 @@ paths:
         schema:
           $ref: '#/definitions/models.RefreshPasswordReq'
       produces:
-      - application/json
       - application/json
       responses:
         "200":
@@ -3940,10 +3928,8 @@ paths:
             type: string
       security:
       - BearerAuth: []
-      - BearerAuth: []
       summary: Refresh password
       tags:
-      - auth
       - auth
   /web/banner:
     get:

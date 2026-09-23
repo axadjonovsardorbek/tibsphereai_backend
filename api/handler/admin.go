@@ -173,7 +173,6 @@ func (h *Handler) GetProfileAdmin(c *gin.Context) {
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Security BearerAuth
 // @Param credentials body models.LoginReq true "Admin login credentials"
 // @Success 200 {object} models.TokenRes "JWT tokens"
 // @Failure 400 {object} string "Invalid request payload"
