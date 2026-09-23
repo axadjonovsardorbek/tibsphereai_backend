@@ -128,9 +128,11 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 
 		app_route := web.Group("/app-route").Use(mid.NewAuth(enforcer, rdb))
 		{
+			app_route.POST("", h.CreateAppRoute)
 			app_route.GET("", h.GetAllAppRoutes)
 			app_route.GET("/:id", h.GetByIdAppRoute)
 			app_route.PUT("/:id/update", h.UpdateAppRoute)
+			app_route.DELETE("/:id/delete", h.DeleteAppRoute)
 		}
 
 		faq := web.Group("/faq").Use(mid.NewAuth(enforcer, rdb))
