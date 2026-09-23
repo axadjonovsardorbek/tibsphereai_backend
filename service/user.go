@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"tibsphereai/api/token"
 	"tibsphereai/internal/config"
 	"tibsphereai/internal/helper"
 	"tibsphereai/internal/push"
@@ -168,6 +169,42 @@ func (s *UserService) GoogleLogin(ctx context.Context, req *m.GoogleLoginReq) (*
 		Name:         name,
 		ReferralCode: req.ReferralCode,
 	})
+}
+
+// RefreshToken - access_token muddati tugab, middleware "access token expired"
+// (401) qaytarganda ishlatiladi. refresh_token'ni tekshiradi (imzo + muddat +
+// redis'dagi joriy sessiya bilan mos kelishi - logout/boshqa qurilmadan kirish
+// eskisini avtomatik bekor qiladi), va yangi access+refresh juftini beradi
+// (session_id ham yangilanadi - eski refresh_token qayta ishlatilmaydi).
+func (s *UserService) RefreshToken(ctx context.Context, req *m.RefreshTokenReq) (*m.TokenRes, error) {
+	if req.RefreshToken == "" {
+		return nil, errors.New("refresh_token is required")
+	}
+
+	claims, err := token.ExtractClaim(req.RefreshToken)
+	if err != nil {
+		return nil, errs.ErrUnauthorized.Wrap(err)
+	}
+
+	userId, _ := claims["user_id"].(string)
+	role, _ := claims["role"].(string)
+	sessionId, _ := claims["session_id"].(string)
+	if userId == "" || role == "" || sessionId == "" {
+		return nil, errs.ErrUnauthorized.Wrap(errors.New("malformed refresh token claims"))
+	}
+
+	stored, err := s.rdb.Get("user_session:" + userId).Result()
+	if err != nil || stored != sessionId {
+		return nil, errs.ErrUnauthorized.Wrap(errors.New("session expired, please login again"))
+	}
+
+	tkn := token.GenerateJWTToken(userId, role, s.rdb)
+	return &m.TokenRes{
+		AccessToken:  tkn.AccessToken,
+		RefreshToken: tkn.RefreshToken,
+		Role:         role,
+		Id:           userId,
+	}, nil
 }
 
 func (s *UserService) Check(ctx context.Context, req *m.UserCheckReq) (*m.UserCheckRes, error) {

@@ -114,3 +114,30 @@ func (h *Handler) VerifyConfirmation(c *gin.Context) {
 
 	c.JSON(http.StatusOK, res)
 }
+
+// RefreshToken godoc
+// @Summary Access token'ni refresh_token orqali yangilash
+// @Description Middleware "access token expired" (401) qaytarganda shu endpoint orqali yangi access+refresh token juftini oling
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body models.RefreshTokenReq true "refresh_token"
+// @Success 200 {object} models.TokenRes
+// @Failure 401 {object} string
+// @Router /auth/token/refresh [post]
+func (h *Handler) RefreshToken(c *gin.Context) {
+	var req m.RefreshTokenReq
+	if err := c.BindJSON(&req); err != nil {
+		errs.Bad(c, err)
+		return
+	}
+
+	res, err := h.Clients.User.RefreshToken(context.Background(), &req)
+	if err != nil {
+		errs.Bad(c, err)
+		slog.Error("Error while refreshing token", err)
+		return
+	}
+
+	c.JSON(http.StatusOK, res)
+}

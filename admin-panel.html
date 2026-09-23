@@ -155,7 +155,35 @@ function toast(msg, kind){
   setTimeout(()=>box.remove(), 4500);
 }
 
-async function api(path, {method='GET', body=null, isForm=false, query=null} = {}){
+// refreshInFlight - bir vaqtda ko'p so'rov 401 olsa ham, refresh faqat bir marta
+// chaqirilsin uchun (parallel so'rovlar shu bitta promise'ni kutadi).
+let refreshInFlight = null;
+async function doRefreshToken(){
+  if(!state.refresh) return false;
+  if(!refreshInFlight){
+    refreshInFlight = (async ()=>{
+      try{
+        const res = await fetch(state.baseUrl.replace(/\/$/,'') + '/auth/token/refresh', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({refresh_token: state.refresh}),
+        });
+        if(!res.ok) return false;
+        const data = await res.json();
+        if(!data || !data.access_token) return false;
+        state.access = data.access_token;
+        state.refresh = data.refresh_token || state.refresh;
+        localStorage.setItem('ts_access', state.access);
+        localStorage.setItem('ts_refresh', state.refresh);
+        return true;
+      }catch(e){ return false; }
+    })();
+  }
+  const ok = await refreshInFlight;
+  refreshInFlight = null;
+  return ok;
+}
+
+async function api(path, {method='GET', body=null, isForm=false, query=null} = {}, _retry=true){
   let url = state.baseUrl.replace(/\/$/,'') + path;
   if(query){
     const qs = Object.entries(query).filter(([,v])=>v!==undefined && v!==null && v!=='').map(([k,v])=>encodeURIComponent(k)+'='+encodeURIComponent(v)).join('&');
@@ -176,6 +204,16 @@ async function api(path, {method='GET', body=null, isForm=false, query=null} = {
   }catch(e){
     toast('Tarmoq xatosi: ' + e.message + ' (Base URL / CORS / server ishlayaptimi tekshiring)', 'err');
     throw e;
+  }
+  // access token muddati tugagan bo'lsa - refresh_token bilan avtomatik yangilab,
+  // so'rovni bir marta qaytadan yuboramiz (foydalanuvchi hech narsa sezmaydi).
+  if(res.status === 401 && _retry && state.refresh && path !== '/auth/token/refresh'){
+    const ok = await doRefreshToken();
+    if(ok) return api(path, {method, body, isForm, query}, false);
+    logout();
+    toast('Sessiya tugagan, qaytadan kiring', 'err');
+    const err = new Error('session expired'); err.status = 401;
+    throw err;
   }
   let data = null;
   const text = await res.text();

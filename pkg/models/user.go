@@ -24,6 +24,12 @@ type UserCheckReq struct {
 	Identifier string `json:"identifier"`
 }
 
+// RefreshTokenReq - access_token muddati tugaganda (401 "access token expired"),
+// refresh_token orqali yangi juft token olish uchun.
+type RefreshTokenReq struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
 type UserCheckRes struct {
 	HasAccount bool `json:"has_account"`
 }
