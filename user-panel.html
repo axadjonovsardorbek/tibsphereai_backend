@@ -1483,14 +1483,17 @@ async function renderTariffs(main){
   grid.innerHTML = items.length ? '' : '<p class="muted">Tarif topilmadi.</p>';
   items.forEach(t=>{
     const c = document.createElement('div'); c.className='card stat';
-    c.innerHTML = '<h4>'+esc(t.name)+'</h4><p>'+esc(t.duration)+' kun · '+esc(t.price)+' so\'m</p><p class="muted">'+esc(t.description||'')+'</p>';
+    const isCoinPkg = t.kind === 'coin_package';
+    const subtitle = isCoinPkg ? ('🪙 '+esc(t.coins)+' tanga · '+esc(t.price)+' so\'m') : (esc(t.duration)+' oy · '+esc(t.price)+' so\'m');
+    c.innerHTML = '<h4>'+esc(t.name)+(isCoinPkg?' <span class="muted">(tanga paketi)</span>':'')+'</h4><p>'+subtitle+'</p><p class="muted">'+esc(t.description||'')+'</p>';
     const buyRow = document.createElement('div'); buyRow.style.display='flex'; buyRow.style.gap='6px'; buyRow.style.marginTop='8px';
     const coinsInp = document.createElement('input'); coinsInp.type='number'; coinsInp.placeholder='Tanga (ixtiyoriy)'; coinsInp.style.width='100%';
+    if(isCoinPkg) coinsInp.style.display='none'; // tangaga tanga sotib olib bo'lmaydi
     const buyBtn = document.createElement('button'); buyBtn.className='primary'; buyBtn.textContent='💳 Sotib olish';
     buyBtn.onclick = async ()=>{
       try{
         const res = await api('/mobile/subscription', {method:'POST', body:{tariff_id:t.id, coins_used:Number(coinsInp.value||0)}});
-        if(res.just_paid) toast('To\'liq tangadan to\'landi — obuna faollashdi!', 'ok');
+        if(res.just_paid) toast(isCoinPkg ? 'Tangalar hisobga qo\'shildi!' : 'To\'liq tangadan to\'landi — obuna faollashdi!', 'ok');
         else if(res.url) openPayLink(res.url);
         else toast('Buyurtma yaratildi: '+res.order_id, 'ok');
       }catch(e){}

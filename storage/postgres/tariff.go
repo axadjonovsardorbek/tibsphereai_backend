@@ -24,20 +24,28 @@ func NewTariffRepo(db *pgxpool.Pool) *TariffRepo {
 
 func (r *TariffRepo) Create(req *m.TariffCreateReq) (*m.ById, error) {
 	id := uuid.NewString()
+	kind := req.Kind
+	if kind == "" {
+		kind = "subscription"
+	}
 	query := `
 	INSERT INTO tariffs (
 		id,
 		name,
+		kind,
 		duration,
+		coins,
 		price,
 		description
-	) VALUES ($1, $2, $3, $4, $5)
+	) VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
 	_, err := r.db.Exec(context.Background(), query,
 		id,
 		req.Name,
+		kind,
 		req.Duration,
+		req.Coins,
 		req.Price,
 		req.Description,
 	)
@@ -53,7 +61,9 @@ func (r *TariffRepo) GetById(req *m.ById) (*m.TariffRes, error) {
 	SELECT
 		id,
 		name,
+		kind,
 		duration,
+		coins,
 		price,
 		description,
 		created_at::text,
@@ -72,7 +82,9 @@ func (r *TariffRepo) GetById(req *m.ById) (*m.TariffRes, error) {
 	err := row.Scan(
 		&tariff.Id,
 		&tariff.Name,
+		&tariff.Kind,
 		&tariff.Duration,
+		&tariff.Coins,
 		&tariff.Price,
 		&tariff.Description,
 		&tariff.CreatedAt,
@@ -95,7 +107,9 @@ func (r *TariffRepo) GetAll(req *m.TariffGetListReq) (*m.PaginationResponse, *m.
 		COUNT(id) OVER() AS total_count,
 		id,
 		name,
+		kind,
 		duration,
+		coins,
 		price,
 		description,
 		created_at::text,
@@ -110,6 +124,10 @@ func (r *TariffRepo) GetAll(req *m.TariffGetListReq) (*m.PaginationResponse, *m.
 	if req.Duration != 0 {
 		query += fmt.Sprintf(" AND duration = $%d", len(args)+1)
 		args = append(args, req.Duration)
+	}
+	if req.Kind != "" {
+		query += fmt.Sprintf(" AND kind = $%d", len(args)+1)
+		args = append(args, req.Kind)
 	}
 
 	query += " ORDER BY created_at DESC"
@@ -132,7 +150,9 @@ func (r *TariffRepo) GetAll(req *m.TariffGetListReq) (*m.PaginationResponse, *m.
 			&totalCount,
 			&tariff.Id,
 			&tariff.Name,
+			&tariff.Kind,
 			&tariff.Duration,
+			&tariff.Coins,
 			&tariff.Price,
 			&tariff.Description,
 			&tariff.CreatedAt,
@@ -165,8 +185,16 @@ func (r *TariffRepo) Update(req *m.TariffUpdateReq) (*m.Void, error) {
 		args = append(args, req.Name)
 	}
 
+	if req.Kind != "" {
+		conditions = append(conditions, " kind = $"+strconv.Itoa(len(args)+1))
+		args = append(args, req.Kind)
+	}
+
 	conditions = append(conditions, " duration = $"+strconv.Itoa(len(args)+1))
 	args = append(args, req.Duration)
+
+	conditions = append(conditions, " coins = $"+strconv.Itoa(len(args)+1))
+	args = append(args, req.Coins)
 
 	conditions = append(conditions, " price = $"+strconv.Itoa(len(args)+1))
 	args = append(args, req.Price)

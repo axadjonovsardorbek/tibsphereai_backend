@@ -38,6 +38,33 @@ func (r *OrderRepo) payURL(amount float64, orderId string) string {
 	)
 }
 
+// activateTariff - to'lov PAID bo'lgandan keyin (gateway'siz, Click yoki Payme -
+// uchala joyda ham) tariff.kind bo'yicha natijani beradi: "subscription" bo'lsa
+// subscriptions qatori, "coin_package" bo'lsa users.coins ga qo'shiladi.
+// tx ichida chaqiriladi, alohida commit qilmaydi.
+func (r *OrderRepo) activateTariff(ctx context.Context, tx pgx.Tx, userId, tariffId, orderId string, duration int) error {
+	var kind string
+	var coins int
+	if err := tx.QueryRow(ctx, `SELECT kind, coins FROM tariffs WHERE id = $1`, tariffId).Scan(&kind, &coins); err != nil {
+		return fmt.Errorf("activateTariff: get tariff: %w", err)
+	}
+
+	if kind == "coin_package" {
+		if _, err := tx.Exec(ctx, `UPDATE users SET coins = coins + $1, updated_at = now() WHERE id = $2`, coins, userId); err != nil {
+			return fmt.Errorf("activateTariff: credit coins: %w", err)
+		}
+		return nil
+	}
+
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO subscriptions (id, user_id, tariff_id, order_id, started_at, ended_at, status)
+		VALUES (gen_random_uuid(), $1, $2, $3, now(), now() + ($4 || ' months')::interval, 'active')
+	`, userId, tariffId, orderId, duration); err != nil {
+		return fmt.Errorf("activateTariff: create subscription: %w", err)
+	}
+	return nil
+}
+
 // Create - Premium obunaga (tariff) buyurtma yaratadi. TZ 2.3-bo'lim: to'liq pulga
 // (Click/Payme), to'liq tangaga, yoki aralash to'lanadi. CoinsUsed so'mga
 // app_settings.coin_to_uzs_rate bo'yicha aylantirilib narxdan ayiriladi; qolgan
@@ -142,11 +169,8 @@ func (r *OrderRepo) Create(req *m.OrderCreateReq) (*m.OrderCreateRes, error) {
 	`, id); err != nil {
 		return nil, fmt.Errorf("error while marking order paid: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO subscriptions (id, user_id, tariff_id, order_id, started_at, ended_at, status)
-		VALUES (gen_random_uuid(), $1, $2, $3, now(), now() + ($4 || ' months')::interval, 'active')
-	`, req.UserId, req.TariffId, id, duration); err != nil {
-		return nil, fmt.Errorf("error while creating subscription: %w", err)
+	if err := r.activateTariff(ctx, tx, req.UserId, req.TariffId, id, duration); err != nil {
+		return nil, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {

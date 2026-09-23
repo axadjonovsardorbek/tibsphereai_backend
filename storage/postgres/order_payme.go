@@ -182,12 +182,8 @@ func (r *OrderRepo) PaymePerformTransaction(paymeId string) (*m.PaymeTransaction
 		}
 	}
 
-	_, err = tx.Exec(ctx, `
-		INSERT INTO subscriptions (id, user_id, tariff_id, order_id, started_at, ended_at, status)
-		VALUES (gen_random_uuid(), $1, $2, $3, now(), now() + ($4 || ' months')::interval, 'active')
-	`, userId, tariffId, orderId, duration)
-	if err != nil {
-		return nil, fmt.Errorf("payme perform: create subscription: %w", err)
+	if err := r.activateTariff(ctx, tx, userId, tariffId, orderId, duration); err != nil {
+		return nil, fmt.Errorf("payme perform: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {

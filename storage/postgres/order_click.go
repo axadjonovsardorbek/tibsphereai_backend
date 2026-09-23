@@ -5,8 +5,6 @@ import (
 	"fmt"
 	m "tibsphereai/pkg/models"
 	"time"
-
-	"github.com/jackc/pgx/v5"
 )
 
 const (
@@ -117,14 +115,15 @@ func (r *OrderRepo) ApplyComplete(p *m.ApplyCompleteParams) (*m.CompleteResult, 
 	var prepare *int64
 	var paidAt *time.Time
 	var coinsUsed int
-	var userId string
+	var userId, tariffId string
+	var duration int
 
 	err = tx.QueryRow(ctx, `
-		SELECT status::text, merchant_prepare_id, paid_at, coins_used, user_id
+		SELECT status::text, merchant_prepare_id, paid_at, coins_used, user_id, tariff_id, duration
 		FROM orders
 		WHERE id=$1::uuid
 		FOR UPDATE
-	`, p.OrderId).Scan(&status, &prepare, &paidAt, &coinsUsed, &userId)
+	`, p.OrderId).Scan(&status, &prepare, &paidAt, &coinsUsed, &userId, &tariffId, &duration)
 
 	if err != nil {
 		return &m.CompleteResult{Error: ErrOrderNotExist, ErrorNote: "Order not found"}, nil
@@ -179,16 +178,8 @@ func (r *OrderRepo) ApplyComplete(p *m.ApplyCompleteParams) (*m.CompleteResult, 
 		}
 	}
 
-	_, err = tx.Exec(ctx, `
-		INSERT INTO subscriptions (id, user_id, tariff_id, order_id, started_at, ended_at, status)
-		SELECT gen_random_uuid(), o.user_id, o.tariff_id, o.id, now(),
-		       now() + (o.duration || ' months')::interval, 'active'
-		FROM orders o
-		WHERE o.id = $1::uuid AND o.status = 'PAID'
-	`, p.OrderId)
-
-	if err != nil && err != pgx.ErrNoRows {
-		return &m.CompleteResult{Error: ErrFailedUpdate, ErrorNote: "Failed to create subscription"}, nil
+	if err := r.activateTariff(ctx, tx, userId, tariffId, p.OrderId, duration); err != nil {
+		return &m.CompleteResult{Error: ErrFailedUpdate, ErrorNote: "Failed to activate tariff"}, nil
 	}
 
 	if err := tx.Commit(ctx); err != nil {

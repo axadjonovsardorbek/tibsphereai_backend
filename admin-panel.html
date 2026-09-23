@@ -551,12 +551,17 @@ const MODULES = {
   },
   tariff: {
     label:'Tariflar', base:'/web/tariff', listKey:'tariffs', noPagination:true,
-    search:[{name:'duration', label:'Muddat (kun)', type:'number'}],
-    columns:['id','name','duration','price','created_at'],
+    search:[
+      {name:'duration', label:'Muddat (kun)', type:'number'},
+      {name:'kind', label:'Turi', type:'select', includeEmpty:true, options:[{value:'subscription',label:'Obuna'},{value:'coin_package',label:'Tanga paketi'}]},
+    ],
+    columns:['id','name','kind','duration','coins','price','created_at'],
     fields:[
       {name:'name', label:'Nomi', type:'text', required:true},
-      {name:'duration', label:'Muddat (kun)', type:'number'},
-      {name:'price', label:'Narx', type:'number', step:'0.01'},
+      {name:'kind', label:'Turi', type:'select', options:[{value:'subscription',label:'Obuna (Premium)'},{value:'coin_package',label:'Tanga paketi'}]},
+      {name:'duration', label:'Muddat (oy) - faqat obuna uchun', type:'number'},
+      {name:'coins', label:'Tanga soni - faqat tanga paketi uchun', type:'number'},
+      {name:'price', label:'Narx (so\'m)', type:'number', step:'0.01'},
       {name:'description', label:'Tavsif', type:'textarea'},
     ],
     canCreate:true, canUpdate:true, canDelete:true,
