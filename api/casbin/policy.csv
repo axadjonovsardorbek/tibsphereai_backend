@@ -49,9 +49,11 @@ p, admin, /web/about, GET
 p, admin, /web/about/:id, GET
 p, admin, /web/about/:id/update, PUT
 p, admin, /web/about/:id/delete, DELETE
+p, admin, /web/app-route, POST
 p, admin, /web/app-route, GET
 p, admin, /web/app-route/:id, GET
 p, admin, /web/app-route/:id/update, PUT
+p, admin, /web/app-route/:id/delete, DELETE
 p, admin, /web/faq, POST
 p, admin, /web/faq, GET
 p, admin, /web/faq/:id, GET
