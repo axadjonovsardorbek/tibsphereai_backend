@@ -35,14 +35,16 @@ func (h *Handler) CreateContact(c *gin.Context) {
 
 	url_check := isValidURL(req.LinkUrl)
 	if !url_check {
-		errs.Bad(c, fmt.Errorf("invalid url"))
+		errs.Bad(c, fmt.Errorf("link_url: havola noto'g'ri formatda (\"%s\") — http:// yoki https:// bilan boshlanishi kerak", req.LinkUrl))
 		slog.Error("Invalid url")
+		return
 	}
 
 	phone_check := isValidPhone(req.PhoneNumber)
 	if !phone_check {
-		errs.Bad(c, fmt.Errorf("invalid phone"))
+		errs.Bad(c, fmt.Errorf("phone_number: telefon raqam noto'g'ri formatda (\"%s\") — to'g'ri format: +998901234567 yoki 901234567", req.PhoneNumber))
 		slog.Error("Invalid phone")
+		return
 	}
 
 	slog.Info("Create contact", "Contact", req)
@@ -167,14 +169,16 @@ func (h *Handler) UpdateContact(c *gin.Context) {
 
 	url_check := isValidURL(req.LinkUrl)
 	if !url_check {
-		errs.Bad(c, fmt.Errorf("invalid url"))
+		errs.Bad(c, fmt.Errorf("link_url: havola noto'g'ri formatda (\"%s\") — http:// yoki https:// bilan boshlanishi kerak", req.LinkUrl))
 		slog.Error("Invalid url")
+		return
 	}
 
 	phone_check := isValidPhone(req.PhoneNumber)
 	if !phone_check {
-		errs.Bad(c, fmt.Errorf("invalid phone"))
+		errs.Bad(c, fmt.Errorf("phone_number: telefon raqam noto'g'ri formatda (\"%s\") — to'g'ri format: +998901234567 yoki 901234567", req.PhoneNumber))
 		slog.Error("Invalid phone")
+		return
 	}
 
 	slog.Info("Update Contact", req)

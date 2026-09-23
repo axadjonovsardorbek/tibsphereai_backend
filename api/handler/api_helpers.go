@@ -41,14 +41,6 @@ func isValidSemver(v string) bool {
 	return re.MatchString(v)
 }
 
-func isValidAppVersion(v models.AppVersionRes) bool {
-	return isValidSemver(v.Android) && isValidSemver(v.IOS)
-}
-
-func isValidAppLinks(l models.AppLinksRes) bool {
-	return isValidURL(l.Google) && isValidURL(l.Apple)
-}
-
 func isValidURL(u string) bool {
 	parsed, err := url.ParseRequestURI(u)
 	if err != nil {
@@ -61,23 +53,29 @@ func isValidURL(u string) bool {
 func validateAppRouteCreate(req models.AppRouteCreateReq) error {
 
 	if !isValidPhone(req.CallCenter) {
-		return fmt.Errorf("invalid call_center phone number")
+		return fmt.Errorf("call_center: telefon raqam noto'g'ri formatda kiritildi (\"%s\") — to'g'ri format: +998901234567 yoki 901234567", req.CallCenter)
 	}
 
 	if !isValidURL(req.SupportUrl) {
-		return fmt.Errorf("invalid support_url")
+		return fmt.Errorf("support_url: havola noto'g'ri formatda (\"%s\") — http:// yoki https:// bilan boshlanishi kerak", req.SupportUrl)
 	}
 
-	if !isValidAppVersion(req.AppVersion) {
-		return fmt.Errorf("invalid app_version format")
+	if !isValidSemver(req.AppVersion.Android) {
+		return fmt.Errorf("app_version.android: versiya noto'g'ri formatda (\"%s\") — masalan: 1.0.0", req.AppVersion.Android)
+	}
+	if !isValidSemver(req.AppVersion.IOS) {
+		return fmt.Errorf("app_version.ios: versiya noto'g'ri formatda (\"%s\") — masalan: 1.0.0", req.AppVersion.IOS)
 	}
 
-	if !isValidAppLinks(req.AppLinks) {
-		return fmt.Errorf("invalid app_links")
+	if !isValidURL(req.AppLinks.Google) {
+		return fmt.Errorf("app_links.google: havola noto'g'ri formatda (\"%s\") — http:// yoki https:// bilan boshlanishi kerak", req.AppLinks.Google)
+	}
+	if !isValidURL(req.AppLinks.Apple) {
+		return fmt.Errorf("app_links.apple: havola noto'g'ri formatda (\"%s\") — http:// yoki https:// bilan boshlanishi kerak", req.AppLinks.Apple)
 	}
 
 	if !isValidSemver(req.PaymentMinVersion) {
-		return fmt.Errorf("invalid payment_min_version")
+		return fmt.Errorf("payment_min_version: versiya noto'g'ri formatda (\"%s\") — masalan: 1.0.0", req.PaymentMinVersion)
 	}
 
 	return nil

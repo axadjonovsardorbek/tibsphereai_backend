@@ -40,7 +40,7 @@ func (h *Handler) SendConfirmation(c *gin.Context) {
 
 	check := isValidIdentifier(req.Identifier)
 	if !check {
-		errs.Bad(c, fmt.Errorf("invalid identifier format"))
+		errs.Bad(c, fmt.Errorf("identifier: email yoki telefon raqam formati noto'g'ri (\"%s\") — masalan: user@example.com yoki +998901234567", req.Identifier))
 		slog.Error("Invalid identifier format")
 		return
 	}
@@ -84,7 +84,7 @@ func (h *Handler) VerifyConfirmation(c *gin.Context) {
 		check := isValidIdentifier(req.Identifier)
 
 		if !check {
-			errs.Bad(c, fmt.Errorf("invalid identifier format"))
+			errs.Bad(c, fmt.Errorf("identifier: email yoki telefon raqam formati noto'g'ri (\"%s\") — masalan: user@example.com yoki +998901234567", req.Identifier))
 			slog.Error("Invalid identifier format")
 			return
 		}

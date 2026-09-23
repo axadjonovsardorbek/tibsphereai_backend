@@ -325,7 +325,9 @@ function toast(msg, kind){
   box.className = 'toast ' + (kind || '');
   box.textContent = msg;
   document.getElementById('toasts').appendChild(box);
-  setTimeout(()=>box.remove(), 4500);
+  // Xato xabarlari (ayniqsa validatsiya tafsilotlari bilan) uzunroq bo'lishi
+  // mumkin - o'qib ulgurish uchun ko'proq vaqt beramiz.
+  setTimeout(()=>box.remove(), kind === 'err' ? 9000 : 4500);
 }
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 

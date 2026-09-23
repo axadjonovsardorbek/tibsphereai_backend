@@ -147,9 +147,7 @@ func (h *Handler) CheckUser(c *gin.Context) {
 
 	check := isValidIdentifier(req.Identifier)
 	if !check {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "invalid identifier",
-		})
+		errs.Bad(c, fmt.Errorf("identifier: email yoki telefon raqam formati noto'g'ri (\"%s\") — masalan: user@example.com yoki +998901234567", req.Identifier))
 		slog.Error("Error binding request body: Invalid identifier")
 		return
 	}
@@ -411,9 +409,7 @@ func (h *Handler) UpdateProfileUser(c *gin.Context) {
 	if req.PhoneNumber != "" {
 		check := isValidPhone(req.PhoneNumber)
 		if !check {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"message": "phone number is not valid",
-			})
+			errs.Bad(c, fmt.Errorf("phone_number: telefon raqam noto'g'ri formatda (\"%s\") — to'g'ri format: +998901234567 yoki 901234567", req.PhoneNumber))
 			slog.Error("Error binding request body: Phone number is not valid")
 			return
 		}
