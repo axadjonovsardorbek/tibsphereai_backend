@@ -28,17 +28,18 @@ type Clients struct {
 	User             *service.UserService
 	UserDevice       *service.UserDeviceService
 
-	Category       *service.CategoryService
-	CategoryUnlock *service.CategoryUnlockService
-	Topic          *service.TopicService
-	StudyPlan      *service.StudyPlanService
-	Case           *service.CaseService
-	Favorite       *service.FavoriteService
-	Simulation     *service.SimulationService
-	Debrief        *service.DebriefService
-	Level          *service.LevelService
-	AppSetting     *service.AppSettingService
-	AIPrompt       *service.AIPromptService
+	Category        *service.CategoryService
+	CategoryUnlock  *service.CategoryUnlockService
+	Topic           *service.TopicService
+	StudyPlan       *service.StudyPlanService
+	Case            *service.CaseService
+	Favorite        *service.FavoriteService
+	Simulation      *service.SimulationService
+	Debrief         *service.DebriefService
+	Level           *service.LevelService
+	AppSetting      *service.AppSettingService
+	AIPrompt        *service.AIPromptService
+	CoinTransaction *service.CoinTransactionService
 }
 
 func NewClients(cfg *config.Config, conn *postgres.Storage, rdb *redis.Client, pushClient *push.Client) (*Clients, error) {
@@ -65,16 +66,17 @@ func NewClients(cfg *config.Config, conn *postgres.Storage, rdb *redis.Client, p
 		User:             userSvc,
 		UserDevice:       service.NewUserDeviceService(conn, pushClient),
 
-		Category:       service.NewCategoryService(conn),
-		CategoryUnlock: service.NewCategoryUnlockService(conn),
-		Topic:          service.NewTopicService(conn),
-		StudyPlan:      service.NewStudyPlanService(conn),
-		Case:           service.NewCaseService(conn, aiClient),
-		Favorite:       service.NewFavoriteService(conn),
-		Simulation:     service.NewSimulationService(conn, aiClient, appSettingSvc),
-		Debrief:        service.NewDebriefService(conn),
-		Level:          service.NewLevelService(conn),
-		AppSetting:     appSettingSvc,
-		AIPrompt:       service.NewAIPromptService(conn, aiClient),
+		Category:        service.NewCategoryService(conn),
+		CategoryUnlock:  service.NewCategoryUnlockService(conn),
+		Topic:           service.NewTopicService(conn),
+		StudyPlan:       service.NewStudyPlanService(conn),
+		Case:            service.NewCaseService(conn, aiClient),
+		Favorite:        service.NewFavoriteService(conn),
+		Simulation:      service.NewSimulationService(conn, aiClient, appSettingSvc),
+		Debrief:         service.NewDebriefService(conn),
+		Level:           service.NewLevelService(conn),
+		AppSetting:      appSettingSvc,
+		AIPrompt:        service.NewAIPromptService(conn, aiClient),
+		CoinTransaction: service.NewCoinTransactionService(conn),
 	}, nil
 }

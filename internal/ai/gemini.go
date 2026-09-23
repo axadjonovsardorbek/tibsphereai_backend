@@ -116,9 +116,11 @@ type geminiCaseGen struct {
 	g *geminiClient
 }
 
-func (c geminiCaseGen) Generate(ctx context.Context, topic, difficulty string) (*models.CaseCreateReq, *Usage, error) {
+func (c geminiCaseGen) Generate(ctx context.Context, genReq *models.CaseGenReq) (*models.CaseCreateReq, *Usage, error) {
 	g := c.g
 	tmpl, params := g.loadPrompt(models.AIPromptCaseGeneration, defaultCaseGenerationPrompt)
+	topic := genReq.Topic
+	difficulty := genReq.Difficulty
 	if difficulty == "" {
 		difficulty = "medium"
 	}
@@ -143,6 +145,15 @@ func (c geminiCaseGen) Generate(ctx context.Context, topic, difficulty string) (
 		prompt = fmt.Sprintf("%s\n\nMavzu: %s\nQiyinlik darajasi: %s", prompt, topic, difficulty)
 	}
 
+	// Admin qo'lda shikoyat/javob kiritgan bo'lsa - AI ularni MAJBURIY asos qilib olishi
+	// kerak (o'zidan o'ylab topmaydi, faqat shu ikkisi atrofida case quradi).
+	if genReq.ChiefComplaint != "" {
+		prompt = fmt.Sprintf("%s\n\nBemorning asosiy shikoyati (albatta shu asosda case tuz, chief_complaint maydonini shu ma'noda barcha tillarga tarjima qil): %s", prompt, genReq.ChiefComplaint)
+	}
+	if genReq.ExpectedAnswer != "" {
+		prompt = fmt.Sprintf("%s\n\nKutilgan to'g'ri javob/tashxis (albatta shu bo'lishi kerak): %s", prompt, genReq.ExpectedAnswer)
+	}
+
 	text, usage, err := g.generateContent(ctx, prompt, params, true)
 	if err != nil {
 		return nil, usage, err
@@ -154,6 +165,11 @@ func (c geminiCaseGen) Generate(ctx context.Context, topic, difficulty string) (
 	}
 	if req.Difficulty == "" {
 		req.Difficulty = difficulty
+	}
+	// ExpectedAnswer bitta til (string) - admin kiritgan bo'lsa AI natijasidan
+	// qat'iy nazar aynan shuni saqlaymiz (aniqlik uchun, AI qayta yozib qo'ymasin).
+	if genReq.ExpectedAnswer != "" {
+		req.ExpectedAnswer = genReq.ExpectedAnswer
 	}
 	return &req, usage, nil
 }

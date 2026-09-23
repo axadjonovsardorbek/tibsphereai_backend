@@ -5,6 +5,17 @@ package models
 // erkin JSON tuzilma sifatida saqlanadi - Gemini AI shu maydonni to'ldiradi/o'qiydi.
 // `ExpectedAnswer` - admin kiritadigan taxminiy javob (AI debrief/scoring uchun asos).
 
+// CaseGenReq - AI yordamida keys generatsiya qilish so'rovi (GenerateCaseWithAI).
+// ChiefComplaint/ExpectedAnswer ixtiyoriy - admin qo'lda kiritsa, AI shularni
+// asos qilib oladi (ExpectedAnswer aynan shu ko'rinishda saqlanadi, ChiefComplaint
+// esa ko'p tilli chief_complaint maydonini generatsiya qilishda yo'l-yo'riq sifatida ishlatiladi).
+type CaseGenReq struct {
+	Topic          string `json:"topic"`
+	Difficulty     string `json:"difficulty"`
+	ChiefComplaint string `json:"chief_complaint"`
+	ExpectedAnswer string `json:"expected_answer"`
+}
+
 type CaseCreateReq struct {
 	TopicId                 string            `json:"topic_id"`
 	Title                   map[string]string `json:"title"`

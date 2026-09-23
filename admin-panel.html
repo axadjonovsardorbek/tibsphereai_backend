@@ -685,6 +685,8 @@ const MODULES = {
           fields:[
             {name:'topic', label:'Mavzu (matn)', type:'text', required:true},
             {name:'difficulty', label:'Qiyinlik', type:'select', options:[{value:'easy',label:'Easy'},{value:'medium',label:'Medium'},{value:'hard',label:'Hard'}]},
+            {name:'chief_complaint', label:'Bemor shikoyati (ixtiyoriy - AI shu asosda quradi)', type:'textarea'},
+            {name:'expected_answer', label:'To\'g\'ri javob/tashxis (ixtiyoriy - aynan shu saqlanadi)', type:'textarea'},
           ],
           values:{},
           onSubmit: async (body)=>{
@@ -1147,6 +1149,74 @@ async function renderOrders(){
   load();
 }
 
+async function renderCoinMonitoring(){
+  const main = document.getElementById('main');
+  main.innerHTML = '<h2 class="pageTitle">Tangalar savdosi monitoringi</h2><p class="pageDesc">/web/coin-transaction — faqat ko\'rish</p>';
+
+  const cards = document.createElement('div'); cards.className='cards'; main.appendChild(cards);
+  (async ()=>{
+    let s;
+    try{ s = await api('/web/coin-transaction/summary'); }catch(e){ return; }
+    const items = [
+      ['Sotib olingan (pul evaziga)', s.total_purchased],
+      ['Ishlab topilgan (referral/promo/simulyatsiya)', s.total_earned],
+      ['Sarflangan (case ochish va h.k.)', s.total_spent],
+      ['Aylanmada (hozirgi jami balans)', s.coins_in_circulation],
+    ];
+    cards.innerHTML = '';
+    items.forEach(([l,v])=>{
+      const c = document.createElement('div'); c.className='card';
+      c.innerHTML = '<div class="v">🪙 '+esc(v ?? 0)+'</div><div class="l">'+esc(l)+'</div>';
+      cards.appendChild(c);
+    });
+  })();
+
+  const toolbar = document.createElement('div'); toolbar.className='toolbar';
+  const reasonSel = document.createElement('select');
+  [['','— barcha sabablar —'],['coin_purchase','Tanga sotib olish'],['category_unlock','Bo\'lim ochish'],['referral_reward','Referral'],['promo_redeem','Promokod'],['simulation_finish','Simulyatsiya']].forEach(([v,l])=>{
+    const o=document.createElement('option'); o.value=v; o.textContent=l; reasonSel.appendChild(o);
+  });
+  const userI = document.createElement('input'); userI.placeholder='User ID';
+  [['Sabab',reasonSel],['User ID',userI]].forEach(([lb,el])=>{
+    const f=document.createElement('div'); f.className='field'; const l=document.createElement('label'); l.textContent=lb;
+    f.appendChild(l); f.appendChild(el); toolbar.appendChild(f);
+  });
+  let page=1, limit=20;
+  const searchBtn=document.createElement('button'); searchBtn.textContent='🔍 Qidirish'; searchBtn.onclick=()=>{page=1;load();};
+  toolbar.appendChild(searchBtn);
+  main.appendChild(toolbar);
+  const tableWrap=document.createElement('div'); main.appendChild(tableWrap);
+  const pager=document.createElement('div'); pager.className='pager'; main.appendChild(pager);
+
+  async function load(){
+    tableWrap.innerHTML='<p class="muted">Yuklanmoqda...</p>';
+    let json;
+    try{ json = await api('/web/coin-transaction', {query:{reason:reasonSel.value, user_id:userI.value, limit, page}}); }
+    catch(e){ tableWrap.innerHTML='<p class="muted">Xatolik</p>'; return; }
+    const {items,count} = extractList(json);
+    if(!items.length){ tableWrap.innerHTML='<p class="muted">Topilmadi</p>'; }
+    else{
+      const table=document.createElement('table');
+      table.innerHTML='<thead><tr><th>Foydalanuvchi</th><th>O\'zgarish</th><th>Sabab</th><th>Manba</th><th>Vaqt</th></tr></thead>';
+      const tbody=document.createElement('tbody');
+      items.forEach(t=>{
+        const tr=document.createElement('tr');
+        const delta = t.delta>0 ? '<span style="color:#4ade80">+'+esc(t.delta)+'</span>' : '<span style="color:#f87171">'+esc(t.delta)+'</span>';
+        tr.innerHTML = '<td>'+fmtCell(t.user_name||t.user_id)+'</td><td>'+delta+'</td><td><span class="pill">'+fmtCell(t.reason)+'</span></td><td>'+fmtCell(t.reference_type)+' '+fmtCell(t.reference_id)+'</td><td>'+fmtCell(t.created_at)+'</td>';
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody); tableWrap.innerHTML=''; tableWrap.appendChild(table);
+    }
+    pager.innerHTML='';
+    const totalPages = Math.max(1, Math.ceil((count||items.length)/limit));
+    const info=document.createElement('span'); info.textContent='Sahifa '+page+' / '+totalPages+' — jami: '+(count??items.length);
+    const prev=document.createElement('button'); prev.className='sm'; prev.textContent='← Oldingi'; prev.disabled=page<=1; prev.onclick=()=>{page--;load();};
+    const next=document.createElement('button'); next.className='sm'; next.textContent='Keyingi →'; next.disabled=page>=totalPages; next.onclick=()=>{page++;load();};
+    pager.appendChild(prev); pager.appendChild(info); pager.appendChild(next);
+  }
+  load();
+}
+
 /* ============================================================
    APP ROUTE (singleton-ish list, update only)
    ============================================================ */
@@ -1541,6 +1611,7 @@ const NAV = [
     {key:'tariff', label:'💳 Tariflar', render: ()=>renderGenericModule('tariff')},
     {key:'order', label:'🧾 Buyurtmalar', render: renderOrders},
     {key:'promocode', label:'🎟 Promokodlar', render: ()=>renderGenericModule('promocode')},
+    {key:'coin_monitoring', label:'🪙 Tangalar monitoringi', render: renderCoinMonitoring},
   ]},
   {group:'Foydalanuvchilar', items:[
     {key:'user', label:'👤 Foydalanuvchilar', render: renderUsers},

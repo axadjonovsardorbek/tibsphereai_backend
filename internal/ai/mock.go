@@ -40,6 +40,6 @@ func (mockClient) Evaluate(ctx context.Context, caseScenario map[string]any, eve
 // allaqachon boshqa signature bilan Generate metodi bor (DebriefAI).
 type mockCaseGen struct{}
 
-func (mockCaseGen) Generate(ctx context.Context, topic, difficulty string) (*models.CaseCreateReq, *Usage, error) {
+func (mockCaseGen) Generate(ctx context.Context, req *models.CaseGenReq) (*models.CaseCreateReq, *Usage, error) {
 	return nil, nil, fmt.Errorf("AI case generation is not configured: set GEMINI_API_KEY")
 }

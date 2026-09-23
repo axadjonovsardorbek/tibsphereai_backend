@@ -310,6 +310,13 @@ func (r *UserRepo) applyReferral(ctx context.Context, newUserId, referralCode st
 		slog.Error("applyReferral: insert reward row failed", "err", err)
 		return
 	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO point_transactions (id, user_id, kind, delta, reason, reference_type, reference_id)
+		VALUES ($1, $2, 'coin', $3, 'referral_reward', 'user', $4), ($5, $4, 'coin', $6, 'referral_reward', 'user', $2)
+	`, uuid.New().String(), referrerId, referrerCoins, newUserId, uuid.New().String(), referredCoins); err != nil {
+		slog.Error("applyReferral: log point transactions failed", "err", err)
+		return
+	}
 
 	if err := tx.Commit(ctx); err != nil {
 		slog.Error("applyReferral: commit failed", "err", err)

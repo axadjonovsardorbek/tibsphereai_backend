@@ -251,6 +251,12 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			dashboard.GET("", h.GetDashboard)
 		}
 
+		coinTransaction := web.Group("/coin-transaction").Use(mid.NewAuth(enforcer, rdb))
+		{
+			coinTransaction.GET("", h.GetAllCoinTransactions)
+			coinTransaction.GET("/summary", h.GetCoinMonitoringSummary)
+		}
+
 		web.POST("/file-upload", h.UploadFile).Use(mid.NewAuth(enforcer, rdb))
 	}
 

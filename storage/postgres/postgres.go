@@ -31,18 +31,19 @@ type Storage struct {
 	UserS             storage.UserI
 	UserDeviceS       storage.UserDeviceI
 
-	CategoryS       storage.CategoryI
-	CategoryUnlockS storage.CategoryUnlockI
-	TopicS          storage.TopicI
-	StudyPlanS      storage.StudyPlanI
-	CaseS           storage.CaseI
-	FavoriteS       storage.FavoriteI
-	SimulationS     storage.SimulationI
-	DebriefS        storage.DebriefI
-	LevelS          storage.LevelI
-	AppSettingS     storage.AppSettingI
-	AIPromptS       storage.AIPromptI
-	AIUsageLogS     storage.AIUsageLogI
+	CategoryS        storage.CategoryI
+	CategoryUnlockS  storage.CategoryUnlockI
+	TopicS           storage.TopicI
+	StudyPlanS       storage.StudyPlanI
+	CaseS            storage.CaseI
+	FavoriteS        storage.FavoriteI
+	SimulationS      storage.SimulationI
+	DebriefS         storage.DebriefI
+	LevelS           storage.LevelI
+	AppSettingS      storage.AppSettingI
+	AIPromptS        storage.AIPromptI
+	AIUsageLogS      storage.AIUsageLogI
+	CoinTransactionS storage.CoinTransactionI
 }
 
 func NewPostgresStorage(cf config.Config, rdb *redis.Client) (*Storage, error) {
@@ -80,17 +81,18 @@ func NewPostgresStorage(cf config.Config, rdb *redis.Client) (*Storage, error) {
 		UserS:             NewUserRepo(pool, rdb),
 		UserDeviceS:       NewUserDeviceRepo(pool),
 
-		CategoryS:       NewCategoryRepo(pool),
-		CategoryUnlockS: NewCategoryUnlockRepo(pool),
-		TopicS:          NewTopicRepo(pool),
-		StudyPlanS:      NewStudyPlanRepo(pool),
-		CaseS:           NewCaseRepo(pool),
-		FavoriteS:       NewFavoriteRepo(pool),
-		SimulationS:     NewSimulationRepo(pool),
-		DebriefS:        NewDebriefRepo(pool),
-		LevelS:          NewLevelRepo(pool),
-		AppSettingS:     NewAppSettingRepo(pool),
-		AIPromptS:       NewAIPromptRepo(pool),
-		AIUsageLogS:     NewAIUsageLogRepo(pool),
+		CategoryS:        NewCategoryRepo(pool),
+		CategoryUnlockS:  NewCategoryUnlockRepo(pool),
+		TopicS:           NewTopicRepo(pool),
+		StudyPlanS:       NewStudyPlanRepo(pool),
+		CaseS:            NewCaseRepo(pool),
+		FavoriteS:        NewFavoriteRepo(pool),
+		SimulationS:      NewSimulationRepo(pool),
+		DebriefS:         NewDebriefRepo(pool),
+		LevelS:           NewLevelRepo(pool),
+		AppSettingS:      NewAppSettingRepo(pool),
+		AIPromptS:        NewAIPromptRepo(pool),
+		AIUsageLogS:      NewAIUsageLogRepo(pool),
+		CoinTransactionS: NewCoinTransactionRepo(pool),
 	}, nil
 }

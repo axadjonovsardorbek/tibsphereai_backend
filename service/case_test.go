@@ -20,7 +20,7 @@ type fakeCaseGen struct {
 	err error
 }
 
-func (f fakeCaseGen) Generate(ctx context.Context, topic, difficulty string) (*m.CaseCreateReq, *ai.Usage, error) {
+func (f fakeCaseGen) Generate(ctx context.Context, req *m.CaseGenReq) (*m.CaseCreateReq, *ai.Usage, error) {
 	return f.res, nil, f.err
 }
 
@@ -51,7 +51,7 @@ func TestCaseService_GenerateWithAI_Success(t *testing.T) {
 	want := &m.ById{Id: "case-ai-1"}
 	cm.On("Create", aiReq).Return(want, nil)
 
-	got, err := svc.GenerateWithAI(context.Background(), "cardiology", "medium")
+	got, err := svc.GenerateWithAI(context.Background(), &m.CaseGenReq{Topic: "cardiology", Difficulty: "medium"})
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
 	assert.True(t, aiReq.IsAIGenerated)
@@ -64,7 +64,7 @@ func TestCaseService_GenerateWithAI_AIError(t *testing.T) {
 	wantErr := errors.New("GEMINI_API_KEY is not configured")
 	svc := newCaseTestService(cm, fakeCaseGen{err: wantErr})
 
-	got, err := svc.GenerateWithAI(context.Background(), "cardiology", "medium")
+	got, err := svc.GenerateWithAI(context.Background(), &m.CaseGenReq{Topic: "cardiology", Difficulty: "medium"})
 	assert.Nil(t, got)
 	assert.ErrorIs(t, err, wantErr)
 	cm.AssertNotCalled(t, "Create")

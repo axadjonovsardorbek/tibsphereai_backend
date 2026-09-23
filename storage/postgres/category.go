@@ -22,14 +22,27 @@ func NewCategoryRepo(db *pgxpool.Pool) *CategoryRepo {
 }
 
 func (r *CategoryRepo) Create(req *m.CategoryCreateReq) (*m.ById, error) {
+	ctx := context.Background()
 	audience := req.Audience
 	if audience == "" {
 		audience = m.AudienceDoctor
 	}
+
+	coinsPerCase := req.CoinsPerCase
+	if coinsPerCase == 0 {
+		// admin coins_per_case'ni kiritmagan bo'lsa - global default (app_settings.case_to_coin_rate)
+		var raw string
+		if err := r.db.QueryRow(ctx, `SELECT value FROM app_settings WHERE key = 'case_to_coin_rate'`).Scan(&raw); err == nil {
+			if v, err := strconv.Atoi(raw); err == nil {
+				coinsPerCase = v
+			}
+		}
+	}
+
 	id := uuid.NewString()
-	_, err := r.db.Exec(context.Background(), `
+	_, err := r.db.Exec(ctx, `
 		INSERT INTO categories (id, name, icon_url, order_num, coins_per_case, audience) VALUES ($1, $2, $3, $4, $5, $6)
-	`, id, req.Name, req.IconUrl, req.OrderNum, req.CoinsPerCase, audience)
+	`, id, req.Name, req.IconUrl, req.OrderNum, coinsPerCase, audience)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating category: %w", err)
 	}

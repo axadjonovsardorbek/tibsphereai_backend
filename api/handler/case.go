@@ -39,21 +39,18 @@ func (h *Handler) CreateCase(c *gin.Context) {
 // @Tags case
 // @Accept json
 // @Produce json
-// @Param body body object{topic=string,difficulty=string} true "Topic and difficulty"
+// @Param body body models.CaseGenReq true "Topic, difficulty va ixtiyoriy chief_complaint/expected_answer"
 // @Success 200 {object} string
 // @Security BearerAuth
 // @Router /web/case/ai-generate [post]
 func (h *Handler) GenerateCaseWithAI(c *gin.Context) {
-	var body struct {
-		Topic      string `json:"topic"`
-		Difficulty string `json:"difficulty"`
-	}
+	var body m.CaseGenReq
 	if err := c.BindJSON(&body); err != nil {
 		errs.Bad(c, err)
 		return
 	}
 
-	res, err := h.Clients.Case.GenerateWithAI(context.Background(), body.Topic, body.Difficulty)
+	res, err := h.Clients.Case.GenerateWithAI(context.Background(), &body)
 	if err != nil {
 		errs.Bad(c, err)
 		return

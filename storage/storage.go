@@ -313,3 +313,10 @@ type AIUsageLogI interface {
 	Log(req *m.AIUsageLogCreateReq) error
 	GetSummary() (*m.AIUsageSummaryRes, error)
 }
+
+// CoinTransactionI - admin "Tangalar savdosi monitoringi" (point_transactions,
+// kind='coin'ni o'qiydi - yozuvlar boshqa service'lar orqali qo'shiladi).
+type CoinTransactionI interface {
+	GetAll(req *m.CoinTransactionGetListReq) (*m.PaginationResponse, *m.CoinTransactionList, error)
+	GetSummary() (*m.CoinMonitoringSummaryRes, error)
+}

@@ -36,7 +36,7 @@ type DebriefAI interface {
 
 // CaseGeneratorAI - Admin uchun avtomatik keys yaratish (BACKEND_STRUCTURE.md 7-bo'lim).
 type CaseGeneratorAI interface {
-	Generate(ctx context.Context, topic, difficulty string) (*models.CaseCreateReq, *Usage, error)
+	Generate(ctx context.Context, req *models.CaseGenReq) (*models.CaseCreateReq, *Usage, error)
 }
 
 // ActionEvalRes - shifokorning bitta klinik harakati (ko'rik/tahlil/instrumental/

@@ -23,8 +23,8 @@ func (s *CaseService) Create(ctx context.Context, req *m.CaseCreateReq) (*m.ById
 // GenerateWithAI - "AI yordamida avtomatik keys yaratish" (BACKEND_STRUCTURE.md 7-bo'lim):
 // admin mavzu va darajani kiritadi, Gemini AI (yoki GEMINI_API_KEY yo'q bo'lsa xatolik)
 // to'liq ssenariyni tayyorlaydi, admin ko'rib chiqib alohida Publish bilan tasdiqlaydi.
-func (s *CaseService) GenerateWithAI(ctx context.Context, topic, difficulty string) (*m.ById, error) {
-	req, usage, err := s.ai.CaseGen.Generate(ctx, topic, difficulty)
+func (s *CaseService) GenerateWithAI(ctx context.Context, genReq *m.CaseGenReq) (*m.ById, error) {
+	req, usage, err := s.ai.CaseGen.Generate(ctx, genReq)
 	logAIUsage(&s.storage, "case_generation", usage, "", "")
 	if err != nil {
 		return nil, err
