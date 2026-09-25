@@ -26,6 +26,9 @@ type Config struct {
 	GROUP_FOR_INFO_ID string
 
 	BASE_URL               string
+	// WEBSITE_URL - Telegram bot menu tugmalari (Case yechish/Bo'limlar/Profil/Biz
+	// haqimizda) bosilganda ochiladigan web ilova manzili (internal/bot).
+	WEBSITE_URL            string
 	CLICK_MERCHANT_ID      int
 	CLICK_SERVICE_ID       int
 	CLICK_SECRET_KEY       string
@@ -89,6 +92,7 @@ func Load() Config {
 	config.GROUP_FOR_INFO_ID = cast.ToString(coalesce("GROUP_FOR_INFO_ID", "-1"))
 
 	config.BASE_URL = cast.ToString(coalesce("BASE_URL", "http://localhost:8004"))
+	config.WEBSITE_URL = cast.ToString(coalesce("WEBSITE_URL", "https://tibcaseweb.vercel.app"))
 	config.CLICK_MERCHANT_ID = cast.ToInt(coalesce("CLICK_MERCHANT_ID", 1))
 	config.CLICK_SERVICE_ID = cast.ToInt(coalesce("CLICK_SERVICE_ID", 1))
 	config.CLICK_SECRET_KEY = cast.ToString(coalesce("CLICK_SECRET_KEY", "test_click_secret_key"))

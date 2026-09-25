@@ -12,6 +12,37 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
+// Asosiy menu tugmalari - bosilganda web ilovaga (config.WEBSITE_URL) o'tkazib
+// yuboradi (inline URL tugma orqali - ReplyKeyboardMarkup'da URL bo'lmaydi).
+const (
+	menuBtnCases      = "🩺 Case yechish"
+	menuBtnCategories = "📚 Bo'limlar"
+	menuBtnProfile    = "👤 Profil"
+	menuBtnAbout      = "ℹ️ Biz haqimizda"
+)
+
+func mainMenuKeyboard() tgbotapi.ReplyKeyboardMarkup {
+	return tgbotapi.ReplyKeyboardMarkup{
+		Keyboard: [][]tgbotapi.KeyboardButton{
+			{{Text: menuBtnCases}, {Text: menuBtnCategories}},
+			{{Text: menuBtnProfile}, {Text: menuBtnAbout}},
+		},
+		ResizeKeyboard: true,
+	}
+}
+
+// sendWebLink - berilgan matn bilan, websiteURL'ni ochadigan bitta inline
+// URL tugmali xabar yuboradi.
+func sendWebLink(bot *tgbotapi.BotAPI, chatID int64, websiteURL, text string) {
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonURL("🌐 Ochish", websiteURL),
+		),
+	)
+	bot.Send(msg)
+}
+
 func BotAuth(config *config.Config) {
 
 	log.Println("Bot started")
@@ -71,20 +102,34 @@ func BotAuth(config *config.Config) {
 					continue
 				}
 
-				msg := tgbotapi.NewMessage(chatID, "📱 Iltimos, raqamingizni yuboring:")
-				msg.ReplyMarkup = tgbotapi.ReplyKeyboardMarkup{
-					Keyboard: [][]tgbotapi.KeyboardButton{
-						{
-							{
-								Text:           "📲 Raqamni yuborish",
-								RequestContact: true,
-							},
-						},
-					},
-					ResizeKeyboard:  true,
-					OneTimeKeyboard: true,
-				}
+				// Oddiy /start (login payload'siz) - asosiy menu ko'rsatiladi
+				// (Case yechish/Bo'limlar/Profil/Biz haqimizda - har biri web
+				// ilovaga o'tkazib yuboradi).
+				msg := tgbotapi.NewMessage(chatID, "👋 Xush kelibsiz! Kerakli bo'limni tanlang:")
+				msg.ReplyMarkup = mainMenuKeyboard()
 				bot.Send(msg)
+				continue
+			}
+
+			if text == "/menu" {
+				msg := tgbotapi.NewMessage(chatID, "Kerakli bo'limni tanlang:")
+				msg.ReplyMarkup = mainMenuKeyboard()
+				bot.Send(msg)
+				continue
+			}
+
+			switch text {
+			case menuBtnCases:
+				sendWebLink(bot, chatID, config.WEBSITE_URL, "🩺 Case yechish uchun web ilovani oching:")
+				continue
+			case menuBtnCategories:
+				sendWebLink(bot, chatID, config.WEBSITE_URL, "📚 Bo'limlarni ko'rish uchun web ilovani oching:")
+				continue
+			case menuBtnProfile:
+				sendWebLink(bot, chatID, config.WEBSITE_URL, "👤 Profilingizni ko'rish uchun web ilovani oching:")
+				continue
+			case menuBtnAbout:
+				sendWebLink(bot, chatID, config.WEBSITE_URL, "ℹ️ Biz haqimizda ma'lumot uchun web ilovani oching:")
 				continue
 			}
 		}
