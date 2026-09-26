@@ -7,8 +7,19 @@ import (
 	sms "tibsphereai/internal/helper"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/exp/slog"
 )
+
+// pgInvalidTextRepresentation - Postgres SQLSTATE 22P02 ("invalid_text_representation"):
+// masalan UUID kutilgan joyga "sim-1" kabi noto'g'ri formatdagi qiymat kelganda.
+// Bunday paytda mijozga xom SQL xatosini ko'rsatmasdan, tushunarli ErrInvalidId qaytariladi.
+const pgInvalidTextRepresentation = "22P02"
+
+func isInvalidInputSyntax(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == pgInvalidTextRepresentation
+}
 
 // LangFromCtx - so'rovdagi Accept-Language header (yoki ?lang=) bo'yicha tilni aniqlaydi,
 // noma'lum/bo'sh bo'lsa "uz"ga tushadi.
@@ -41,6 +52,10 @@ func Respond(c *gin.Context, defaultErr *AppError, err error) {
 	var ae *AppError
 	if errors.As(err, &ae) {
 		respond(c, ae)
+		return
+	}
+	if isInvalidInputSyntax(err) {
+		respond(c, ErrInvalidId.Wrap(err))
 		return
 	}
 	respond(c, defaultErr.Wrap(err))

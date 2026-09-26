@@ -34,6 +34,15 @@ var (
 		Ru: "Ошибка сервера, попробуйте позже",
 		En: "Internal server error, try again later",
 	})
+	// ErrInvalidId - path/query parametrga UUID kutilgan joyga boshqa formatdagi
+	// qiymat (masalan "sim-1") kelganda. Ko'ring [[respond.go]] - Postgres'ning
+	// raw "invalid input syntax for type uuid" xatosi shu bilan almashtiriladi,
+	// mijozga ichki SQL xatosi chiqmasligi uchun.
+	ErrInvalidId = New(http.StatusBadRequest, "invalid_id", Text{
+		Uz: "ID formati noto'g'ri",
+		Ru: "Неверный формат ID",
+		En: "Invalid ID format",
+	})
 )
 
 // ============ Auth (BACKEND_STRUCTURE.md 1-bo'lim) ============
