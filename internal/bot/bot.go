@@ -1,8 +1,11 @@
 package bot
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 	"time"
 
@@ -31,16 +34,65 @@ func mainMenuKeyboard() tgbotapi.ReplyKeyboardMarkup {
 	}
 }
 
-// sendWebLink - berilgan matn bilan, websiteURL'ni ochadigan bitta inline
-// URL tugmali xabar yuboradi.
+// --- Telegram Mini App (web_app) tugmasi ---
+//
+// go-telegram-bot-api (v4.6.4, shu jumladan eng so'nggi v5.5.1 ham) InlineKeyboardButton'da
+// "web_app" maydonini umuman qo'llab-quvvatlamaydi - shu sabab oddiy NewInlineKeyboardButtonURL
+// ishlatilsa, Telegram tugmani tashqi brauzerda ochadi (ilova ichida emas, "orqaga"
+// bosilganda ilovadan butunlay chiqib ketadi). tgbotapi.BaseChat.ReplyMarkup interface{}
+// bo'lgani va json.Marshal generik ishlagani uchun, kutubxonani yangilamasdan
+// o'zimizning JSON strukturamiz bilan Telegram Bot API'ning web_app formatini
+// to'g'ridan-to'g'ri yuboramiz (bot Telegram ichida - Mini App sifatida ochiladi,
+// pastki panelga minimizatsiya bo'ladi).
+type webAppInfo struct {
+	URL string `json:"url"`
+}
+
+type webAppInlineButton struct {
+	Text   string     `json:"text"`
+	WebApp webAppInfo `json:"web_app"`
+}
+
+type webAppInlineKeyboard struct {
+	InlineKeyboard [][]webAppInlineButton `json:"inline_keyboard"`
+}
+
+// sendWebLink - berilgan matn bilan, websiteURL'ni Telegram Mini App sifatida
+// (bot ichida) ochadigan bitta web_app tugmali xabar yuboradi.
 func sendWebLink(bot *tgbotapi.BotAPI, chatID int64, websiteURL, text string) {
 	msg := tgbotapi.NewMessage(chatID, text)
-	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonURL("🌐 Ochish", websiteURL),
-		),
-	)
+	msg.ReplyMarkup = webAppInlineKeyboard{
+		InlineKeyboard: [][]webAppInlineButton{
+			{{Text: "📱 Ilovani ochish", WebApp: webAppInfo{URL: websiteURL}}},
+		},
+	}
 	bot.Send(msg)
+}
+
+// setMenuButton - chat oynasidagi doimiy "Menu" tugmasini (matn kiritish maydoni
+// yonida) to'g'ridan-to'g'ri web_app'ga sozlaydi (BotFather -> Menu Button orqali
+// qo'lda ham qilsa bo'ladi, lekin shu funksiya kodda, deploy'da avtomatik bajaradi).
+// tgbotapi kutubxonasida setChatMenuButton yo'q, shu sabab xom HTTP so'rov.
+func setMenuButton(token, websiteURL string) {
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/setChatMenuButton", token)
+	body, _ := json.Marshal(map[string]any{
+		"menu_button": map[string]any{
+			"type": "web_app",
+			"text": "📱 Ilovani ochish",
+			"web_app": map[string]any{
+				"url": websiteURL,
+			},
+		},
+	})
+	resp, err := http.Post(url, "application/json", bytes.NewReader(body))
+	if err != nil {
+		log.Printf("setChatMenuButton failed: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("setChatMenuButton unexpected status: %d", resp.StatusCode)
+	}
 }
 
 func BotAuth(config *config.Config) {
@@ -58,6 +110,8 @@ func BotAuth(config *config.Config) {
 		fmt.Println(err)
 		log.Panic(err)
 	}
+
+	setMenuButton(config.NEW_BOT_TOKEN, config.WEBSITE_URL)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
