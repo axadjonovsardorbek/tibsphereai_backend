@@ -9,7 +9,9 @@ import (
 )
 
 // UserDeviceService - ko'p qurilma push token (users.fcm_token o'rnini bosadi). Register/Unregister
-// paytida foydalanuvchi tiliga mos FCM topicga (all_uz/all_ru/all_en) obuna/unobuna qilinadi.
+// paytida foydalanuvchi tiliga mos FCM topicga (all_uz/all_ru/all_en) HAMDA shaxsiy
+// UserTopic("user_"+userId)ga obuna/unobuna qilinadi - TargetUser push (PushService)
+// shu shaxsiy topic orqali yuboriladi, tokenni DB'dan alohida o'qish shart emas.
 type UserDeviceService struct {
 	storage st.Storage
 	push    *push.Client
@@ -33,6 +35,9 @@ func (s *UserDeviceService) Register(ctx context.Context, req *m.UserDeviceRegis
 		if err := s.push.SubscribeToTopic(ctx, []string{req.FCMToken}, m.BroadcastTopic(lang)); err != nil {
 			fmt.Println("failed to subscribe device to topic:", err)
 		}
+		if err := s.push.SubscribeToTopic(ctx, []string{req.FCMToken}, m.UserTopic(req.UserId)); err != nil {
+			fmt.Println("failed to subscribe device to user topic:", err)
+		}
 	}
 
 	return res, nil
@@ -51,6 +56,9 @@ func (s *UserDeviceService) Unregister(ctx context.Context, req *m.UserDeviceUnr
 		}
 		if err := s.push.UnsubscribeFromTopic(ctx, []string{req.FCMToken}, m.BroadcastTopic(lang)); err != nil {
 			fmt.Println("failed to unsubscribe device from topic:", err)
+		}
+		if err := s.push.UnsubscribeFromTopic(ctx, []string{req.FCMToken}, m.UserTopic(userId)); err != nil {
+			fmt.Println("failed to unsubscribe device from user topic:", err)
 		}
 	}
 

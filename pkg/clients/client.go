@@ -67,7 +67,7 @@ func NewClients(cfg *config.Config, conn *postgres.Storage, rdb *redis.Client, p
 
 		Category:        service.NewCategoryService(conn),
 		Topic:           service.NewTopicService(conn),
-		StudyPlan:       service.NewStudyPlanService(conn),
+		StudyPlan:       service.NewStudyPlanService(conn, pushSvc),
 		Case:            service.NewCaseService(conn, aiClient),
 		Favorite:        service.NewFavoriteService(conn),
 		Simulation:      service.NewSimulationService(conn, aiClient, appSettingSvc),

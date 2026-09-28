@@ -14,7 +14,7 @@ import (
 )
 
 func newStudyPlanTestService(sm *mocks.StudyPlanMock) *StudyPlanService {
-	return NewStudyPlanService(&st.Storage{StudyPlanS: sm})
+	return NewStudyPlanService(&st.Storage{StudyPlanS: sm}, nil)
 }
 
 func TestStudyPlanService_Upsert(t *testing.T) {

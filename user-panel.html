@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TibSphereAI — User App (Review UI)</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
     --bg:#0b1420; --panel:#0f1f2e; --panel2:#15293c; --border:#233b52;
@@ -179,7 +180,7 @@
   .statusRow .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:6px}
   .statusRow.warn .dot{background:var(--warn)} .statusRow.warn{color:#fbbf24}
   .statusRow.critical .dot{background:var(--danger);animation:blink 1s infinite} .statusRow.critical{color:#fca5a5}
-  .statusRow.flat .dot{background:#f87171} .statusRow.flat{color:#f87171}
+  .statusRow.flat .dot{background:#f87171;animation:blink .6s infinite} .statusRow.flat{color:#f87171}
   @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
 
   .avatarStage{display:flex;flex-direction:column;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px 8px}
@@ -188,6 +189,7 @@
   .avatarFig.severity-mid .breathe{animation-duration:1.6s}
   .avatarFig.severity-high .breathe{animation-duration:.9s}
   .avatarFig.seizure{animation:shake .25s linear infinite}
+  .avatarFig.flatline .breathe{animation:none;opacity:.55}
   @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
   @keyframes shake{0%{transform:translateX(-2px) rotate(-1deg)}50%{transform:translateX(2px) rotate(1deg)}100%{transform:translateX(-2px) rotate(-1deg)}}
   .ecgWrap{width:100%;height:44px;overflow:hidden;margin-top:10px;border-radius:8px;background:#050c14}
@@ -276,10 +278,18 @@
 
     <div id="googlePane" class="hidden">
       <div class="field">
-        <label>Google id_token (frontend Google Sign-In'dan olinadi)</label>
-        <textarea id="googleTokenInput" rows="3" placeholder="eyJhbGciOi..."></textarea>
+        <label>Google Client ID</label>
+        <input id="googleClientIdInput" value="439240484061-ujut1a9arhm8q83d3dsga7ruhfrjpcmf.apps.googleusercontent.com">
       </div>
-      <button class="primary" style="width:100%" onclick="doGoogleLogin()">🔵 Google bilan kirish</button>
+      <div id="googleBtnDiv" style="display:flex;justify-content:center;margin:10px 0;min-height:40px"></div>
+      <div id="googleHint" class="muted" style="font-size:11px;text-align:center">Yuklanmoqda…</div>
+      <div id="googleFallback" class="hidden" style="margin-top:8px">
+        <div class="field">
+          <label>Google id_token (tugma ishlamasa, qo'lda joylashtiring)</label>
+          <textarea id="googleTokenInput" rows="3" placeholder="eyJhbGciOi..."></textarea>
+        </div>
+        <button class="primary" style="width:100%" onclick="doGoogleLogin()">🔵 Google bilan kirish</button>
+      </div>
     </div>
 
     <div id="loginErr"></div>
@@ -548,6 +558,45 @@ function switchAuthTab(which){
   document.getElementById('tabGoogle').classList.toggle('active', which==='google');
   document.getElementById('otpPane').classList.toggle('hidden', which!=='otp');
   document.getElementById('googlePane').classList.toggle('hidden', which!=='google');
+  if(which==='google') initGoogleSignIn();
+}
+
+/* Google Identity Services - haqiqiy Google Sign-In tugmasi, id_token'ni
+   qo'lda paste qilishga hojat qoldirmaydi. Muvaffaqiyatli kirishda GIS
+   'callback' orqali id_token (credential) qaytaradi, shu bilan bevosita
+   /mobile/auth/google chaqiriladi. */
+let googleInited = false;
+function initGoogleSignIn(){
+  const clientId = document.getElementById('googleClientIdInput').value.trim();
+  const btnDiv = document.getElementById('googleBtnDiv');
+  const hint = document.getElementById('googleHint');
+  if(!clientId){ hint.textContent = 'Client ID kiriting'; showGoogleFallback(); return; }
+  if(typeof google === 'undefined' || !google.accounts || !google.accounts.id){
+    // gsi/client hali yuklanmagan yoki bloklangan - biroz kutib qayta urinamiz
+    if(!initGoogleSignIn._retries) initGoogleSignIn._retries = 0;
+    if(initGoogleSignIn._retries < 20){ initGoogleSignIn._retries++; setTimeout(initGoogleSignIn, 250); return; }
+    hint.textContent = 'Google skripti yuklanmadi (tarmoq/bloklovchi tekshiring)';
+    showGoogleFallback();
+    return;
+  }
+  try{
+    google.accounts.id.initialize({ client_id: clientId, callback: onGoogleCredential });
+    btnDiv.innerHTML = '';
+    google.accounts.id.renderButton(btnDiv, { theme:'filled_black', size:'large', width:280, text:'signin_with' });
+    hint.textContent = '';
+    googleInited = true;
+  }catch(e){
+    hint.textContent = 'Google tugmasini ishga tushirib bo\'lmadi: ' + e.message;
+    showGoogleFallback();
+  }
+}
+function showGoogleFallback(){ document.getElementById('googleFallback').classList.remove('hidden'); }
+async function onGoogleCredential(resp){
+  document.getElementById('loginErr').textContent='';
+  try{
+    const res = await rawPost('/mobile/auth/google', {id_token: resp.credential});
+    saveSession(res);
+  }catch(e){ document.getElementById('loginErr').style.color='#fca5a5'; document.getElementById('loginErr').textContent = e.message; }
 }
 
 function curBase(){ return document.getElementById('baseUrlInput').value.trim().replace(/\/$/,''); }
@@ -1345,7 +1394,7 @@ function applyVitals(v, alarm){
     statusRow.querySelector('span').innerHTML = '<span class="dot"></span>'+esc(label);
   }
   if(avatar){
-    avatar.className = 'avatarFig' + (alarm==='critical'?' severity-high':(alarm==='warning'?' severity-mid':''));
+    avatar.className = 'avatarFig' + (alarm==='flatline'?' flatline':(alarm==='critical'?' severity-high':(alarm==='warning'?' severity-mid':'')));
     avatar.querySelector('svg')?.classList.toggle('shake', false);
   }
   if(ecgWrap) ecgWrap.classList.toggle('flat', alarm==='flatline');

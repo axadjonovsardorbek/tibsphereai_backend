@@ -43,13 +43,6 @@ func (s *PushService) SendPush(ctx context.Context, target m.PushTarget, event m
 		if target.UserID == "" {
 			return fmt.Errorf("user_id required")
 		}
-		tokens, err := s.storage.UserDeviceS.GetTokensByUser(ctx, target.UserID)
-		if err != nil {
-			return err
-		}
-		if len(tokens) == 0 {
-			return nil
-		}
 
 		lang := "uz"
 		if u, uerr := s.storage.UserS.GetById(&m.ById{Id: target.UserID}); uerr == nil && u != nil && u.Language != nil && *u.Language != "" {
@@ -57,8 +50,9 @@ func (s *PushService) SendPush(ctx context.Context, target m.PushTarget, event m
 		}
 		msg := m.BuildLocalizedPushMessage(event, lang)
 
-		_, err = s.push.SendToManyTokens(ctx, tokens, msg.Title, msg.Body, msg.Data)
-		return err
+		// FCM tokenni DB'dan o'qish shart emas - device Register paytida
+		// UserTopic(userId)ga obuna bo'lgan, shu topicga yuboramiz.
+		return s.push.SendToTopic(ctx, m.UserTopic(target.UserID), msg.Title, msg.Body, msg.Data)
 
 	default:
 		return fmt.Errorf("unknown target")

@@ -48,31 +48,19 @@ func TestPushService_SendPush_TargetUser_EmptyUserID(t *testing.T) {
 	assert.ErrorContains(t, err, "user_id required")
 }
 
-// TargetUser - foydalanuvchining hech qanday qurilmasi ro'yxatdan o'tmagan bo'lsa,
-// push jo'natilmaydi va xato ham bo'lmaydi.
-func TestPushService_SendPush_TargetUser_NoTokens_NoOp(t *testing.T) {
-	dm := mocks.NewUserDeviceMock()
-	svc := newPushTestService(mocks.NewUserMock(), dm, uninitializedPushClient())
-
-	dm.On("GetTokensByUser", mock.Anything, "user-1").Return([]string{}, nil)
-
-	err := svc.SendPush(context.Background(), m.PushTarget{Type: m.TargetUser, UserID: "user-1"}, m.PushEvent{Type: m.EventPaymentSuccess})
-	require.NoError(t, err)
-}
-
-// TargetUser - tokenlar bor bo'lsa, foydalanuvchi tilini storage'dan olib,
-// SendToManyTokens'ga urinib ko'radi (uninitialized client -> xato qaytadi).
-func TestPushService_SendPush_TargetUser_WithTokens_PropagatesSendError(t *testing.T) {
+// TargetUser - FCM token DB'dan o'qilmaydi, to'g'ridan-to'g'ri UserTopic(userId)
+// topicga yuboriladi (device Register paytida shu topicga obuna qilingan bo'ladi).
+func TestPushService_SendPush_TargetUser_SendsToUserTopic_PropagatesSendError(t *testing.T) {
 	dm := mocks.NewUserDeviceMock()
 	um := mocks.NewUserMock()
 	svc := newPushTestService(um, dm, uninitializedPushClient())
 
 	lang := "ru"
-	dm.On("GetTokensByUser", mock.Anything, "user-1").Return([]string{"tok1", "tok2"}, nil)
 	um.On("GetById", &m.ById{Id: "user-1"}).Return(&m.UserRes{Language: &lang}, nil)
 
 	err := svc.SendPush(context.Background(), m.PushTarget{Type: m.TargetUser, UserID: "user-1"}, m.PushEvent{Type: m.EventPaymentSuccess})
 	assert.ErrorContains(t, err, "push client not initialized")
+	dm.AssertNotCalled(t, "GetTokensByUser", mock.Anything, mock.Anything)
 }
 
 func TestPushService_SendPush_UnknownTarget(t *testing.T) {

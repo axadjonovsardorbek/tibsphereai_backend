@@ -47,6 +47,15 @@ func BroadcastTopic(lang string) string {
 	}
 }
 
+// UserTopic - bitta foydalanuvchiga shaxsiy FCM topic nomi. Device Register
+// paytida shu topicga obuna bo'ladi (BroadcastTopic bilan bir qatorda);
+// TargetUser push endi FCM tokenlarni DB'dan o'qib SendToManyTokens qilish
+// o'rniga to'g'ridan-to'g'ri shu topicga yuboriladi - bir nechta qurilma
+// bo'lsa ham bittagina chaqiruqda barchasiga yetadi.
+func UserTopic(userId string) string {
+	return "user_" + userId
+}
+
 type PushTarget struct {
 	Type   PushTargetType
 	UserID string // TargetUser uchun

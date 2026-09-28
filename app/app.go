@@ -64,6 +64,7 @@ func Run(cf *config.Config) {
 	handlers := handler.NewHandler(*services, minioClient, cf)
 
 	go bot.BotAuth(cf)
+	go services.StudyPlan.RunReminderScheduler(ctx)
 
 	router := api.NewApi(handlers, rdb)
 	log.Println("Server is running on port ", cf.AUTH_PORT)
