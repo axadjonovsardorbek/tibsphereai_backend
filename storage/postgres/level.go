@@ -24,9 +24,9 @@ func NewLevelRepo(db *pgxpool.Pool) *LevelRepo {
 func (r *LevelRepo) Create(req *m.LevelCreateReq) (*m.ById, error) {
 	id := uuid.NewString()
 	_, err := r.db.Exec(context.Background(), `
-		INSERT INTO levels (id, level_number, slug, required_xp, title, badge_image_url)
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`, id, req.LevelNumber, req.Slug, req.RequiredXP, req.Title, req.BadgeImageUrl)
+		INSERT INTO levels (id, level_number, slug, required_xp, title, badge_image_url, xp_reward, coin_reward)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, id, req.LevelNumber, req.Slug, req.RequiredXP, req.Title, req.BadgeImageUrl, req.XPReward, req.CoinReward)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating level: %w", err)
 	}
@@ -35,7 +35,7 @@ func (r *LevelRepo) Create(req *m.LevelCreateReq) (*m.ById, error) {
 
 func (r *LevelRepo) GetAll() ([]m.LevelRes, error) {
 	rows, err := r.db.Query(context.Background(), `
-		SELECT id, level_number, slug, required_xp, title, badge_image_url
+		SELECT id, level_number, slug, required_xp, title, badge_image_url, xp_reward, coin_reward
 		FROM levels ORDER BY required_xp ASC
 	`)
 	if err != nil {
@@ -46,7 +46,7 @@ func (r *LevelRepo) GetAll() ([]m.LevelRes, error) {
 	var list []m.LevelRes
 	for rows.Next() {
 		l := m.LevelRes{}
-		if err := rows.Scan(&l.Id, &l.LevelNumber, &l.Slug, &l.RequiredXP, &l.Title, &l.BadgeImageUrl); err != nil {
+		if err := rows.Scan(&l.Id, &l.LevelNumber, &l.Slug, &l.RequiredXP, &l.Title, &l.BadgeImageUrl, &l.XPReward, &l.CoinReward); err != nil {
 			return nil, fmt.Errorf("error while scanning level: %w", err)
 		}
 		list = append(list, l)
@@ -62,6 +62,10 @@ func (r *LevelRepo) Update(req *m.LevelUpdateReq) (*m.Void, error) {
 	args = append(args, req.LevelNumber)
 	conditions = append(conditions, "required_xp = $"+strconv.Itoa(len(args)+1))
 	args = append(args, req.RequiredXP)
+	conditions = append(conditions, "xp_reward = $"+strconv.Itoa(len(args)+1))
+	args = append(args, req.XPReward)
+	conditions = append(conditions, "coin_reward = $"+strconv.Itoa(len(args)+1))
+	args = append(args, req.CoinReward)
 	if req.Slug != "" && req.Slug != "string" {
 		conditions = append(conditions, "slug = $"+strconv.Itoa(len(args)+1))
 		args = append(args, req.Slug)
@@ -102,13 +106,13 @@ func (r *LevelRepo) Delete(req *m.ById) (*m.Void, error) {
 
 func (r *LevelRepo) GetLevelForXP(xp int) (*m.LevelRes, error) {
 	row := r.db.QueryRow(context.Background(), `
-		SELECT id, level_number, slug, required_xp, title, badge_image_url
+		SELECT id, level_number, slug, required_xp, title, badge_image_url, xp_reward, coin_reward
 		FROM levels WHERE required_xp <= $1
 		ORDER BY required_xp DESC LIMIT 1
 	`, xp)
 
 	l := m.LevelRes{}
-	err := row.Scan(&l.Id, &l.LevelNumber, &l.Slug, &l.RequiredXP, &l.Title, &l.BadgeImageUrl)
+	err := row.Scan(&l.Id, &l.LevelNumber, &l.Slug, &l.RequiredXP, &l.Title, &l.BadgeImageUrl, &l.XPReward, &l.CoinReward)
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}

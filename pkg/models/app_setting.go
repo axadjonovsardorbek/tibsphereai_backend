@@ -34,31 +34,23 @@ type UserLimitStatusRes struct {
 	HasSubscription bool `json:"has_subscription"` // true - limit cheksiz (Premium)
 }
 
-// --- Case qiyinlik darajasi (difficulty) bo'yicha XP/Coin mukofoti (admin sozlaydi) ---
+// --- Case qiyinlik darajasi (difficulty) koeffitsienti (admin sozlaydi) ---
 //
 // Avval xp=health_percent, coins=health_percent/10 edi (faqat sog'liqqa qarab,
-// case qanchalik qiyin bo'lishidan qat'i nazar bir xil). Endi har bir qiyinlik
-// darajasi uchun admin panelda ("Sozlamalar" -> "Mukofot sozlamalari") o'zining
-// bazaviy XP/Coin qiymati belgilanadi, yakuniy mukofot esa health_percent'ga
-// mutanosib beriladi: xp = round(baseXP * health_percent / 100) va h.k.
-// Ko'ring [[AppSettingService.DifficultyReward]].
+// case qanchalik qiyin bo'lishidan qat'i nazar bir xil). Endi bazaviy XP/Coin
+// foydalanuvchining O'Z DARAJASI (levels.xp_reward/coin_reward, [[LevelRes]]) bo'yicha
+// olinadi, case "medium"/"hard" bo'lsa esa shu bazaga koeffitsient bilan ko'paytiriladi
+// (masalan medium=1.5x, hard=2x) - admin panelda "Sozlamalar" -> "Mukofot sozlamalari"
+// orqali boshqariladi. Yakuniy mukofot bundan tashqari health_percent'ga (qobiliyat/
+// to'g'ri bajarish darajasi) mutanosib beriladi. Ko'ring [[SimulationService.Finish]].
 const (
-	AppSettingXPRewardEasy   = "xp_reward_easy"
-	AppSettingXPRewardMedium = "xp_reward_medium"
-	AppSettingXPRewardHard   = "xp_reward_hard"
-
-	AppSettingCoinRewardEasy   = "coin_reward_easy"
-	AppSettingCoinRewardMedium = "coin_reward_medium"
-	AppSettingCoinRewardHard   = "coin_reward_hard"
+	AppSettingMediumRewardMultiplier = "medium_reward_multiplier" // masalan "1.5"
+	AppSettingHardRewardMultiplier   = "hard_reward_multiplier"   // masalan "2"
 )
 
 // DifficultyRewardRes - admin panelning "Mukofot sozlamalari" formasi uchun,
-// uchala qiyinlik darajasining joriy bazaviy XP/Coin qiymatlari bir so'rovda.
+// joriy koeffitsientlar bir so'rovda ("easy" har doim 1x, bazaviy qiymatning o'zi).
 type DifficultyRewardRes struct {
-	XPEasy     int `json:"xp_easy"`
-	CoinEasy   int `json:"coin_easy"`
-	XPMedium   int `json:"xp_medium"`
-	CoinMedium int `json:"coin_medium"`
-	XPHard     int `json:"xp_hard"`
-	CoinHard   int `json:"coin_hard"`
+	MediumMultiplier float64 `json:"medium_multiplier"`
+	HardMultiplier   float64 `json:"hard_multiplier"`
 }

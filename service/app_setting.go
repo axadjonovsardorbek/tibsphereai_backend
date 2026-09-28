@@ -68,71 +68,56 @@ func (s *AppSettingService) VoiceEnabled(ctx context.Context) bool {
 	return v
 }
 
-// difficultyRewardDefaults - app_settings'da sozlanmagan bo'lsa ishlatiladigan
-// bazaviy qiymatlar (case.difficulty: easy|medium|hard).
-var difficultyRewardDefaults = map[string]struct{ XP, Coin int }{
-	"easy":   {XP: 50, Coin: 5},
-	"medium": {XP: 100, Coin: 10},
-	"hard":   {XP: 150, Coin: 15},
-}
+// Case qiyinlik darajasi koeffitsientlari - app_settings'da sozlanmagan bo'lsa
+// ishlatiladigan default qiymatlar ("easy" har doim 1x, bu yerda yo'q).
+const (
+	defaultMediumMultiplier = 1.5
+	defaultHardMultiplier   = 2.0
+)
 
-func (s *AppSettingService) getIntSetting(key string, def int) int {
+func (s *AppSettingService) getFloatSetting(key string, def float64) float64 {
 	setting, err := s.storage.AppSettingS.Get(key)
 	if err != nil || setting == nil {
 		return def
 	}
-	if v, err := strconv.Atoi(setting.Value); err == nil {
+	if v, err := strconv.ParseFloat(setting.Value, 64); err == nil {
 		return v
 	}
 	return def
 }
 
-// DifficultyReward - case.difficulty (easy|medium|hard) bo'yicha bazaviy XP/Coin
-// (admin "Mukofot sozlamalari" orqali sozlaydi). Yakuniy mukofot bu bazaga
-// health_percent nisbatan mutanosib beriladi - ko'ring [[SimulationService.Finish]].
-// Noma'lum/bo'sh difficulty kelsa - "medium" default'iga tushadi.
-func (s *AppSettingService) DifficultyReward(ctx context.Context, difficulty string) (xpBase int, coinBase int) {
-	def, ok := difficultyRewardDefaults[difficulty]
-	if !ok {
-		def = difficultyRewardDefaults["medium"]
-	}
+// DifficultyMultiplier - case.difficulty (easy|medium|hard) bo'yicha koeffitsient
+// (admin "Mukofot sozlamalari" orqali sozlaydi, masalan medium=1.5x, hard=2x).
+// Bu koeffitsient foydalanuvchining o'z darajasidagi bazaviy XP/Coin'ga
+// (levels.xp_reward/coin_reward) qo'llanadi - ko'ring [[SimulationService.Finish]].
+// "easy" yoki noma'lum/bo'sh difficulty - 1x (ko'paytirilmagan).
+func (s *AppSettingService) DifficultyMultiplier(ctx context.Context, difficulty string) float64 {
 	switch difficulty {
-	case "easy":
-		return s.getIntSetting(m.AppSettingXPRewardEasy, def.XP), s.getIntSetting(m.AppSettingCoinRewardEasy, def.Coin)
+	case "medium":
+		return s.getFloatSetting(m.AppSettingMediumRewardMultiplier, defaultMediumMultiplier)
 	case "hard":
-		return s.getIntSetting(m.AppSettingXPRewardHard, def.XP), s.getIntSetting(m.AppSettingCoinRewardHard, def.Coin)
+		return s.getFloatSetting(m.AppSettingHardRewardMultiplier, defaultHardMultiplier)
 	default:
-		return s.getIntSetting(m.AppSettingXPRewardMedium, def.XP), s.getIntSetting(m.AppSettingCoinRewardMedium, def.Coin)
+		return 1.0
 	}
 }
 
 // GetDifficultyRewards - admin panelning "Mukofot sozlamalari" formasi uchun,
-// uchala darajaning joriy qiymatlari bir so'rovda.
+// joriy koeffitsientlar bir so'rovda.
 func (s *AppSettingService) GetDifficultyRewards(ctx context.Context) *m.DifficultyRewardRes {
-	xpE, coinE := s.DifficultyReward(ctx, "easy")
-	xpM, coinM := s.DifficultyReward(ctx, "medium")
-	xpH, coinH := s.DifficultyReward(ctx, "hard")
 	return &m.DifficultyRewardRes{
-		XPEasy: xpE, CoinEasy: coinE,
-		XPMedium: xpM, CoinMedium: coinM,
-		XPHard: xpH, CoinHard: coinH,
+		MediumMultiplier: s.getFloatSetting(m.AppSettingMediumRewardMultiplier, defaultMediumMultiplier),
+		HardMultiplier:   s.getFloatSetting(m.AppSettingHardRewardMultiplier, defaultHardMultiplier),
 	}
 }
 
-// SetDifficultyRewards - admin formadagi 6 ta qiymatni app_settings'ga bittalab yozadi.
+// SetDifficultyRewards - admin formadagi 2 ta koeffitsientni app_settings'ga yozadi.
 func (s *AppSettingService) SetDifficultyRewards(ctx context.Context, req *m.DifficultyRewardRes) error {
-	kv := map[string]int{
-		m.AppSettingXPRewardEasy:     req.XPEasy,
-		m.AppSettingCoinRewardEasy:   req.CoinEasy,
-		m.AppSettingXPRewardMedium:   req.XPMedium,
-		m.AppSettingCoinRewardMedium: req.CoinMedium,
-		m.AppSettingXPRewardHard:     req.XPHard,
-		m.AppSettingCoinRewardHard:   req.CoinHard,
+	if _, err := s.storage.AppSettingS.Set(&m.AppSettingSetReq{Key: m.AppSettingMediumRewardMultiplier, Value: strconv.FormatFloat(req.MediumMultiplier, 'f', -1, 64)}); err != nil {
+		return err
 	}
-	for key, val := range kv {
-		if _, err := s.storage.AppSettingS.Set(&m.AppSettingSetReq{Key: key, Value: strconv.Itoa(val)}); err != nil {
-			return err
-		}
+	if _, err := s.storage.AppSettingS.Set(&m.AppSettingSetReq{Key: m.AppSettingHardRewardMultiplier, Value: strconv.FormatFloat(req.HardMultiplier, 'f', -1, 64)}); err != nil {
+		return err
 	}
 	return nil
 }

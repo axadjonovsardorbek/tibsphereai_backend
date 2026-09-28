@@ -193,10 +193,13 @@ func (f fakeActionEvalAI) Evaluate(ctx context.Context, caseScenario map[string]
 	return f.res, nil, f.err
 }
 
-// Finish - sessiya yakunlanganda mukofot case.difficulty bo'yicha bazaviy
-// XP/Coin'ga (app_settings, sozlanmagan bo'lsa medium default: xp=100,coin=10)
-// health_percent nisbatan mutanosib hisoblanadi, balansga qo'shiladi va faoliyat
-// (streak) loglanadi (BACKEND_STRUCTURE.md 6-bo'lim).
+// Finish - sessiya yakunlanganda mukofot ikki omilga qarab hisoblanadi: (1)
+// foydalanuvchining O'Z DARAJASI (levels.xp_reward/coin_reward - bu yerda UserS.GetById
+// xato qaytaradi, shu sabab defaultLevelXPReward/CoinReward=50/5 ishlatiladi), (2) case
+// qiyinlik darajasi koeffitsienti (app_settings, sozlanmagan bo'lsa medium=1.5x, hard=2x -
+// shu sabab "medium" uchun 50*1.5=75 XP, 5*1.5=8 Coin). health_percent'ga mutanosib
+// hisoblanadi, balansga qo'shiladi va faoliyat (streak) loglanadi (BACKEND_STRUCTURE.md 6-bo'lim).
+// Level bo'yicha haqiqiy farqlanishni TestSimulationService_Finish_UsesUserLevelReward tekshiradi.
 func TestSimulationService_Finish_AwardsPointsAndLogsActivity(t *testing.T) {
 	sm := mocks.NewSimulationMock()
 	um := mocks.NewUserMock()
@@ -206,32 +209,75 @@ func TestSimulationService_Finish_AwardsPointsAndLogsActivity(t *testing.T) {
 
 	userId := "user-1"
 	caseId := "case-1"
-	health := 50
+	health := 100
 	sm.On("GetById", &m.ById{Id: "sess-1"}).Return(&m.SimulationSessionRes{UserId: &userId, CaseId: &caseId, HealthPercent: &health}, nil)
 
 	difficulty := "medium"
 	cm.On("GetById", &m.ById{Id: "case-1"}).Return(&m.CaseRes{Difficulty: &difficulty}, nil)
-	am.On("Get", mock.Anything).Return(nil, errors.New("not set")).Maybe() // -> medium default (xp=100, coin=10)
+	am.On("Get", mock.Anything).Return(nil, errors.New("not set")).Maybe()        // -> medium default 1.5x
+	um.On("GetById", &m.ById{Id: "user-1"}).Return(nil, errors.New("no user")).Maybe() // -> level lookup skip, default base 50/5
 
 	// kamida bitta klinik harakat bo'lishi kerak (aks holda mukofot 0 - pastdagi
 	// TestSimulationService_Finish_NoActions_NoReward'ga qarang).
 	sm.On("GetEvents", "sess-1").Return([]m.SimulationEventReq{{Type: "medication"}}, nil)
 
 	req := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "manual"}
-	// xp = 100 * 50/100 = 50, coins = 10 * 50/100 = 5
-	finishRes := &m.SimulationFinishRes{SessionId: "sess-1", XPEarned: 50, CoinsEarned: 5}
-	sm.On("Finish", req, 50, 5).Return(finishRes, nil)
+	// default bazasi: xp = round(50*1.5) = 75, coin = round(5*1.5) = 8; 100% sog'liq -> to'liq beriladi
+	finishRes := &m.SimulationFinishRes{SessionId: "sess-1", XPEarned: 75, CoinsEarned: 8}
+	sm.On("Finish", req, 75, 8).Return(finishRes, nil)
 
-	um.On("AddPoints", &m.AddPointsReq{UserId: "user-1", XPDelta: 50, CoinsDelta: 5, Reason: "simulation_finish", ReferenceId: "sess-1"}).
+	um.On("AddPoints", &m.AddPointsReq{UserId: "user-1", XPDelta: 75, CoinsDelta: 8, Reason: "simulation_finish", ReferenceId: "sess-1"}).
 		Return(&m.Void{}, nil).Maybe()
 	um.On("CreateActivity", &m.UserActivityCreateReq{UserId: "user-1", Activity: 1}).Return(&m.Void{}, nil).Maybe()
 
 	got, err := svc.Finish(context.Background(), req)
 	require.NoError(t, err)
 	assert.Equal(t, "sess-1", got.SessionId)
-	assert.Equal(t, 50, got.XPEarned)
-	assert.Equal(t, 5, got.CoinsEarned)
+	assert.Equal(t, 75, got.XPEarned)
+	assert.Equal(t, 8, got.CoinsEarned)
 	assert.False(t, got.DebriefReady) // TODO: WS/poll orqali xabar qilinadi, hozircha doim false
+}
+
+// Finish - Level 5 (yuqori daraja, katta xp_reward/coin_reward) + "hard" case
+// (2x koeffitsient) birgalikda past darajadagi foydalanuvchidan ancha ko'proq
+// mukofot berishi kerak - aynan shu narsa so'ralgan edi ("userni leveliga qarab
+// ham farq qilishi kerak").
+func TestSimulationService_Finish_UsesUserLevelReward(t *testing.T) {
+	pool := testSimulationDB(t)
+	sm := mocks.NewSimulationMock()
+	um := mocks.NewUserMock()
+	cm := mocks.NewCaseMock()
+	lm := mocks.NewLevelMock()
+	am := mocks.NewAppSettingMock()
+	pgStorage := &st.Storage{Db: pool, SimulationS: sm, CaseS: cm, UserS: um, LevelS: lm, DebriefS: mocks.NewDebriefMock(), AppSettingS: am}
+	svc := NewSimulationService(pgStorage, &ai.Client{}, NewAppSettingService(pgStorage, 3))
+
+	userId := "user-1"
+	caseId := "case-1"
+	health := 100
+	sm.On("GetById", &m.ById{Id: "sess-1"}).Return(&m.SimulationSessionRes{UserId: &userId, CaseId: &caseId, HealthPercent: &health}, nil)
+
+	difficulty := "hard"
+	cm.On("GetById", &m.ById{Id: "case-1"}).Return(&m.CaseRes{Difficulty: &difficulty}, nil)
+
+	userXP := 8000 // "specialist" darajasidagi foydalanuvchi
+	um.On("GetById", &m.ById{Id: "user-1"}).Return(&m.UserRes{XP: &userXP}, nil)
+	xpReward, coinReward := 150, 15 // Level 5'ning bazaviy mukofoti (migrations/00013)
+	lm.On("GetLevelForXP", 8000).Return(&m.LevelRes{XPReward: &xpReward, CoinReward: &coinReward}, nil)
+
+	am.On("Get", mock.Anything).Return(nil, errors.New("not set")).Maybe() // -> hard default 2x
+	sm.On("GetEvents", "sess-1").Return([]m.SimulationEventReq{{Type: "procedure"}}, nil)
+
+	req := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "manual"}
+	// 150*2=300 XP, 15*2=30 Coin - Level 1'ning (75/8, oldingi testga qarang) ustidagi test
+	sm.On("Finish", req, 300, 30).Return(&m.SimulationFinishRes{SessionId: "sess-1", XPEarned: 300, CoinsEarned: 30}, nil)
+	um.On("AddPoints", mock.Anything).Return(&m.Void{}, nil).Maybe()
+	um.On("CreateActivity", mock.Anything).Return(&m.Void{}, nil).Maybe()
+
+	got, err := svc.Finish(context.Background(), req)
+	require.NoError(t, err)
+	assert.Equal(t, 300, got.XPEarned)
+	assert.Equal(t, 30, got.CoinsEarned)
 }
 
 // Finish - hech qanday klinik harakat qilinmagan bo'lsa (faqat anamnez "question"
@@ -289,7 +335,7 @@ func TestSimulationService_Finish_StorageError(t *testing.T) {
 
 	req := &m.SimulationFinishReq{SessionId: "sess-1"}
 	wantErr := errors.New("already finished")
-	sm.On("Finish", req, 100, 10).Return(nil, wantErr)
+	sm.On("Finish", req, 75, 8).Return(nil, wantErr) // CaseId yo'q -> difficulty="medium" default -> 50*1.5=75, 5*1.5=8
 
 	got, err := svc.Finish(context.Background(), req)
 	assert.Nil(t, got)

@@ -5,12 +5,19 @@ package models
 // Slug - level'ning o'zgarmas kodi (masalan "beginner", "resident"), mobil/frontend
 // tomonda ikonka/rang/tarjima shu bo'yicha bog'lanadi (level_number/title o'zgarsa ham slug qolaveradi).
 
+// XPReward/CoinReward - shu levelga yetgan foydalanuvchi case yakunlaganda oladigan
+// bazaviy mukofot (case.difficulty koeffitsienti va health_percent bilan yana
+// ko'paytiriladi - ko'ring [[SimulationService.Finish]]). Har bir level o'z
+// mukofot miqdorini belgilaydi - masalan Level 5 (Mutaxassis) Level 1'dan ko'proq.
+
 type LevelCreateReq struct {
 	LevelNumber   int    `json:"level_number"`
 	Slug          string `json:"slug"`
 	RequiredXP    int    `json:"required_xp"`
 	Title         string `json:"title"`
 	BadgeImageUrl string `json:"badge_image_url"`
+	XPReward      int    `json:"xp_reward"`
+	CoinReward    int    `json:"coin_reward"`
 }
 
 type LevelUpdateReq struct {
@@ -20,6 +27,8 @@ type LevelUpdateReq struct {
 	RequiredXP    int    `json:"required_xp"`
 	Title         string `json:"title"`
 	BadgeImageUrl string `json:"badge_image_url"`
+	XPReward      int    `json:"xp_reward"`
+	CoinReward    int    `json:"coin_reward"`
 }
 
 type LevelRes struct {
@@ -29,6 +38,8 @@ type LevelRes struct {
 	RequiredXP    *int    `json:"required_xp"`
 	Title         *string `json:"title"`
 	BadgeImageUrl *string `json:"badge_image_url"`
+	XPReward      *int    `json:"xp_reward"`
+	CoinReward    *int    `json:"coin_reward"`
 }
 
 // AddPointsReq - keys yakunlanganda XP/Coin qo'shish (UserI.AddPoints).

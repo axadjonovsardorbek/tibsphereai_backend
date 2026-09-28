@@ -48,9 +48,11 @@ func (h *Handler) SetSetting(c *gin.Context) {
 }
 
 // GetDifficultyRewards godoc
-// @Summary Case qiyinlik darajasi (easy/medium/hard) bo'yicha bazaviy XP/Coin mukofoti
-// @Description Yakuniy mukofot shu bazaga health_percent nisbatan mutanosib beriladi
-// @Description (SimulationService.Finish). Sozlanmagan bo'lsa default: easy 50/5, medium 100/10, hard 150/15.
+// @Summary Case qiyinlik darajasi (medium/hard) mukofot koeffitsienti
+// @Description Bazaviy XP/Coin foydalanuvchining darajasidan (levels.xp_reward/coin_reward)
+// @Description olinadi, bu yerdagi koeffitsient ("easy"=1x, bu yerda yo'q) shunga qo'llanadi,
+// @Description keyin health_percent'ga mutanosib beriladi (SimulationService.Finish).
+// @Description Sozlanmagan bo'lsa default: medium=1.5, hard=2.
 // @Tags setting
 // @Produce json
 // @Success 200 {object} models.DifficultyRewardRes
@@ -61,11 +63,11 @@ func (h *Handler) GetDifficultyRewards(c *gin.Context) {
 }
 
 // SetDifficultyRewards godoc
-// @Summary Case qiyinlik darajasi bo'yicha bazaviy XP/Coin mukofotini sozlash
+// @Summary Case qiyinlik darajasi (medium/hard) mukofot koeffitsientini sozlash
 // @Tags setting
 // @Accept json
 // @Produce json
-// @Param body body models.DifficultyRewardRes true "6 ta qiymat (easy/medium/hard uchun xp+coin)"
+// @Param body body models.DifficultyRewardRes true "medium_multiplier, hard_multiplier"
 // @Success 200 {object} string
 // @Security BearerAuth
 // @Router /web/setting/difficulty-reward [put]

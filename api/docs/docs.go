@@ -6194,14 +6194,14 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Yakuniy mukofot shu bazaga health_percent nisbatan mutanosib beriladi\n(SimulationService.Finish). Sozlanmagan bo'lsa default: easy 50/5, medium 100/10, hard 150/15.",
+                "description": "Bazaviy XP/Coin foydalanuvchining darajasidan (levels.xp_reward/coin_reward)\nolinadi, bu yerdagi koeffitsient (\"easy\"=1x, bu yerda yo'q) shunga qo'llanadi,\nkeyin health_percent'ga mutanosib beriladi (SimulationService.Finish).\nSozlanmagan bo'lsa default: medium=1.5, hard=2.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "setting"
                 ],
-                "summary": "Case qiyinlik darajasi (easy/medium/hard) bo'yicha bazaviy XP/Coin mukofoti",
+                "summary": "Case qiyinlik darajasi (medium/hard) mukofot koeffitsienti",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -6226,10 +6226,10 @@ const docTemplate = `{
                 "tags": [
                     "setting"
                 ],
-                "summary": "Case qiyinlik darajasi bo'yicha bazaviy XP/Coin mukofotini sozlash",
+                "summary": "Case qiyinlik darajasi (medium/hard) mukofot koeffitsientini sozlash",
                 "parameters": [
                     {
-                        "description": "6 ta qiymat (easy/medium/hard uchun xp+coin)",
+                        "description": "medium_multiplier, hard_multiplier",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -8279,23 +8279,11 @@ const docTemplate = `{
         "models.DifficultyRewardRes": {
             "type": "object",
             "properties": {
-                "coin_easy": {
-                    "type": "integer"
+                "hard_multiplier": {
+                    "type": "number"
                 },
-                "coin_hard": {
-                    "type": "integer"
-                },
-                "coin_medium": {
-                    "type": "integer"
-                },
-                "xp_easy": {
-                    "type": "integer"
-                },
-                "xp_hard": {
-                    "type": "integer"
-                },
-                "xp_medium": {
-                    "type": "integer"
+                "medium_multiplier": {
+                    "type": "number"
                 }
             }
         },
@@ -8444,6 +8432,9 @@ const docTemplate = `{
                 "badge_image_url": {
                     "type": "string"
                 },
+                "coin_reward": {
+                    "type": "integer"
+                },
                 "level_number": {
                     "type": "integer"
                 },
@@ -8455,6 +8446,9 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
+                },
+                "xp_reward": {
+                    "type": "integer"
                 }
             }
         },
@@ -8464,6 +8458,9 @@ const docTemplate = `{
                 "badge_image_url": {
                     "type": "string"
                 },
+                "coin_reward": {
+                    "type": "integer"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -8478,6 +8475,9 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
+                },
+                "xp_reward": {
+                    "type": "integer"
                 }
             }
         },
@@ -8487,6 +8487,9 @@ const docTemplate = `{
                 "badge_image_url": {
                     "type": "string"
                 },
+                "coin_reward": {
+                    "type": "integer"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -8501,6 +8504,9 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
+                },
+                "xp_reward": {
+                    "type": "integer"
                 }
             }
         },

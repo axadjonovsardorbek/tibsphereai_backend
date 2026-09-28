@@ -126,12 +126,25 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 	return res, nil
 }
 
+// defaultLevelXPReward/defaultLevelCoinReward - levels jadvalida hali hech qanday
+// yozuv bo'lmasa (yoki foydalanuvchi XP'siga mos level topilmasa) ishlatiladigan
+// bazaviy mukofot (Level 1'ning odatiy qiymatiga mos, ko'ring migrations/00013).
+const (
+	defaultLevelXPReward   = 50
+	defaultLevelCoinReward = 5
+)
+
 // Finish - sessiyani yakunlaydi, XP/Coin beradi va AI debriefing hisobotini
-// generatsiya qiladi. Mukofot case.difficulty (easy|medium|hard) bo'yicha admin
-// belgilagan bazaviy XP/Coin'ga (AppSettingService.DifficultyReward) health_percent
-// nisbatan mutanosib hisoblanadi - masalan hard case, 80% sog'liq bilan tugatilsa:
-// xp = round(hard_xp_base * 80/100). Muvaffaqiyatsiz (health_zero) bo'lsa tanga
-// berilmaydi (coins=0), faqat XP hisoblanadi (BACKEND_STRUCTURE.md 6-bo'lim).
+// generatsiya qiladi. Mukofot ikki omilga qarab hisoblanadi:
+// 1) foydalanuvchining O'Z DARAJASI (levels.xp_reward/coin_reward, [[LevelRes]]) -
+// qancha yuqori level, shuncha ko'p bazaviy mukofot;
+// 2) case.difficulty (easy|medium|hard) koeffitsienti (AppSettingService.DifficultyMultiplier,
+// masalan hard=2x) - shu bazaga qo'llanadi.
+// Ikkalasi ham health_percent'ga (qobiliyat/to'g'ri bajarish darajasi) mutanosib
+// beriladi - masalan Level 3 foydalanuvchi hard case'ni 80% sog'liq bilan tugatsa:
+// xp = round(level3_xp_reward * hard_multiplier * 80/100). Muvaffaqiyatsiz
+// (health_zero) bo'lsa tanga berilmaydi (coins=0), faqat XP hisoblanadi
+// (BACKEND_STRUCTURE.md 6-bo'lim).
 // Hech qanday klinik harakat qilinmagan bo'lsa (0 ta action event - faqat "question"
 // chat hisobga olinmaydi), xp/coins ham 0 - aks holda darhol "finish" bosib, hech
 // narsa qilmasdan to'liq mukofot olish mumkin bo'lardi (health_percent 100'dan boshlanadi).
@@ -151,7 +164,23 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 			difficulty = *caseRes.Difficulty
 		}
 	}
-	xpBase, coinBase := s.appSettings.DifficultyReward(ctx, difficulty)
+
+	xpBase, coinBase := defaultLevelXPReward, defaultLevelCoinReward
+	if session.UserId != nil {
+		if user, uErr := s.storage.UserS.GetById(&m.ById{Id: *session.UserId}); uErr == nil && user != nil && user.XP != nil {
+			if lvl, lErr := s.storage.LevelS.GetLevelForXP(*user.XP); lErr == nil && lvl != nil {
+				if lvl.XPReward != nil {
+					xpBase = *lvl.XPReward
+				}
+				if lvl.CoinReward != nil {
+					coinBase = *lvl.CoinReward
+				}
+			}
+		}
+	}
+	mult := s.appSettings.DifficultyMultiplier(ctx, difficulty)
+	xpBase = int(float64(xpBase)*mult + 0.5)
+	coinBase = int(float64(coinBase)*mult + 0.5)
 
 	// actionCount - "question" (anamnez chat) hisobga olinmaydi, chunki u
 	// health_percent'ga ta'sir qilmaydi (AddEvent). health_percent boshlang'ich
