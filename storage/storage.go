@@ -258,7 +258,10 @@ type SimulationI interface {
 	// turi - PatientAI chat, boshqalari - ActionEvaluatorAI klinik baho,
 	// [[internal/ai/ai.go]]); storage faqat berilgan qiymatlarni yozadi.
 	AddEvent(req *m.SimulationEventReq, isCorrect bool, healthDelta int) (*m.SimulationEventRes, error)
-	Finish(req *m.SimulationFinishReq) (*m.SimulationFinishRes, error)
+	// Finish - xpEarned/coinsEarned service qatlamida hisoblanadi (case.difficulty
+	// bo'yicha bazaviy mukofot * health_percent nisbati, [[AppSettingService.DifficultyReward]]);
+	// storage faqat berilgan qiymatlarni yozadi va final_score=health_percent qo'yadi.
+	Finish(req *m.SimulationFinishReq, xpEarned, coinsEarned int) (*m.SimulationFinishRes, error)
 	GetById(req *m.ById) (*m.SimulationSessionRes, error)
 	GetOngoing(req *m.ById) (*m.PaginationResponse, *m.SimulationSessionList, error)
 	GetCompleted(req *m.ById) (*m.PaginationResponse, *m.SimulationSessionList, error)

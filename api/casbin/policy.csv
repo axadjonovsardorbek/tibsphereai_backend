@@ -101,6 +101,8 @@ p, admin, /web/level/:id/update, PUT
 p, admin, /web/level/:id/delete, DELETE
 p, admin, /web/setting, GET
 p, admin, /web/setting, PUT
+p, admin, /web/setting/difficulty-reward, GET
+p, admin, /web/setting/difficulty-reward, PUT
 p, admin, /web/ai-prompt, GET
 p, admin, /web/ai-prompt, PUT
 p, admin, /web/ai-prompt/usage, GET

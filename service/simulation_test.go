@@ -193,37 +193,103 @@ func (f fakeActionEvalAI) Evaluate(ctx context.Context, caseScenario map[string]
 	return f.res, nil, f.err
 }
 
-// Finish - sessiya yakunlanganda XP/Coin balansga qo'shilishi va faoliyat
-// (streak) loglanishi kerak (BACKEND_STRUCTURE.md 6-bo'lim).
+// Finish - sessiya yakunlanganda mukofot case.difficulty bo'yicha bazaviy
+// XP/Coin'ga (app_settings, sozlanmagan bo'lsa medium default: xp=100,coin=10)
+// health_percent nisbatan mutanosib hisoblanadi, balansga qo'shiladi va faoliyat
+// (streak) loglanadi (BACKEND_STRUCTURE.md 6-bo'lim).
 func TestSimulationService_Finish_AwardsPointsAndLogsActivity(t *testing.T) {
 	sm := mocks.NewSimulationMock()
 	um := mocks.NewUserMock()
-	svc := newSimulationTestService(t, sm, mocks.NewCaseMock(), um, mocks.NewDebriefMock(), mocks.NewAppSettingMock(), nil)
-
-	req := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "manual"}
-	finishRes := &m.SimulationFinishRes{SessionId: "sess-1", XPEarned: 20, CoinsEarned: 5}
-	sm.On("Finish", req).Return(finishRes, nil)
+	cm := mocks.NewCaseMock()
+	am := mocks.NewAppSettingMock()
+	svc := newSimulationTestService(t, sm, cm, um, mocks.NewDebriefMock(), am, nil)
 
 	userId := "user-1"
-	sm.On("GetById", &m.ById{Id: "sess-1"}).Return(&m.SimulationSessionRes{UserId: &userId}, nil).Maybe()
-	um.On("AddPoints", &m.AddPointsReq{UserId: "user-1", XPDelta: 20, CoinsDelta: 5, Reason: "simulation_finish", ReferenceId: "sess-1"}).
+	caseId := "case-1"
+	health := 50
+	sm.On("GetById", &m.ById{Id: "sess-1"}).Return(&m.SimulationSessionRes{UserId: &userId, CaseId: &caseId, HealthPercent: &health}, nil)
+
+	difficulty := "medium"
+	cm.On("GetById", &m.ById{Id: "case-1"}).Return(&m.CaseRes{Difficulty: &difficulty}, nil)
+	am.On("Get", mock.Anything).Return(nil, errors.New("not set")).Maybe() // -> medium default (xp=100, coin=10)
+
+	// kamida bitta klinik harakat bo'lishi kerak (aks holda mukofot 0 - pastdagi
+	// TestSimulationService_Finish_NoActions_NoReward'ga qarang).
+	sm.On("GetEvents", "sess-1").Return([]m.SimulationEventReq{{Type: "medication"}}, nil)
+
+	req := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "manual"}
+	// xp = 100 * 50/100 = 50, coins = 10 * 50/100 = 5
+	finishRes := &m.SimulationFinishRes{SessionId: "sess-1", XPEarned: 50, CoinsEarned: 5}
+	sm.On("Finish", req, 50, 5).Return(finishRes, nil)
+
+	um.On("AddPoints", &m.AddPointsReq{UserId: "user-1", XPDelta: 50, CoinsDelta: 5, Reason: "simulation_finish", ReferenceId: "sess-1"}).
 		Return(&m.Void{}, nil).Maybe()
 	um.On("CreateActivity", &m.UserActivityCreateReq{UserId: "user-1", Activity: 1}).Return(&m.Void{}, nil).Maybe()
 
 	got, err := svc.Finish(context.Background(), req)
 	require.NoError(t, err)
 	assert.Equal(t, "sess-1", got.SessionId)
-	assert.Equal(t, 20, got.XPEarned)
+	assert.Equal(t, 50, got.XPEarned)
+	assert.Equal(t, 5, got.CoinsEarned)
 	assert.False(t, got.DebriefReady) // TODO: WS/poll orqali xabar qilinadi, hozircha doim false
+}
+
+// Finish - hech qanday klinik harakat qilinmagan bo'lsa (faqat anamnez "question"
+// yoki umuman hech narsa), xp/coins 0 bo'lishi kerak - health_percent boshlang'ich
+// 100'dan boshlangani uchun aks holda darhol "finish" bosib, hech narsa qilmasdan
+// to'liq mukofot olib ketish mumkin bo'lardi.
+func TestSimulationService_Finish_NoActions_NoReward(t *testing.T) {
+	sm := mocks.NewSimulationMock()
+	am := mocks.NewAppSettingMock()
+	svc := newSimulationTestService(t, sm, mocks.NewCaseMock(), mocks.NewUserMock(), mocks.NewDebriefMock(), am, nil)
+
+	health := 100
+	sm.On("GetById", &m.ById{Id: "sess-1"}).Return(&m.SimulationSessionRes{HealthPercent: &health}, nil)
+	am.On("Get", mock.Anything).Return(nil, errors.New("not set")).Maybe()
+	sm.On("GetEvents", "sess-1").Return([]m.SimulationEventReq{{Type: "question"}}, nil)
+
+	req := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "manual"}
+	sm.On("Finish", req, 0, 0).Return(&m.SimulationFinishRes{SessionId: "sess-1"}, nil)
+
+	got, err := svc.Finish(context.Background(), req)
+	require.NoError(t, err)
+	assert.Equal(t, 0, got.XPEarned)
+	assert.Equal(t, 0, got.CoinsEarned)
+}
+
+// Finish - health_zero (health 0'ga tushib avtomatik tugagan) sabab bo'lsa,
+// tanga umuman berilmaydi (coins=0), XP baribir health_percent nisbatida hisoblanadi.
+func TestSimulationService_Finish_HealthZero_NoCoins(t *testing.T) {
+	sm := mocks.NewSimulationMock()
+	am := mocks.NewAppSettingMock()
+	svc := newSimulationTestService(t, sm, mocks.NewCaseMock(), mocks.NewUserMock(), mocks.NewDebriefMock(), am, nil)
+
+	health := 0
+	sm.On("GetById", &m.ById{Id: "sess-1"}).Return(&m.SimulationSessionRes{HealthPercent: &health}, nil)
+	am.On("Get", mock.Anything).Return(nil, errors.New("not set")).Maybe()
+	sm.On("GetEvents", "sess-1").Return([]m.SimulationEventReq{{Type: "medication"}}, nil)
+
+	req := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "health_zero"}
+	sm.On("Finish", req, 0, 0).Return(&m.SimulationFinishRes{SessionId: "sess-1"}, nil)
+
+	got, err := svc.Finish(context.Background(), req)
+	require.NoError(t, err)
+	assert.Equal(t, 0, got.CoinsEarned)
 }
 
 func TestSimulationService_Finish_StorageError(t *testing.T) {
 	sm := mocks.NewSimulationMock()
-	svc := newSimulationTestService(t, sm, mocks.NewCaseMock(), mocks.NewUserMock(), mocks.NewDebriefMock(), mocks.NewAppSettingMock(), nil)
+	am := mocks.NewAppSettingMock()
+	svc := newSimulationTestService(t, sm, mocks.NewCaseMock(), mocks.NewUserMock(), mocks.NewDebriefMock(), am, nil)
+
+	health := 100
+	sm.On("GetById", &m.ById{Id: "sess-1"}).Return(&m.SimulationSessionRes{HealthPercent: &health}, nil)
+	am.On("Get", mock.Anything).Return(nil, errors.New("not set")).Maybe()
+	sm.On("GetEvents", "sess-1").Return([]m.SimulationEventReq{{Type: "exam"}}, nil)
 
 	req := &m.SimulationFinishReq{SessionId: "sess-1"}
 	wantErr := errors.New("already finished")
-	sm.On("Finish", req).Return(nil, wantErr)
+	sm.On("Finish", req, 100, 10).Return(nil, wantErr)
 
 	got, err := svc.Finish(context.Background(), req)
 	assert.Nil(t, got)

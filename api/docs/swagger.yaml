@@ -945,6 +945,21 @@ definitions:
       xp_earned:
         type: integer
     type: object
+  models.DifficultyRewardRes:
+    properties:
+      coin_easy:
+        type: integer
+      coin_hard:
+        type: integer
+      coin_medium:
+        type: integer
+      xp_easy:
+        type: integer
+      xp_hard:
+        type: integer
+      xp_medium:
+        type: integer
+    type: object
   models.FaqCreateBody:
     properties:
       answer:
@@ -5712,6 +5727,46 @@ paths:
             type: string
       security:
       - BearerAuth: []
+      tags:
+      - setting
+  /web/setting/difficulty-reward:
+    get:
+      description: |-
+        Yakuniy mukofot shu bazaga health_percent nisbatan mutanosib beriladi
+        (SimulationService.Finish). Sozlanmagan bo'lsa default: easy 50/5, medium 100/10, hard 150/15.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.DifficultyRewardRes'
+      security:
+      - BearerAuth: []
+      summary: Case qiyinlik darajasi (easy/medium/hard) bo'yicha bazaviy XP/Coin
+        mukofoti
+      tags:
+      - setting
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 6 ta qiymat (easy/medium/hard uchun xp+coin)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.DifficultyRewardRes'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Case qiyinlik darajasi bo'yicha bazaviy XP/Coin mukofotini sozlash
       tags:
       - setting
   /web/tariff:

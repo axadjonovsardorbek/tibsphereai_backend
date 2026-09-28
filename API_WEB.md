@@ -873,6 +873,32 @@ Sotib olingan, ishlab topilgan, sarflangan va aylanmadagi jami tanga
 **Javob (200):**
 `string`
 
+### `GET /web/setting/difficulty-reward`
+**Case qiyinlik darajasi (easy/medium/hard) bo'yicha bazaviy XP/Coin mukofoti**
+Yakuniy mukofot shu bazaga health_percent nisbatan mutanosib beriladi
+(SimulationService.Finish). Sozlanmagan bo'lsa default: easy 50/5, medium 100/10, hard 150/15.
+- Auth: kerak (Bearer token)
+**Javob (200):**
+- `coin_easy`: integer
+- `coin_hard`: integer
+- `coin_medium`: integer
+- `xp_easy`: integer
+- `xp_hard`: integer
+- `xp_medium`: integer
+
+### `PUT /web/setting/difficulty-reward`
+**Case qiyinlik darajasi bo'yicha bazaviy XP/Coin mukofotini sozlash**
+- Auth: kerak (Bearer token)
+**Body** (DifficultyRewardRes) (majburiy):
+  - `coin_easy`: integer
+  - `coin_hard`: integer
+  - `coin_medium`: integer
+  - `xp_easy`: integer
+  - `xp_hard`: integer
+  - `xp_medium`: integer
+**Javob (200):**
+`string`
+
 ## Bildirishnomalar
 
 ### `GET /web/notification`

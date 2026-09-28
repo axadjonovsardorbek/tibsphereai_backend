@@ -33,3 +33,32 @@ type UserLimitStatusRes struct {
 	Remaining       int  `json:"remaining"`
 	HasSubscription bool `json:"has_subscription"` // true - limit cheksiz (Premium)
 }
+
+// --- Case qiyinlik darajasi (difficulty) bo'yicha XP/Coin mukofoti (admin sozlaydi) ---
+//
+// Avval xp=health_percent, coins=health_percent/10 edi (faqat sog'liqqa qarab,
+// case qanchalik qiyin bo'lishidan qat'i nazar bir xil). Endi har bir qiyinlik
+// darajasi uchun admin panelda ("Sozlamalar" -> "Mukofot sozlamalari") o'zining
+// bazaviy XP/Coin qiymati belgilanadi, yakuniy mukofot esa health_percent'ga
+// mutanosib beriladi: xp = round(baseXP * health_percent / 100) va h.k.
+// Ko'ring [[AppSettingService.DifficultyReward]].
+const (
+	AppSettingXPRewardEasy   = "xp_reward_easy"
+	AppSettingXPRewardMedium = "xp_reward_medium"
+	AppSettingXPRewardHard   = "xp_reward_hard"
+
+	AppSettingCoinRewardEasy   = "coin_reward_easy"
+	AppSettingCoinRewardMedium = "coin_reward_medium"
+	AppSettingCoinRewardHard   = "coin_reward_hard"
+)
+
+// DifficultyRewardRes - admin panelning "Mukofot sozlamalari" formasi uchun,
+// uchala qiyinlik darajasining joriy bazaviy XP/Coin qiymatlari bir so'rovda.
+type DifficultyRewardRes struct {
+	XPEasy     int `json:"xp_easy"`
+	CoinEasy   int `json:"coin_easy"`
+	XPMedium   int `json:"xp_medium"`
+	CoinMedium int `json:"coin_medium"`
+	XPHard     int `json:"xp_hard"`
+	CoinHard   int `json:"coin_hard"`
+}

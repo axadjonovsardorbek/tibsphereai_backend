@@ -126,17 +126,62 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 	return res, nil
 }
 
-// Finish - sessiyani yakunlaydi, XP/Coin beradi (BACKEND_STRUCTURE.md 6-bo'lim:
-// muvaffaqiyatsiz bo'lsa tanga berilmaydi, faqat XP/urinish hisoblanadi) va
-// AI debriefing hisobotini generatsiya qiladi.
+// Finish - sessiyani yakunlaydi, XP/Coin beradi va AI debriefing hisobotini
+// generatsiya qiladi. Mukofot case.difficulty (easy|medium|hard) bo'yicha admin
+// belgilagan bazaviy XP/Coin'ga (AppSettingService.DifficultyReward) health_percent
+// nisbatan mutanosib hisoblanadi - masalan hard case, 80% sog'liq bilan tugatilsa:
+// xp = round(hard_xp_base * 80/100). Muvaffaqiyatsiz (health_zero) bo'lsa tanga
+// berilmaydi (coins=0), faqat XP hisoblanadi (BACKEND_STRUCTURE.md 6-bo'lim).
+// Hech qanday klinik harakat qilinmagan bo'lsa (0 ta action event - faqat "question"
+// chat hisobga olinmaydi), xp/coins ham 0 - aks holda darhol "finish" bosib, hech
+// narsa qilmasdan to'liq mukofot olish mumkin bo'lardi (health_percent 100'dan boshlanadi).
 func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishReq) (*m.SimulationFinishRes, error) {
-	res, err := s.storage.SimulationS.Finish(req)
+	session, err := s.storage.SimulationS.GetById(&m.ById{Id: req.SessionId})
+	if err != nil {
+		return nil, err
+	}
+	if session == nil || session.HealthPercent == nil {
+		return nil, fmt.Errorf("active session not found: %s", req.SessionId)
+	}
+	healthPercent := *session.HealthPercent
+
+	difficulty := "medium"
+	if session.CaseId != nil {
+		if caseRes, cErr := s.storage.CaseS.GetById(&m.ById{Id: *session.CaseId}); cErr == nil && caseRes != nil && caseRes.Difficulty != nil && *caseRes.Difficulty != "" {
+			difficulty = *caseRes.Difficulty
+		}
+	}
+	xpBase, coinBase := s.appSettings.DifficultyReward(ctx, difficulty)
+
+	// actionCount - "question" (anamnez chat) hisobga olinmaydi, chunki u
+	// health_percent'ga ta'sir qilmaydi (AddEvent). health_percent boshlang'ich
+	// 100'dan boshlanadi va faqat klinik harakatlar (ko'rik/tahlil/dori/protsedura)
+	// orqali o'zgaradi - shu sabab hech qanday klinik harakat qilmasdan (yoki faqat
+	// savol berib) darhol "finish" bosilsa, health_percent 100'da qolib, hech narsa
+	// qilmagan holda to'liq mukofot olib ketmasligi uchun bu tekshiruv kerak.
+	actionCount := 0
+	if events, eErr := s.storage.SimulationS.GetEvents(req.SessionId); eErr == nil {
+		for _, e := range events {
+			if e.Type != "question" {
+				actionCount++
+			}
+		}
+	}
+
+	xp, coins := 0, 0
+	if actionCount > 0 {
+		xp = xpBase * healthPercent / 100
+		if req.Reason != "health_zero" {
+			coins = coinBase * healthPercent / 100
+		}
+	}
+
+	res, err := s.storage.SimulationS.Finish(req, xp, coins)
 	if err != nil {
 		return nil, err
 	}
 
-	session, err := s.storage.SimulationS.GetById(&m.ById{Id: req.SessionId})
-	if err == nil && session != nil && session.UserId != nil {
+	if session.UserId != nil {
 		if _, err := s.storage.UserS.AddPoints(&m.AddPointsReq{
 			UserId:      *session.UserId,
 			XPDelta:     res.XPEarned,

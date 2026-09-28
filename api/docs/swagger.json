@@ -6180,6 +6180,67 @@
                 }
             }
         },
+        "/web/setting/difficulty-reward": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Yakuniy mukofot shu bazaga health_percent nisbatan mutanosib beriladi\n(SimulationService.Finish). Sozlanmagan bo'lsa default: easy 50/5, medium 100/10, hard 150/15.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "setting"
+                ],
+                "summary": "Case qiyinlik darajasi (easy/medium/hard) bo'yicha bazaviy XP/Coin mukofoti",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.DifficultyRewardRes"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "setting"
+                ],
+                "summary": "Case qiyinlik darajasi bo'yicha bazaviy XP/Coin mukofotini sozlash",
+                "parameters": [
+                    {
+                        "description": "6 ta qiymat (easy/medium/hard uchun xp+coin)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.DifficultyRewardRes"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/web/tariff": {
             "get": {
                 "security": [
@@ -8204,6 +8265,29 @@
                     }
                 },
                 "xp_earned": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.DifficultyRewardRes": {
+            "type": "object",
+            "properties": {
+                "coin_easy": {
+                    "type": "integer"
+                },
+                "coin_hard": {
+                    "type": "integer"
+                },
+                "coin_medium": {
+                    "type": "integer"
+                },
+                "xp_easy": {
+                    "type": "integer"
+                },
+                "xp_hard": {
+                    "type": "integer"
+                },
+                "xp_medium": {
                     "type": "integer"
                 }
             }

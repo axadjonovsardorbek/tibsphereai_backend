@@ -102,23 +102,25 @@ func (r *SimulationRepo) AddEvent(req *m.SimulationEventReq, isCorrect bool, hea
 	}, nil
 }
 
-// Finish - TODO: yakuniy ball/AI debriefingni internal/ai.DebriefAI orqali hisoblash;
-// hozircha health_percent'ni final_score sifatida ishlatamiz.
-func (r *SimulationRepo) Finish(req *m.SimulationFinishReq) (*m.SimulationFinishRes, error) {
+// Finish - xpEarned/coinsEarned service qatlamida oldindan hisoblab uzatiladi
+// (case.difficulty bo'yicha bazaviy mukofot * health_percent nisbati). TODO:
+// yakuniy ball/AI debriefingni internal/ai.DebriefAI orqali hisoblash; hozircha
+// health_percent'ni final_score sifatida ishlatamiz.
+func (r *SimulationRepo) Finish(req *m.SimulationFinishReq, xpEarned, coinsEarned int) (*m.SimulationFinishRes, error) {
 	ctx := context.Background()
 
-	var healthPercent int
 	status := "completed"
 	if req.Reason == "health_zero" {
 		status = "failed"
 	}
 
+	var healthPercent int
 	err := r.db.QueryRow(ctx, `
 		UPDATE simulation_sessions
-		SET status = $1, ended_at = now(), final_score = health_percent
-		WHERE id = $2 AND status = 'active'
+		SET status = $1, ended_at = now(), final_score = health_percent, xp_earned = $2, coins_earned = $3
+		WHERE id = $4 AND status = 'active'
 		RETURNING health_percent
-	`, status, req.SessionId).Scan(&healthPercent)
+	`, status, xpEarned, coinsEarned, req.SessionId).Scan(&healthPercent)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("active session not found: %s", req.SessionId)
 	}
@@ -126,24 +128,11 @@ func (r *SimulationRepo) Finish(req *m.SimulationFinishReq) (*m.SimulationFinish
 		return nil, fmt.Errorf("error while finishing simulation: %w", err)
 	}
 
-	xp := healthPercent
-	coins := 0
-	if status == "completed" {
-		coins = healthPercent / 10
-	}
-
-	_, err = r.db.Exec(ctx, `
-		UPDATE simulation_sessions SET xp_earned = $1, coins_earned = $2 WHERE id = $3
-	`, xp, coins, req.SessionId)
-	if err != nil {
-		return nil, fmt.Errorf("error while saving rewards: %w", err)
-	}
-
 	return &m.SimulationFinishRes{
 		SessionId:    req.SessionId,
 		FinalScore:   healthPercent,
-		XPEarned:     xp,
-		CoinsEarned:  coins,
+		XPEarned:     xpEarned,
+		CoinsEarned:  coinsEarned,
 		DebriefReady: false, // TODO(ai): DebriefAI orqali hisobot tayyor bo'lganda true
 	}, nil
 }

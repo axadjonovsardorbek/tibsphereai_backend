@@ -221,6 +221,8 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 		{
 			setting.GET("", h.GetAllSettings)
 			setting.PUT("", h.SetSetting)
+			setting.GET("/difficulty-reward", h.GetDifficultyRewards)
+			setting.PUT("/difficulty-reward", h.SetDifficultyRewards)
 		}
 
 		aiPrompt := web.Group("/ai-prompt").Use(mid.NewAuth(enforcer, rdb))

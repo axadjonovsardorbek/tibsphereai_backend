@@ -1418,6 +1418,49 @@ async function renderAIPrompt(){
 async function renderSettings(){
   const main = document.getElementById('main');
   main.innerHTML = '<h2 class="pageTitle">Tizim sozlamalari</h2><p class="pageDesc">/web/setting — key/value (value JSON string sifatida)</p>';
+
+  // --- Mukofot sozlamalari: case qiyinlik darajasi (easy/medium/hard) bo'yicha
+  // bazaviy XP/Coin. Yakuniy mukofot shu bazaga health_percent (sog'liq %, ya'ni
+  // qanchalik to'g'ri/qobiliyatli yechilgani) nisbatan mutanosib beriladi -
+  // 0 ta klinik harakat qilingan bo'lsa mukofot 0 (SimulationService.Finish). ---
+  const rewardCard = document.createElement('div'); rewardCard.className='card'; rewardCard.style.marginBottom='16px';
+  rewardCard.innerHTML = '<div class="v" style="font-size:16px;margin-bottom:4px">🏆 Mukofot sozlamalari (XP / Coin)</div>'+
+    '<div class="l" style="margin-bottom:10px">Case yakunida beriladigan bazaviy mukofot, qiyinlik darajasi bo\'yicha. '+
+    'Yakuniy qiymat sog\'liq foiziga (qobiliyat/to\'g\'ri bajarish darajasiga) mutanosib beriladi.</div>';
+  const rewardGrid = document.createElement('div');
+  rewardGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px 16px';
+  const rewardInputs = {};
+  [
+    ['xp_easy','🟢 Oson - XP'], ['coin_easy','🟢 Oson - Coin'],
+    ['xp_medium','🟡 O\'rta - XP'], ['coin_medium','🟡 O\'rta - Coin'],
+    ['xp_hard','🔴 Qiyin - XP'], ['coin_hard','🔴 Qiyin - Coin'],
+  ].forEach(([key,label])=>{
+    const f = document.createElement('div'); f.className='field';
+    const l = document.createElement('label'); l.textContent=label;
+    const inp = document.createElement('input'); inp.type='number'; inp.min='0';
+    rewardInputs[key]=inp;
+    f.appendChild(l); f.appendChild(inp); rewardGrid.appendChild(f);
+  });
+  rewardCard.appendChild(rewardGrid);
+  const rewardSaveBtn = document.createElement('button'); rewardSaveBtn.className='primary'; rewardSaveBtn.style.marginTop='10px';
+  rewardSaveBtn.textContent = '💾 Mukofotlarni saqlash';
+  rewardSaveBtn.onclick = async()=>{
+    const body = {};
+    Object.keys(rewardInputs).forEach(k=>{ body[k] = Number(rewardInputs[k].value||0); });
+    try{
+      await api('/web/setting/difficulty-reward', {method:'PUT', body});
+      toast('Mukofot sozlamalari saqlandi','ok');
+    }catch(e){}
+  };
+  rewardCard.appendChild(rewardSaveBtn);
+  main.appendChild(rewardCard);
+  (async()=>{
+    try{
+      const r = await api('/web/setting/difficulty-reward');
+      if(r) Object.keys(rewardInputs).forEach(k=>{ if(r[k] !== undefined) rewardInputs[k].value = r[k]; });
+    }catch(e){}
+  })();
+
   const addBtn = document.createElement('button'); addBtn.className='primary'; addBtn.textContent='+ Sozlama qo\'shish/yangilash';
   addBtn.onclick = ()=>openForm({key:'daily_free_limit', value:''});
   main.appendChild(addBtn);
