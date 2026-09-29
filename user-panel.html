@@ -191,6 +191,13 @@
   .avatarFig.seizure{animation:shake .25s linear infinite}
   .avatarFig.flatline .breathe{animation:none;opacity:.55}
   @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+  /* Yuz ifodasi - health_percent tushgan sari (severity-mid/high/flatline) og'iz/qosh
+     shakli o'zgaradi, bemor holati 100% deb "muzlab" qolmasligi uchun. */
+  .avatarFig .mouth-mid, .avatarFig .mouth-high, .avatarFig .brow{display:none}
+  .avatarFig.severity-mid .mouth-normal, .avatarFig.severity-high .mouth-normal, .avatarFig.flatline .mouth-normal{display:none}
+  .avatarFig.severity-mid .mouth-mid{display:inline}
+  .avatarFig.severity-high .mouth-high, .avatarFig.flatline .mouth-high{display:inline}
+  .avatarFig.severity-mid .brow, .avatarFig.severity-high .brow, .avatarFig.flatline .brow{display:inline}
   @keyframes shake{0%{transform:translateX(-2px) rotate(-1deg)}50%{transform:translateX(2px) rotate(1deg)}100%{transform:translateX(-2px) rotate(-1deg)}}
   .ecgWrap{width:100%;height:44px;overflow:hidden;margin-top:10px;border-radius:8px;background:#050c14}
   .ecgWrap svg{width:200%;height:100%;animation:ecgScroll 2.4s linear infinite}
@@ -331,13 +338,27 @@ const state = {
 };
 
 function toast(msg, kind){
+  const wrap = document.getElementById('toasts');
+  // Bir xil matn+tur bilan toast allaqachon ko'rinib turgan bo'lsa (masalan
+  // tugma bir necha marta ketma-ket bosilsa), uni yangilab qayta boshlaymiz -
+  // bir xil xabar ustma-ust uyilib qolmaydi.
+  const dupSelector = '.toast[data-msg="'+CSS.escape(msg)+'"][data-kind="'+CSS.escape(kind || '')+'"]';
+  const existing = wrap.querySelector(dupSelector);
+  if(existing){
+    clearTimeout(existing._toastTimer);
+    existing._toastTimer = setTimeout(()=>existing.remove(), kind === 'err' ? 9000 : 4500);
+    return;
+  }
+
   const box = document.createElement('div');
   box.className = 'toast ' + (kind || '');
   box.textContent = msg;
-  document.getElementById('toasts').appendChild(box);
+  box.dataset.msg = msg;
+  box.dataset.kind = kind || '';
+  wrap.appendChild(box);
   // Xato xabarlari (ayniqsa validatsiya tafsilotlari bilan) uzunroq bo'lishi
   // mumkin - o'qib ulgurish uchun ko'proq vaqt beramiz.
-  setTimeout(()=>box.remove(), kind === 'err' ? 9000 : 4500);
+  box._toastTimer = setTimeout(()=>box.remove(), kind === 'err' ? 9000 : 4500);
 }
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -1133,7 +1154,13 @@ function svgAvatar(){
   return '<svg viewBox="0 0 96 120" class="breathe" xmlns="http://www.w3.org/2000/svg">'+
     '<circle cx="48" cy="24" r="18" fill="#cbd5e1"/>'+
     '<circle cx="41" cy="22" r="2.4" fill="#0b1420" class="eye"/><circle cx="55" cy="22" r="2.4" fill="#0b1420" class="eye"/>'+
-    '<path d="M40 30 Q48 33 56 30" stroke="#0b1420" stroke-width="1.6" fill="none" stroke-linecap="round" class="mouth"/>'+
+    // qoshlar - faqat severity-mid/high/flatline'da ko'rinadi (CSS), tashvishli ifoda
+    '<path d="M36 16 L44 19" stroke="#0b1420" stroke-width="1.4" fill="none" stroke-linecap="round" class="brow"/>'+
+    '<path d="M60 16 L52 19" stroke="#0b1420" stroke-width="1.4" fill="none" stroke-linecap="round" class="brow"/>'+
+    // og'iz - 3 holat, CSS class (severity-*) bo'yicha faqat biri ko'rinadi: tinch tabassum -> tashvish (tekis) -> og'riq (chatnash)
+    '<path d="M40 30 Q48 33 56 30" stroke="#0b1420" stroke-width="1.6" fill="none" stroke-linecap="round" class="mouth mouth-normal"/>'+
+    '<path d="M40 31 L56 31" stroke="#0b1420" stroke-width="1.6" fill="none" stroke-linecap="round" class="mouth mouth-mid"/>'+
+    '<path d="M40 33 Q48 28 56 33" stroke="#0b1420" stroke-width="1.6" fill="none" stroke-linecap="round" class="mouth mouth-high"/>'+
     '<rect x="30" y="44" width="36" height="52" rx="14" fill="#e2e8f0"/>'+
     '<rect x="10" y="48" width="14" height="38" rx="7" fill="#cbd5e1"/>'+
     '<rect x="72" y="48" width="14" height="38" rx="7" fill="#cbd5e1"/>'+
@@ -1377,6 +1404,30 @@ function applyHealth(pct){
   const fill = document.getElementById('simHealthFill'); if(fill) fill.style.width = pct+'%';
   const lbl = document.getElementById('simHealthLbl'); if(lbl) lbl.textContent = pct+'%';
   const pctEl = document.getElementById('simHealthPct'); if(pctEl) pctEl.textContent = pct+'%';
+  if(sim) sim.lastHealthPct = pct;
+  refreshAvatarSeverity();
+}
+
+// refreshAvatarSeverity - avatar ko'rinishini (yuz/nafas) ikkita signaldan
+// eng og'irini olib belgilaydi: backend alarm (warning>=65% dan pastda,
+// critical>=70% pasaysa ishga tushadi - bu ECG/teri/status matniga ham
+// ta'sir qiladi) VA health_percent'ning o'zi. Faqat alarm'ga qarasa, masalan
+// 70% (hali "Barqaror") bilan 66% orasida bemor tashqi ko'rinishda umuman
+// o'zgarmagan bo'lib qolardi - health tushayotganini avatar erta ko'rsatsin
+// deb frontend o'z chegarasini (<=80% mid, <=40% high) ham qo'shadi.
+function refreshAvatarSeverity(){
+  const avatar = document.getElementById('simAvatar');
+  if(!avatar || !sim) return;
+  const pct = sim.lastHealthPct ?? 100;
+  const alarm = sim.lastAlarm || '';
+
+  if(alarm === 'flatline'){ avatar.className = 'avatarFig flatline'; return; }
+
+  let level = '';
+  if(alarm === 'critical' || pct <= 40) level = 'high';
+  else if(alarm === 'warning' || pct <= 80) level = 'mid';
+
+  avatar.className = 'avatarFig' + (level ? ' severity-'+level : '');
 }
 
 function applyVitals(v, alarm){
@@ -1386,17 +1437,14 @@ function applyVitals(v, alarm){
   set('simSkin', alarm==='critical'||alarm==='flatline' ? 'Rangpar' : (alarm==='warning' ? 'Nam' : 'Normal'));
 
   const statusRow = document.getElementById('simStatus');
-  const avatar = document.getElementById('simAvatar');
   const ecgWrap = document.getElementById('simEcgWrap');
   if(statusRow){
     statusRow.className = 'statusRow' + (alarm?(' '+(alarm==='flatline'?'flat':alarm)):'');
     const label = {warning:'Og\'riqda', critical:'Og\'ir holat', flatline:'YURAK TO\'XTADI', '':'Barqaror'}[alarm||''];
     statusRow.querySelector('span').innerHTML = '<span class="dot"></span>'+esc(label);
   }
-  if(avatar){
-    avatar.className = 'avatarFig' + (alarm==='flatline'?' flatline':(alarm==='critical'?' severity-high':(alarm==='warning'?' severity-mid':'')));
-    avatar.querySelector('svg')?.classList.toggle('shake', false);
-  }
+  if(sim) sim.lastAlarm = alarm || '';
+  refreshAvatarSeverity();
   if(ecgWrap) ecgWrap.classList.toggle('flat', alarm==='flatline');
   if(v.hr) simSetBeepRate(v.hr);
 }

@@ -33,6 +33,12 @@ type SimulationEventRes struct {
 	HealthDelta   int            `json:"health_delta"`
 	HealthPercent int            `json:"health_percent"`
 	Response      map[string]any `json:"response"` // AI javobi / lab natijasi va h.k.
+	// SessionEnded - health_percent shu harakatdan keyin 0'ga tushib, sessiya
+	// server tomonidan avtomatik yakunlangan bo'lsa true (bemor "o'ldi").
+	// Frontend shu bayroqni ko'rsa, keyingi buyruq/xabar yuborishni to'xtatib,
+	// FinishResult'dagi debrief/XP/coin natijasini ko'rsatishi kerak.
+	SessionEnded bool                 `json:"session_ended"`
+	FinishResult *SimulationFinishRes `json:"finish_result,omitempty"`
 }
 
 type SimulationFinishReq struct {

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"tibsphereai/internal/ai"
+	"tibsphereai/pkg/errs"
 	m "tibsphereai/pkg/models"
 	"tibsphereai/storage/mocks"
 	st "tibsphereai/storage/postgres"
@@ -136,7 +137,9 @@ func TestSimulationService_AddEvent_Question_AttachesAIReply(t *testing.T) {
 	svc := newSimulationTestService(t, sm, cm, mocks.NewUserMock(), mocks.NewDebriefMock(), mocks.NewAppSettingMock(), aiClient)
 
 	req := &m.SimulationEventReq{SessionId: "sess-1", Type: "question", Payload: map[string]any{"question": "Qayerda og'riq bor?"}}
-	eventRes := &m.SimulationEventRes{Response: map[string]any{}}
+	// HealthPercent>0 - 0 bo'lsa AddEvent avtomatik Finish(health_zero)ni ham
+	// urinib ko'radi (pastdagi TestSimulationService_AddEvent_AutoFinishesOnHealthZero'ga qarang).
+	eventRes := &m.SimulationEventRes{Response: map[string]any{}, HealthPercent: 100}
 	sm.On("AddEvent", req, true, 0).Return(eventRes, nil)
 
 	caseId := "case-1"
@@ -157,7 +160,7 @@ func TestSimulationService_AddEvent_NonQuestion_AppliesAIEval(t *testing.T) {
 	svc := newSimulationTestService(t, sm, cm, mocks.NewUserMock(), mocks.NewDebriefMock(), mocks.NewAppSettingMock(), aiClient)
 
 	req := &m.SimulationEventReq{SessionId: "sess-1", Type: "lab", Payload: map[string]any{"name": "Troponin"}}
-	eventRes := &m.SimulationEventRes{Response: map[string]any{}}
+	eventRes := &m.SimulationEventRes{Response: map[string]any{}, HealthPercent: 85}
 	sm.On("AddEvent", req, false, -15).Return(eventRes, nil)
 
 	caseId := "case-1"
@@ -181,6 +184,60 @@ func TestSimulationService_AddEvent_StorageError(t *testing.T) {
 	got, err := svc.AddEvent(context.Background(), req)
 	assert.Nil(t, got)
 	assert.ErrorIs(t, err, wantErr)
+}
+
+// AddEvent - sessiya allaqachon yakunlangan (status != "active", masalan
+// avvalgi health_zero yoki manual finish) bo'lsa, hech qanday AI
+// baholash/health o'zgarishi qilinmasdan rad etiladi - "o'lgan" bemorga
+// cheksiz muolaja qilib bo'lmaydi.
+func TestSimulationService_AddEvent_SessionNotActive_Rejected(t *testing.T) {
+	sm := mocks.NewSimulationMock()
+	cm := mocks.NewCaseMock()
+	svc := newSimulationTestService(t, sm, cm, mocks.NewUserMock(), mocks.NewDebriefMock(), mocks.NewAppSettingMock(), nil)
+
+	status := "failed"
+	sm.On("GetById", &m.ById{Id: "sess-1"}).Return(&m.SimulationSessionRes{Status: &status}, nil)
+
+	req := &m.SimulationEventReq{SessionId: "sess-1", Type: "medication"}
+	got, err := svc.AddEvent(context.Background(), req)
+
+	assert.Nil(t, got)
+	assert.ErrorIs(t, err, errs.ErrSessionNotActive)
+	sm.AssertNotCalled(t, "AddEvent", mock.Anything, mock.Anything, mock.Anything)
+	cm.AssertNotCalled(t, "GetById", mock.Anything)
+}
+
+// AddEvent - health_percent shu harakatdan keyin 0'ga tushsa, server
+// foydalanuvchi "Yakunlash" bosishini kutmasdan sessiyani avtomatik
+// Finish(reason="health_zero") bilan yakunlaydi va SessionEnded/FinishResult
+// javobda qaytadi (frontend HP 0%da ham cheksiz buyruq berish muammosi).
+func TestSimulationService_AddEvent_AutoFinishesOnHealthZero(t *testing.T) {
+	sm := mocks.NewSimulationMock()
+	cm := mocks.NewCaseMock()
+	am := mocks.NewAppSettingMock()
+	aiClient := &ai.Client{Action: fakeActionEvalAI{res: &ai.ActionEvalRes{IsCorrect: false, HealthDelta: -100, Feedback: "og'ir xato"}}}
+	svc := newSimulationTestService(t, sm, cm, mocks.NewUserMock(), mocks.NewDebriefMock(), am, aiClient)
+
+	caseId := "case-1"
+	health := 0 // Finish ichida qayta o'qiladigan sessiya holati - AddEvent'dan keyingi (allaqachon 0'ga tushgan) qiymat
+	sm.On("GetById", &m.ById{Id: "sess-1"}).Return(&m.SimulationSessionRes{CaseId: &caseId, HealthPercent: &health}, nil)
+	cm.On("GetById", &m.ById{Id: "case-1"}).Return(&m.CaseRes{}, nil)
+
+	req := &m.SimulationEventReq{SessionId: "sess-1", Type: "medication", Payload: map[string]any{}}
+	eventRes := &m.SimulationEventRes{Response: map[string]any{}, HealthPercent: 0}
+	sm.On("AddEvent", req, false, -100).Return(eventRes, nil)
+
+	am.On("Get", mock.Anything).Return(nil, errors.New("not set")).Maybe()
+	sm.On("GetEvents", "sess-1").Return([]m.SimulationEventReq{{Type: "medication"}}, nil)
+
+	finishReq := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "health_zero"}
+	finishRes := &m.SimulationFinishRes{SessionId: "sess-1", XPEarned: 0, CoinsEarned: 0}
+	sm.On("Finish", finishReq, 0, 0, 0).Return(finishRes, nil)
+
+	got, err := svc.AddEvent(context.Background(), req)
+	require.NoError(t, err)
+	assert.True(t, got.SessionEnded)
+	assert.Equal(t, finishRes, got.FinishResult)
 }
 
 // fakeActionEvalAI - ai.ActionEvaluatorAI ning test uchun soxta implementatsiyasi.
@@ -214,7 +271,7 @@ func TestSimulationService_Finish_AwardsPointsAndLogsActivity(t *testing.T) {
 
 	difficulty := "medium"
 	cm.On("GetById", &m.ById{Id: "case-1"}).Return(&m.CaseRes{Difficulty: &difficulty}, nil)
-	am.On("Get", mock.Anything).Return(nil, errors.New("not set")).Maybe()        // -> medium default 1.5x
+	am.On("Get", mock.Anything).Return(nil, errors.New("not set")).Maybe()             // -> medium default 1.5x
 	um.On("GetById", &m.ById{Id: "user-1"}).Return(nil, errors.New("no user")).Maybe() // -> level lookup skip, default base 50/5
 
 	// kamida bitta klinik harakat bo'lishi kerak (aks holda mukofot 0 - pastdagi
@@ -224,7 +281,7 @@ func TestSimulationService_Finish_AwardsPointsAndLogsActivity(t *testing.T) {
 	req := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "manual"}
 	// default bazasi: xp = round(50*1.5) = 75, coin = round(5*1.5) = 8; 100% sog'liq -> to'liq beriladi
 	finishRes := &m.SimulationFinishRes{SessionId: "sess-1", XPEarned: 75, CoinsEarned: 8}
-	sm.On("Finish", req, 75, 8).Return(finishRes, nil)
+	sm.On("Finish", req, 100, 75, 8).Return(finishRes, nil) // finalScore=100 - aiClient AI'siz (Debrief=nil), jarima yo'q
 
 	um.On("AddPoints", &m.AddPointsReq{UserId: "user-1", XPDelta: 75, CoinsDelta: 8, Reason: "simulation_finish", ReferenceId: "sess-1"}).
 		Return(&m.Void{}, nil).Maybe()
@@ -270,7 +327,7 @@ func TestSimulationService_Finish_UsesUserLevelReward(t *testing.T) {
 
 	req := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "manual"}
 	// 150*2=300 XP, 15*2=30 Coin - Level 1'ning (75/8, oldingi testga qarang) ustidagi test
-	sm.On("Finish", req, 300, 30).Return(&m.SimulationFinishRes{SessionId: "sess-1", XPEarned: 300, CoinsEarned: 30}, nil)
+	sm.On("Finish", req, 100, 300, 30).Return(&m.SimulationFinishRes{SessionId: "sess-1", XPEarned: 300, CoinsEarned: 30}, nil)
 	um.On("AddPoints", mock.Anything).Return(&m.Void{}, nil).Maybe()
 	um.On("CreateActivity", mock.Anything).Return(&m.Void{}, nil).Maybe()
 
@@ -295,7 +352,7 @@ func TestSimulationService_Finish_NoActions_NoReward(t *testing.T) {
 	sm.On("GetEvents", "sess-1").Return([]m.SimulationEventReq{{Type: "question"}}, nil)
 
 	req := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "manual"}
-	sm.On("Finish", req, 0, 0).Return(&m.SimulationFinishRes{SessionId: "sess-1"}, nil)
+	sm.On("Finish", req, 100, 0, 0).Return(&m.SimulationFinishRes{SessionId: "sess-1"}, nil)
 
 	got, err := svc.Finish(context.Background(), req)
 	require.NoError(t, err)
@@ -316,7 +373,7 @@ func TestSimulationService_Finish_HealthZero_NoCoins(t *testing.T) {
 	sm.On("GetEvents", "sess-1").Return([]m.SimulationEventReq{{Type: "medication"}}, nil)
 
 	req := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "health_zero"}
-	sm.On("Finish", req, 0, 0).Return(&m.SimulationFinishRes{SessionId: "sess-1"}, nil)
+	sm.On("Finish", req, 0, 0, 0).Return(&m.SimulationFinishRes{SessionId: "sess-1"}, nil)
 
 	got, err := svc.Finish(context.Background(), req)
 	require.NoError(t, err)
@@ -335,11 +392,61 @@ func TestSimulationService_Finish_StorageError(t *testing.T) {
 
 	req := &m.SimulationFinishReq{SessionId: "sess-1"}
 	wantErr := errors.New("already finished")
-	sm.On("Finish", req, 75, 8).Return(nil, wantErr) // CaseId yo'q -> difficulty="medium" default -> 50*1.5=75, 5*1.5=8
+	sm.On("Finish", req, 100, 75, 8).Return(nil, wantErr) // CaseId yo'q -> difficulty="medium" default -> 50*1.5=75, 5*1.5=8
 
 	got, err := svc.Finish(context.Background(), req)
 	assert.Nil(t, got)
 	assert.ErrorIs(t, err, wantErr)
+}
+
+// Finish - DebriefAI (sinxron, xp/coin hisoblashdan OLDIN chaqiriladi) topgan
+// har bir klinik xato (incorrect_steps) uchun finalScore/XP/tangadan
+// incorrectStepPenaltyPct(10)% ayiriladi - ActionEvaluatorAI real vaqtda
+// yetarlicha jazolamagan xato (masalan "gipotenziyada nitroglikerin berish
+// xavfi") baribir yakuniy ballga ta'sir qilishi uchun.
+func TestSimulationService_Finish_PenalizesForDebriefIncorrectSteps(t *testing.T) {
+	sm := mocks.NewSimulationMock()
+	um := mocks.NewUserMock()
+	cm := mocks.NewCaseMock()
+	am := mocks.NewAppSettingMock()
+	dm := mocks.NewDebriefMock()
+	debriefAI := fakeDebriefAI{res: &m.DebriefReportCreateReq{
+		CorrectSteps:   []string{"O2 kislorod berildi"},
+		IncorrectSteps: []string{"Gipotenziyada Nitroglikerin berish xavfi"},
+	}}
+	svc := newSimulationTestService(t, sm, cm, um, dm, am, &ai.Client{Debrief: debriefAI})
+
+	userId := "user-1"
+	caseId := "case-1"
+	health := 100
+	sm.On("GetById", &m.ById{Id: "sess-1"}).Return(&m.SimulationSessionRes{UserId: &userId, CaseId: &caseId, HealthPercent: &health}, nil)
+
+	difficulty := "medium"
+	cm.On("GetById", &m.ById{Id: "case-1"}).Return(&m.CaseRes{Difficulty: &difficulty}, nil)
+	am.On("Get", mock.Anything).Return(nil, errors.New("not set")).Maybe() // -> medium default 1.5x
+	um.On("GetById", &m.ById{Id: "user-1"}).Return(nil, errors.New("no user")).Maybe()
+	sm.On("GetEvents", "sess-1").Return([]m.SimulationEventReq{{Type: "medication"}}, nil)
+
+	req := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "manual"}
+	// bazasi 75 XP/8 Coin (oldingi testlardagi kabi); 1 ta incorrect_step -> finalScore=100-10=90
+	// xp = 75*90/100 = 67, coin = 8*90/100 = 7
+	finishRes := &m.SimulationFinishRes{SessionId: "sess-1", FinalScore: 90, XPEarned: 67, CoinsEarned: 7}
+	sm.On("Finish", req, 90, 67, 7).Return(finishRes, nil)
+
+	dm.On("Create", mock.MatchedBy(func(r *m.DebriefReportCreateReq) bool {
+		return r.SessionId == "sess-1" && len(r.IncorrectSteps) == 1
+	})).Return(&m.Void{}, nil)
+
+	um.On("AddPoints", mock.Anything).Return(&m.Void{}, nil).Maybe()
+	um.On("CreateActivity", mock.Anything).Return(&m.Void{}, nil).Maybe()
+
+	got, err := svc.Finish(context.Background(), req)
+	require.NoError(t, err)
+	assert.Equal(t, 90, got.FinalScore)
+	assert.Equal(t, 67, got.XPEarned)
+	assert.Equal(t, 7, got.CoinsEarned)
+	assert.True(t, got.DebriefReady)
+	dm.AssertExpectations(t)
 }
 
 func TestSimulationService_GetById(t *testing.T) {

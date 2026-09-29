@@ -70,8 +70,21 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 	responseExtra := map[string]any{}
 
 	session, sErr := s.storage.SimulationS.GetById(&m.ById{Id: req.SessionId})
+	if sErr != nil {
+		return nil, sErr
+	}
+	if session == nil {
+		return nil, errs.ErrSessionNotFound
+	}
+	// health_percent 0'ga tushib avtomatik yakunlangan (yoki boshqa sabab bilan
+	// yakunlangan) sessiyaga yana buyruq/savol yuborilishini to'sadi - "o'lgan"
+	// bemorga cheksiz muolaja qilib bo'lmaydi.
+	if session.Status != nil && *session.Status != "active" {
+		return nil, errs.ErrSessionNotActive
+	}
+
 	var caseRes *m.CaseRes
-	if sErr == nil && session != nil && session.CaseId != nil {
+	if session.CaseId != nil {
 		caseRes, _ = s.storage.CaseS.GetById(&m.ById{Id: *session.CaseId})
 	}
 	userId := ""
@@ -123,6 +136,20 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 	for k, v := range responseExtra {
 		res.Response[k] = v
 	}
+
+	// health_percent 0'ga tushdi - bemor "o'ldi", sessiya frontend "Yakunlash"
+	// bosishini kutmasdan server tomonidan avtomatik yakunlanadi (aks holda
+	// HP 0%da ham cheksiz buyruq berish mumkin bo'lib qolardi).
+	if res.HealthPercent <= 0 {
+		finishRes, fErr := s.Finish(ctx, &m.SimulationFinishReq{SessionId: req.SessionId, Reason: "health_zero"})
+		if fErr != nil {
+			fmt.Println("failed to auto-finish simulation on health_zero:", fErr)
+		} else {
+			res.SessionEnded = true
+			res.FinishResult = finishRes
+		}
+	}
+
 	return res, nil
 }
 
@@ -134,17 +161,28 @@ const (
 	defaultLevelCoinReward = 5
 )
 
+// incorrectStepPenaltyPct - DebriefAI (Finish ichida sinxron generatsiya
+// qilinadi) topgan har bir klinik xato (incorrect_steps) uchun yakuniy
+// foizdan ayiriladigan jarima. Sabab: health_percent faqat ActionEvaluatorAI'ning
+// REAL VAQTDAGI (har harakatdan keyingi) bahosiga qarab o'zgaradi; DebriefAI esa
+// sessiya tugagach BUTUN tarixni ko'rib chiqib, real vaqtda yetarlicha
+// jazolanmagan (yoki umuman e'tibordan chetda qolgan) xatolarni topishi mumkin -
+// masalan "gipotenziyada nitroglikerin berish xavfi" kabi. Bu jarima bo'lmasa,
+// bunday xato final_score/XP/tangaga umuman ta'sir qilmay qolardi.
+const incorrectStepPenaltyPct = 10
+
 // Finish - sessiyani yakunlaydi, XP/Coin beradi va AI debriefing hisobotini
 // generatsiya qiladi. Mukofot ikki omilga qarab hisoblanadi:
 // 1) foydalanuvchining O'Z DARAJASI (levels.xp_reward/coin_reward, [[LevelRes]]) -
 // qancha yuqori level, shuncha ko'p bazaviy mukofot;
 // 2) case.difficulty (easy|medium|hard) koeffitsienti (AppSettingService.DifficultyMultiplier,
 // masalan hard=2x) - shu bazaga qo'llanadi.
-// Ikkalasi ham health_percent'ga (qobiliyat/to'g'ri bajarish darajasi) mutanosib
-// beriladi - masalan Level 3 foydalanuvchi hard case'ni 80% sog'liq bilan tugatsa:
-// xp = round(level3_xp_reward * hard_multiplier * 80/100). Muvaffaqiyatsiz
-// (health_zero) bo'lsa tanga berilmaydi (coins=0), faqat XP hisoblanadi
-// (BACKEND_STRUCTURE.md 6-bo'lim).
+// Ikkalasi ham finalScore'ga (qobiliyat/to'g'ri bajarish darajasi) mutanosib
+// beriladi - masalan Level 3 foydalanuvchi hard case'ni 80% finalScore bilan
+// tugatsa: xp = round(level3_xp_reward * hard_multiplier * 80/100). finalScore -
+// health_percent'dan DebriefAI xatolari uchun jarima ayirilgan qiymat (pastda,
+// incorrectStepPenaltyPct). Muvaffaqiyatsiz (health_zero) bo'lsa tanga
+// berilmaydi (coins=0), faqat XP hisoblanadi (BACKEND_STRUCTURE.md 6-bo'lim).
 // Hech qanday klinik harakat qilinmagan bo'lsa (0 ta action event - faqat "question"
 // chat hisobga olinmaydi), xp/coins ham 0 - aks holda darhol "finish" bosib, hech
 // narsa qilmasdan to'liq mukofot olish mumkin bo'lardi (health_percent 100'dan boshlanadi).
@@ -159,9 +197,13 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 	healthPercent := *session.HealthPercent
 
 	difficulty := "medium"
+	var caseRes *m.CaseRes
 	if session.CaseId != nil {
-		if caseRes, cErr := s.storage.CaseS.GetById(&m.ById{Id: *session.CaseId}); cErr == nil && caseRes != nil && caseRes.Difficulty != nil && *caseRes.Difficulty != "" {
-			difficulty = *caseRes.Difficulty
+		if cr, cErr := s.storage.CaseS.GetById(&m.ById{Id: *session.CaseId}); cErr == nil && cr != nil {
+			caseRes = cr
+			if cr.Difficulty != nil && *cr.Difficulty != "" {
+				difficulty = *cr.Difficulty
+			}
 		}
 	}
 
@@ -188,8 +230,9 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 	// orqali o'zgaradi - shu sabab hech qanday klinik harakat qilmasdan (yoki faqat
 	// savol berib) darhol "finish" bosilsa, health_percent 100'da qolib, hech narsa
 	// qilmagan holda to'liq mukofot olib ketmasligi uchun bu tekshiruv kerak.
+	events, eErr := s.storage.SimulationS.GetEvents(req.SessionId)
 	actionCount := 0
-	if events, eErr := s.storage.SimulationS.GetEvents(req.SessionId); eErr == nil {
+	if eErr == nil {
 		for _, e := range events {
 			if e.Type != "question" {
 				actionCount++
@@ -197,15 +240,45 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 		}
 	}
 
-	xp, coins := 0, 0
-	if actionCount > 0 {
-		xp = xpBase * healthPercent / 100
-		if req.Reason != "health_zero" {
-			coins = coinBase * healthPercent / 100
+	// DebriefAI hisobotini XP/coin hisoblashdan OLDIN, sinxron generatsiya
+	// qilamiz (avval "go s.generateDebrief(...)" bilan fonda, natija reward'ga
+	// umuman ta'sir qilmasdi) - shunda incorrect_steps darhol jarima sifatida
+	// hisobga olinadi. AI mavjud bo'lmasa (Debrief=nil, mock/GEMINI_API_KEY
+	// yo'q) yoki xato bersa, jarimasiz (finalScore=healthPercent) davom etadi.
+	var debrief *m.DebriefReportCreateReq
+	if s.ai != nil && s.ai.Debrief != nil && caseRes != nil && eErr == nil {
+		d, usage, dErr := s.ai.Debrief.Generate(ctx, caseRes.Scenario, events)
+		if dErr != nil {
+			fmt.Println("debrief AI generation failed:", dErr)
+		} else {
+			debrief = d
+		}
+		userId := ""
+		if session.UserId != nil {
+			userId = *session.UserId
+		}
+		if session.CaseId != nil {
+			logAIUsage(&s.storage, "debrief", usage, userId, *session.CaseId)
 		}
 	}
 
-	res, err := s.storage.SimulationS.Finish(req, xp, coins)
+	finalScore := healthPercent
+	if debrief != nil {
+		finalScore -= len(debrief.IncorrectSteps) * incorrectStepPenaltyPct
+		if finalScore < 0 {
+			finalScore = 0
+		}
+	}
+
+	xp, coins := 0, 0
+	if actionCount > 0 {
+		xp = xpBase * finalScore / 100
+		if req.Reason != "health_zero" {
+			coins = coinBase * finalScore / 100
+		}
+	}
+
+	res, err := s.storage.SimulationS.Finish(req, finalScore, xp, coins)
 	if err != nil {
 		return nil, err
 	}
@@ -226,51 +299,18 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 		}
 	}
 
-	go s.generateDebrief(req.SessionId)
-
-	res.DebriefReady = false // TODO: WebSocket/poll orqali tayyor bo'lgani xabar qilinadi
-	return res, nil
-}
-
-func (s *SimulationService) generateDebrief(sessionId string) {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("debrief generation panic:", r)
+	debriefReady := false
+	if debrief != nil {
+		debrief.SessionId = req.SessionId
+		if _, dcErr := s.storage.DebriefS.Create(debrief); dcErr != nil {
+			fmt.Println("failed to save debrief report:", dcErr)
+		} else {
+			debriefReady = true
 		}
-	}()
-
-	ctx := context.Background()
-
-	session, err := s.storage.SimulationS.GetById(&m.ById{Id: sessionId})
-	if err != nil || session == nil || session.CaseId == nil {
-		return
 	}
 
-	caseRes, err := s.storage.CaseS.GetById(&m.ById{Id: *session.CaseId})
-	if err != nil {
-		return
-	}
-
-	events, err := s.storage.SimulationS.GetEvents(sessionId)
-	if err != nil {
-		return
-	}
-
-	report, usage, err := s.ai.Debrief.Generate(ctx, caseRes.Scenario, events)
-	userId := ""
-	if session.UserId != nil {
-		userId = *session.UserId
-	}
-	logAIUsage(&s.storage, "debrief", usage, userId, *session.CaseId)
-	if err != nil {
-		fmt.Println("debrief AI generation failed:", err)
-		return
-	}
-	report.SessionId = sessionId
-
-	if _, err := s.storage.DebriefS.Create(report); err != nil {
-		fmt.Println("failed to save debrief report:", err)
-	}
+	res.DebriefReady = debriefReady
+	return res, nil
 }
 
 func (s *SimulationService) GetById(ctx context.Context, req *m.ById) (*m.SimulationSessionRes, error) {

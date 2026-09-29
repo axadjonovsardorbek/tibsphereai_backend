@@ -1503,8 +1503,8 @@ func (mk *SimulationMock) AddEvent(req *m.SimulationEventReq, isCorrect bool, he
 	return r0, args.Error(1)
 }
 
-func (mk *SimulationMock) Finish(req *m.SimulationFinishReq, xpEarned, coinsEarned int) (*m.SimulationFinishRes, error) {
-	args := mk.Called(req, xpEarned, coinsEarned)
+func (mk *SimulationMock) Finish(req *m.SimulationFinishReq, finalScore, xpEarned, coinsEarned int) (*m.SimulationFinishRes, error) {
+	args := mk.Called(req, finalScore, xpEarned, coinsEarned)
 	var r0 *m.SimulationFinishRes
 	if args.Get(0) != nil {
 		r0 = args.Get(0).(*m.SimulationFinishRes)

@@ -221,7 +221,6 @@ type TopicI interface {
 	GetAllMobile(req *m.TopicGetListMobileReq) (*m.PaginationResponse, *m.TopicMobileList, error)
 }
 
-
 type StudyPlanI interface {
 	Upsert(req *m.StudyPlanUpsertReq) (*m.Void, error)
 	GetByUserId(userId string) (*m.StudyPlanRes, error)
@@ -258,10 +257,13 @@ type SimulationI interface {
 	// turi - PatientAI chat, boshqalari - ActionEvaluatorAI klinik baho,
 	// [[internal/ai/ai.go]]); storage faqat berilgan qiymatlarni yozadi.
 	AddEvent(req *m.SimulationEventReq, isCorrect bool, healthDelta int) (*m.SimulationEventRes, error)
-	// Finish - xpEarned/coinsEarned service qatlamida hisoblanadi (case.difficulty
-	// bo'yicha bazaviy mukofot * health_percent nisbati, [[AppSettingService.DifficultyReward]]);
-	// storage faqat berilgan qiymatlarni yozadi va final_score=health_percent qo'yadi.
-	Finish(req *m.SimulationFinishReq, xpEarned, coinsEarned int) (*m.SimulationFinishRes, error)
+	// Finish - finalScore/xpEarned/coinsEarned service qatlamida hisoblanadi
+	// (case.difficulty bo'yicha bazaviy mukofot * finalScore nisbati,
+	// [[AppSettingService.DifficultyReward]]; finalScore - health_percent'dan
+	// DebriefAI topgan klinik xatolar (incorrect_steps) uchun jarima ayirilgan
+	// qiymati, [[SimulationService.Finish]]); storage faqat berilgan
+	// qiymatlarni yozadi.
+	Finish(req *m.SimulationFinishReq, finalScore, xpEarned, coinsEarned int) (*m.SimulationFinishRes, error)
 	GetById(req *m.ById) (*m.SimulationSessionRes, error)
 	GetOngoing(req *m.ById) (*m.PaginationResponse, *m.SimulationSessionList, error)
 	GetCompleted(req *m.ById) (*m.PaginationResponse, *m.SimulationSessionList, error)

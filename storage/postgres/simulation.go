@@ -103,10 +103,10 @@ func (r *SimulationRepo) AddEvent(req *m.SimulationEventReq, isCorrect bool, hea
 }
 
 // Finish - xpEarned/coinsEarned service qatlamida oldindan hisoblab uzatiladi
-// (case.difficulty bo'yicha bazaviy mukofot * health_percent nisbati). TODO:
-// yakuniy ball/AI debriefingni internal/ai.DebriefAI orqali hisoblash; hozircha
-// health_percent'ni final_score sifatida ishlatamiz.
-func (r *SimulationRepo) Finish(req *m.SimulationFinishReq, xpEarned, coinsEarned int) (*m.SimulationFinishRes, error) {
+// (case.difficulty bo'yicha bazaviy mukofot * finalScore nisbati). finalScore -
+// service qatlamida hisoblangan, DebriefAI'ning klinik xatolari (incorrect_steps)
+// uchun health_percent'dan jarima ayirilgan yakuniy ball ([[SimulationService.Finish]]).
+func (r *SimulationRepo) Finish(req *m.SimulationFinishReq, finalScore, xpEarned, coinsEarned int) (*m.SimulationFinishRes, error) {
 	ctx := context.Background()
 
 	status := "completed"
@@ -114,13 +114,13 @@ func (r *SimulationRepo) Finish(req *m.SimulationFinishReq, xpEarned, coinsEarne
 		status = "failed"
 	}
 
-	var healthPercent int
+	var scoreOut int
 	err := r.db.QueryRow(ctx, `
 		UPDATE simulation_sessions
-		SET status = $1, ended_at = now(), final_score = health_percent, xp_earned = $2, coins_earned = $3
-		WHERE id = $4 AND status = 'active'
-		RETURNING health_percent
-	`, status, xpEarned, coinsEarned, req.SessionId).Scan(&healthPercent)
+		SET status = $1, ended_at = now(), final_score = $2, xp_earned = $3, coins_earned = $4
+		WHERE id = $5 AND status = 'active'
+		RETURNING final_score
+	`, status, finalScore, xpEarned, coinsEarned, req.SessionId).Scan(&scoreOut)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("active session not found: %s", req.SessionId)
 	}
@@ -130,10 +130,10 @@ func (r *SimulationRepo) Finish(req *m.SimulationFinishReq, xpEarned, coinsEarne
 
 	return &m.SimulationFinishRes{
 		SessionId:    req.SessionId,
-		FinalScore:   healthPercent,
+		FinalScore:   scoreOut,
 		XPEarned:     xpEarned,
 		CoinsEarned:  coinsEarned,
-		DebriefReady: false, // TODO(ai): DebriefAI orqali hisobot tayyor bo'lganda true
+		DebriefReady: false, // service qatlamida debrief muvaffaqiyatli saqlansa true'ga o'rnatiladi
 	}, nil
 }
 
