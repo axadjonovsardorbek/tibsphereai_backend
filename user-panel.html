@@ -1242,8 +1242,23 @@ function wireVoiceInput(micBtn, msgInput){
     try{ recognition && recognition.stop(); }catch(e){}
   }
 
-  micBtn.onclick = ()=>{
+  micBtn.onclick = async ()=>{
     if(listening){ stopListening(); return; }
+
+    // Safari'da SpeechRecognition Chrome'dan farqli mikrofon ruxsatini o'zi
+    // so'ramaydi - oldindan getUserMedia bilan aniq ruxsat olinmasa
+    // "service-not-allowed" xatosi bilan darhol to'xtaydi. Shu sabab avval
+    // shu orqali ruxsat so'raymiz (oqimning o'zi kerak emas - SpeechRecognition
+    // mikrofonni mustaqil boshqaradi, shu uchun darhol to'xtatamiz).
+    if(navigator.mediaDevices?.getUserMedia){
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+        stream.getTracks().forEach(t => t.stop());
+      }catch(e){
+        toast('Mikrofonga ruxsat berilmadi - brauzer/sayt sozlamalaridan mikrofon ruxsatini yoqing.', 'err');
+        return;
+      }
+    }
 
     recognition = new SR();
     recognition.lang = 'uz-UZ';
@@ -1273,6 +1288,8 @@ function wireVoiceInput(micBtn, msgInput){
         'audio-capture': 'Mikrofon topilmadi.',
         'network': 'Tarmoq xatosi - ovozni matnga aylantirib bo\'lmadi.',
         'language-not-supported': 'Bu brauzer o\'zbekcha ovozli kiritishni qo\'llamaydi.',
+        'service-not-allowed': 'Ovozli kiritish xizmati bloklangan - Safari\'da Develop menyu > Experimental Features > "Speech Recognition"ni yoqib ko\'ring, yoki Chrome/Edge\'dan foydalaning.',
+        'aborted': 'Ovozli kiritish bekor qilindi.',
       };
       toast(messages[ev.error] || ('Ovozli kiritish xatosi: '+ev.error), 'err');
     };
