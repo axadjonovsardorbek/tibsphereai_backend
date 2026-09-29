@@ -1178,6 +1178,21 @@ function svgEcg(){
   '</svg>';
 }
 
+// TTS ovozlar ro'yxati ko'p brauzerda (ayniqsa Chrome) sahifa yuklangandan
+// keyin ASINXRON keladi - birinchi getVoices() chaqiruvi bo'sh qaytishi mumkin,
+// shu sabab 'voiceschanged' hodisasini ham tinglaymiz.
+if('speechSynthesis' in window){
+  try{ window.speechSynthesis.onvoiceschanged = () => {}; }catch(e){}
+}
+
+// pickUzVoice - o'zbekcha (uz-*) ovoz o'rnatilgan bo'lsa qaytaradi, aks holda null.
+function pickUzVoice(){
+  try{
+    const voices = window.speechSynthesis.getVoices() || [];
+    return voices.find(v => v.lang && v.lang.toLowerCase().startsWith('uz')) || null;
+  }catch(e){ return null; }
+}
+
 // speakText - platforma ovozli funksiyasi: backend audio generatsiya qilmaydi,
 // qurilma TTS'idan (window.speechSynthesis) foydalanamiz. sim.muted (🔇/🔊 tugmasi)
 // va sim.voiceGlobalEnabled (/mobile/setting/voice - admin killswitch) ikkalasi
@@ -1188,7 +1203,14 @@ function speakText(text){
     if(!text || !('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(String(text));
-    u.lang = 'uz-UZ';
+    // O'zbekcha ovoz ko'p brauzerda (ayniqsa Windows/Linux Chrome, Safari)
+    // o'rnatilmagan bo'ladi - forsiy lang='uz-UZ' qo'ysak, ba'zi brauzerlar
+    // (Safari) mos ovoz topa olmay UMUMAN JIM QOLADI (xato ham bermaydi).
+    // Shu sabab o'zbekcha ovoz topilgandagina lang belgilaymiz, aks holda
+    // brauzerning standart ovozi bilan o'qitamiz (aksenti noto'g'ri bo'lsa ham,
+    // butunlay jim qolgandan ko'ra yaxshi).
+    const uzVoice = pickUzVoice();
+    if(uzVoice){ u.voice = uzVoice; u.lang = uzVoice.lang; }
     window.speechSynthesis.speak(u);
   }catch(e){}
 }
