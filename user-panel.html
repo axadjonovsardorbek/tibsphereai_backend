@@ -236,6 +236,8 @@
   .simInputBar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid var(--border);background:var(--panel)}
   .simInputBar input{flex:1;border-radius:999px;padding:10px 14px}
   .simInputBar button.round{width:38px;height:38px;border-radius:50%;padding:0;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .simInputBar button.round.recording{background:var(--danger);border-color:var(--danger);animation:micPulse 1s ease-in-out infinite}
+  @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
   .eventPicker{display:flex;gap:6px;overflow-x:auto;padding:0 12px 8px}
   .eventPicker button{flex-shrink:0;font-size:11px;padding:6px 10px;border-radius:999px;background:var(--panel2)}
   .eventPicker button.active{background:var(--accent);color:#04211c;border-color:var(--accent2)}
@@ -1215,6 +1217,75 @@ function speakText(text){
   }catch(e){}
 }
 
+// wireVoiceInput - ovozli kiritish (STT, Web Speech API): mikrofon tugmasiga
+// bosilganda gapni tinglaydi, matnga aylantirib input maydoniga qo'yadi va
+// avtomatik yuboradi - "voice orqali suhbatlashish". Chrome/Edge (va Android
+// WebView) `webkitSpeechRecognition` orqali qo'llaydi; Safari/Firefox
+// desktop odatda qo'llamaydi - shunday holatda tugma bosilganda tushunarli
+// xabar bilan qo'lda yozishga yo'naltiradi (funksiya butunlay yashirilmaydi,
+// chunki qaysi brauzer qo'llab-quvvatlashi foydalanuvchiga qarab farq qiladi).
+function wireVoiceInput(micBtn, msgInput){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    micBtn.title = 'Ovozli kiritish bu brauzerda qo\'llab-quvvatlanmaydi';
+    micBtn.onclick = ()=>toast('Bu brauzer ovozli kiritishni qo\'llamaydi - Chrome/Edge\'da (yoki mobil ilovada) sinab ko\'ring.', 'err');
+    return;
+  }
+
+  let recognition = null;
+  let listening = false;
+
+  function stopListening(){
+    listening = false;
+    micBtn.classList.remove('recording');
+    micBtn.textContent = '🎤';
+    try{ recognition && recognition.stop(); }catch(e){}
+  }
+
+  micBtn.onclick = ()=>{
+    if(listening){ stopListening(); return; }
+
+    recognition = new SR();
+    recognition.lang = 'uz-UZ';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = ()=>{
+      listening = true;
+      micBtn.classList.add('recording');
+      micBtn.textContent = '⏺️';
+    };
+    recognition.onresult = (ev)=>{
+      const text = ev.results?.[0]?.[0]?.transcript?.trim();
+      if(text){
+        msgInput.value = text;
+        // Ovoz orqali kelgan xabarni "aytilgach darhol yuborish" - haqiqiy
+        // suhbat hissi uchun avtomatik jo'natamiz (yozib chiqarib, keyin
+        // qo'lda "Yuborish" bosishga hojat qoldirmaydi).
+        msgInput.dispatchEvent(new Event('voiceresult'));
+      }
+    };
+    recognition.onerror = (ev)=>{
+      const messages = {
+        'no-speech': 'Hech narsa eshitilmadi, qayta urinib ko\'ring.',
+        'not-allowed': 'Mikrofonga ruxsat berilmagan - brauzer sozlamalaridan ruxsat bering.',
+        'audio-capture': 'Mikrofon topilmadi.',
+        'network': 'Tarmoq xatosi - ovozni matnga aylantirib bo\'lmadi.',
+        'language-not-supported': 'Bu brauzer o\'zbekcha ovozli kiritishni qo\'llamaydi.',
+      };
+      toast(messages[ev.error] || ('Ovozli kiritish xatosi: '+ev.error), 'err');
+    };
+    recognition.onend = stopListening;
+
+    try{
+      recognition.start();
+    }catch(e){
+      stopListening();
+    }
+  };
+}
+
 function simBeepOnce(){
   try{
     if(!sim || sim.muted) return;
@@ -1333,7 +1404,7 @@ async function openSimulation(startRes){
     '<button class="round" id="simMicBtn" title="Ovozli (tez kunda)">🎤</button>'+
     '<input id="simMsgInput" placeholder="Javobingiz yoki savolingizni yozing...">'+
     '<button class="round primary" id="simSendBtn" title="Yuborish">➤</button>';
-  document.getElementById('simMicBtn').onclick = ()=>toast('Ovozli kiritish tez kunda qo\'shiladi','ok');
+  wireVoiceInput(document.getElementById('simMicBtn'), document.getElementById('simMsgInput'));
   const msgInput = document.getElementById('simMsgInput');
   const sendBtnEl = document.getElementById('simSendBtn');
   const sendMsg = async ()=>{
@@ -1377,7 +1448,11 @@ async function openSimulation(startRes){
       }
       chatLog.scrollTop = chatLog.scrollHeight;
       applyHealth(res.health_percent);
-      if(res.health_percent <= 0) finishSimulation('health_zero');
+      // Backend health_percent 0'ga tushganda sessiyani O'ZI avtomatik
+      // yakunlaydi (session_ended/finish_result) - shu natijadan foydalanamiz,
+      // qayta PUT /finish chaqirmaymiz (allaqachon yakunlangan sessiyaga
+      // urinib, kerakssiz xato qaytarardi).
+      if(res.session_ended){ completeSimulationFlow(sim.sessionId, res.finish_result); }
     }catch(e){
       typingDiv.remove();
     } finally {
@@ -1386,6 +1461,8 @@ async function openSimulation(startRes){
   };
   sendBtnEl.onclick = sendMsg;
   msgInput.addEventListener('keydown', e=>{ if(e.key==='Enter') sendMsg(); });
+  // wireVoiceInput matnni to'ldirib shu hodisani otadi - ovozdan darhol yuboriladi.
+  msgInput.addEventListener('voiceresult', sendMsg);
 
   // Timer (faqat yangi Start'da bor - resume qilinganda ko'rsatilmaydi)
   if(sim.timeLimitSec){
@@ -1474,13 +1551,24 @@ function applyVitals(v, alarm){
 async function finishSimulation(reason){
   if(!sim) return;
   const sid = sim.sessionId;
+  let finishRes = null;
   try{
-    const res = await api('/mobile/simulation/'+sid+'/finish', {method:'PUT', body:{reason}});
-    toast('Yakunlandi. Ball: '+res.final_score+' · XP: +'+res.xp_earned+' · Tanga: +'+res.coins_earned, 'ok');
+    finishRes = await api('/mobile/simulation/'+sid+'/finish', {method:'PUT', body:{reason}});
   }catch(e){}
+  completeSimulationFlow(sid, finishRes);
+}
+
+// completeSimulationFlow - Finish natijasi (qo'lda "Yakunlash" bosilib PUT
+// /finish orqali, YOKI backend health_percent 0'da avtomatik yakunlab shu
+// natijani AddEvent javobida qaytarganda) bir xil yakuniy oqim: ball/XP/tanga
+// toast, sim view yopiladi, debrief kutiladi.
+function completeSimulationFlow(sessionId, finishRes){
+  if(finishRes){
+    toast('Yakunlandi. Ball: '+finishRes.final_score+' · XP: +'+finishRes.xp_earned+' · Tanga: +'+finishRes.coins_earned, 'ok');
+  }
   closeSimView();
   selectTab('home');
-  awaitDebrief(sid);
+  awaitDebrief(sessionId);
 }
 
 // awaitDebrief - Finish chaqirilgach debriefing hisoboti fonda (Gemini orqali)

@@ -60,6 +60,17 @@ func (s *SimulationService) Start(ctx context.Context, req *m.SimulationStartReq
 	return res, nil
 }
 
+// friendlyAIError - AI provayder (Gemini) xatosining xom texnik matni
+// (masalan "gemini API error (status 503): This model is currently
+// experiencing high demand...") foydalanuvchiga TO'G'RIDAN-TO'G'RI
+// ko'rsatilmaydi - inglizcha, tushunarsiz va ichki infratuzilma
+// tafsilotlarini oshkor qiladi. To'liq matn serverda logga yoziladi
+// (debug uchun), foydalanuvchiga esa umumiy, o'zbekcha xabar qaytadi.
+func friendlyAIError(err error) string {
+	fmt.Println("AI error:", err)
+	return "AI xizmati hozir band yoki vaqtincha ishlamayapti. Birozdan so'ng qayta urinib ko'ring."
+}
+
 // AddEvent - "question" turi uchun bemor AI (internal/ai.PatientAI) javobini
 // qo'shadi (BACKEND_STRUCTURE.md 4-bo'lim: Anamnez); qolgan turlar (ko'rik,
 // tahlil, instrumental, dori, protsedura) uchun ActionEvaluatorAI orqali
@@ -107,7 +118,7 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 			reply, usage, aiErr := s.ai.Patient.Reply(ctx, caseRes.Scenario, expectedAnswer, question)
 			logAIUsage(&s.storage, "chat", usage, userId, caseId)
 			if aiErr != nil {
-				responseExtra["patient_reply_error"] = aiErr.Error()
+				responseExtra["patient_reply_error"] = friendlyAIError(aiErr)
 			} else if reply.IsAction {
 				// Shifokor chatda qaror/harakat bayon qildi ("dori beraman", "tekshiruv
 				// qilamiz") - bu bemorga emas, platformaga aytilgan deb hisoblanadi va
@@ -124,7 +135,7 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 				isCorrect, healthDelta = eval.IsCorrect, eval.HealthDelta
 				responseExtra["feedback"] = eval.Feedback
 			} else if aiErr != nil {
-				responseExtra["feedback_error"] = aiErr.Error()
+				responseExtra["feedback_error"] = friendlyAIError(aiErr)
 			}
 		}
 	}
