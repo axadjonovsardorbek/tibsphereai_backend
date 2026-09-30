@@ -1473,7 +1473,17 @@ async function openSimulation(startRes){
     }
 
     const doctorDiv = document.createElement('div'); doctorDiv.className='msg doctor';
-    doctorDiv.textContent = pendingAudioB64 ? '🎤 ...' : text;
+    // Matn alohida span'da - transkripsiya kelgach faqat shu yangilanadi,
+    // pastda qo'shiladigan 🔊 (o'z ovozini qayta eshitish) tugmasi saqlanib qoladi.
+    const doctorTextSpan = document.createElement('span');
+    doctorTextSpan.textContent = pendingAudioB64 ? '🎤 ...' : text;
+    doctorDiv.appendChild(doctorTextSpan);
+    if(pendingAudioB64){
+      // Shifokorning o'zi aytgan ovozli xabari - Gemini javobidan mustaqil,
+      // o'zi yozib olgan xom audio (pendingAudioB64) orqali istalgan payt
+      // qayta eshitib ko'rish mumkin.
+      addReplayButton(doctorDiv, null, pendingAudioB64, pendingAudioMime);
+    }
     chatLog.appendChild(doctorDiv); msgInput.value=''; chatLog.scrollTop = chatLog.scrollHeight;
 
     // "Yozayapti..." indikatori - Gemini javobi 1-3 soniya kutilishi mumkin,
@@ -1490,9 +1500,9 @@ async function openSimulation(startRes){
       // Ovozli xabar bo'lsa, Gemini transkripsiyasi kelgach "🎤 ..." o'rniga
       // haqiqatan nima deyilganini ko'rsatamiz.
       if(pendingAudioB64 && res.response && res.response.transcript){
-        doctorDiv.textContent = res.response.transcript;
+        doctorTextSpan.textContent = res.response.transcript;
       } else if(pendingAudioB64 && res.response && res.response.transcribe_error){
-        doctorDiv.textContent = '🎤 (tushunilmadi)';
+        doctorTextSpan.textContent = '🎤 (tushunilmadi)';
       }
 
       // replyAudio - Gemini native TTS (o'zbekcha, backend/service/simulation.go
