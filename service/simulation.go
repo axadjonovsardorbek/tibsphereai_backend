@@ -112,7 +112,31 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 		expectedAnswer = *caseRes.ExpectedAnswer
 	}
 
-	if caseRes != nil {
+	// "Voice orqali suhbatlashish": frontend matn o'rniga audio (MediaRecorder
+	// yozuvi, baza64) yuborgan bo'lsa, Gemini'ning o'zi (VoiceAI.Transcribe)
+	// tinglab matnga aylantiradi - brauzerning Web Speech API'si umuman
+	// ishlatilmaydi. Natija req.Payload'dagi "question"/"text" kalitiga
+	// qo'yiladi - shu bilan pastdagi mantiq (PatientAI/ActionEvaluatorAI)
+	// qo'lda yozilgan xabar bilan bir xil ishlaydi, o'zgartirish shart emas.
+	transcribeFailed := false
+	if audioB64, ok := req.Payload["audio_base64"].(string); ok && audioB64 != "" && s.ai != nil && s.ai.Voice != nil {
+		mimeType, _ := req.Payload["audio_mime"].(string)
+		transcript, usage, tErr := s.ai.Voice.Transcribe(ctx, audioB64, mimeType)
+		logAIUsage(&s.storage, "voice_transcribe", usage, userId, caseId)
+		if tErr != nil {
+			transcribeFailed = true
+			responseExtra["transcribe_error"] = friendlyAIError(tErr)
+		} else {
+			key := "text"
+			if req.Type == "question" {
+				key = "question"
+			}
+			req.Payload[key] = transcript
+			responseExtra["transcript"] = transcript
+		}
+	}
+
+	if caseRes != nil && !transcribeFailed {
 		if req.Type == "question" {
 			question, _ := req.Payload["question"].(string)
 			reply, usage, aiErr := s.ai.Patient.Reply(ctx, caseRes.Scenario, expectedAnswer, question)
@@ -136,6 +160,30 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 				responseExtra["feedback"] = eval.Feedback
 			} else if aiErr != nil {
 				responseExtra["feedback_error"] = friendlyAIError(aiErr)
+			}
+		}
+	}
+
+	// Javobni ovozga aylantirish (Gemini native TTS, VoiceAI.Synthesize) -
+	// brauzer TTS (window.speechSynthesis) o'rniga, "hammasi Gemini" bo'lishi
+	// uchun. Matn bormi-yo'qmi (voice orqali kelganmi, qo'lda yozilganmi)
+	// farqi yo'q - har doim urinib ko'radi, frontend sim.muted holatiga qarab
+	// o'ynatish-o'ynatmaslikni o'zi hal qiladi. Muvaffaqiyatsiz bo'lsa (AI
+	// yo'q/xato) responseExtra'ga audio qo'shilmaydi - frontend browser TTS'ga
+	// tushishi (fallback) mumkin.
+	if s.ai != nil && s.ai.Voice != nil {
+		toSpeak, _ := responseExtra["patient_reply"].(string)
+		if toSpeak == "" {
+			toSpeak, _ = responseExtra["feedback"].(string)
+		}
+		if toSpeak != "" {
+			audioB64, usage, sErr := s.ai.Voice.Synthesize(ctx, toSpeak)
+			logAIUsage(&s.storage, "voice_synthesize", usage, userId, caseId)
+			if sErr != nil {
+				fmt.Println("voice synthesize failed:", sErr)
+			} else {
+				responseExtra["reply_audio_base64"] = audioB64
+				responseExtra["reply_audio_mime"] = "audio/wav"
 			}
 		}
 	}

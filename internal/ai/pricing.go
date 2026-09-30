@@ -20,6 +20,11 @@ var geminiPricing = map[string]pricePerMTok{
 	// gemini-3.6-flash - TAXMINIY narx (ai.google.dev/pricing'da tasdiqlang,
 	// bu model chiqarilish sanasi bilim chegarasidan keyingi bo'lishi mumkin).
 	"gemini-3.6-flash": {Input: 0.10, Output: 0.40},
+	// gemini-3.8-flash-tts - TAXMINIY narx, audio chiqish odatda oddiy matn
+	// tokenidan qimmatroq narxlanadi (ai.google.dev/pricing'da tasdiqlang) -
+	// bu yerdagi qiymat faqat xarajat dashboardida son ko'rinishi uchun, aniq
+	// billing manbai emas.
+	"gemini-3.8-flash-tts": {Input: 0.10, Output: 3.00},
 }
 
 // defaultPricing - narxlar jadvalida topilmagan model uchun (gemini-2.0-flash

@@ -60,6 +60,10 @@ type Config struct {
 	// AI (Gemini) - stub mode when GEMINI_API_KEY is empty
 	GEMINI_API_KEY string
 	GEMINI_MODEL   string
+	// GEMINI_TTS_MODEL - "voice orqali suhbatlashish" chiqishi (Synthesize) uchun
+	// alohida model, chunki oddiy chat modeli (GEMINI_MODEL) audio chiqarmaydi -
+	// faqat *-tts modellar responseModalities:["AUDIO"]'ni qo'llaydi.
+	GEMINI_TTS_MODEL string
 
 	// Google OAuth (mobile "1-bosqichli kirish")
 	GOOGLE_CLIENT_ID string
@@ -124,6 +128,7 @@ func Load() Config {
 
 	config.GEMINI_API_KEY = cast.ToString(coalesce("GEMINI_API_KEY", ""))
 	config.GEMINI_MODEL = cast.ToString(coalesce("GEMINI_MODEL", "gemini-2.0-flash"))
+	config.GEMINI_TTS_MODEL = cast.ToString(coalesce("GEMINI_TTS_MODEL", "gemini-3.8-flash-tts"))
 
 	config.GOOGLE_CLIENT_ID = cast.ToString(coalesce("GOOGLE_CLIENT_ID", ""))
 

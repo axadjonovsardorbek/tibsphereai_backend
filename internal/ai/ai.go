@@ -74,12 +74,26 @@ type ActionEvaluatorAI interface {
 	Evaluate(ctx context.Context, caseScenario map[string]any, expectedAnswer, eventType string, payload map[string]any) (*ActionEvalRes, *Usage, error)
 }
 
+// VoiceAI - "voice orqali suhbatlashish": tibsimulyatsiyada shifokorning
+// aytgan gapini (audio) matnga aylantiradi (Transcribe) va platforma/bemor
+// javobini tabiiy ovozga (Synthesize, o'zbekcha) aylantiradi - ikkalasi ham
+// Gemini native audio orqali (gemini-*-tts model, contents+inlineData audio),
+// brauzerning Web Speech API'siga (STT/TTS) umuman bog'liq emas.
+type VoiceAI interface {
+	// Transcribe - audioB64 (raw baza64, masalan audio/webm) ni matnga aylantiradi.
+	Transcribe(ctx context.Context, audioB64, mimeType string) (text string, usage *Usage, err error)
+	// Synthesize - matnni (o'zbekcha) tabiiy ovozli audioga aylantiradi;
+	// audioB64 - WAV formatidagi audio, baza64 kodlangan.
+	Synthesize(ctx context.Context, text string) (audioB64 string, usage *Usage, err error)
+}
+
 // Client - AI xizmatlarini bitta joyda ushlab turadi.
 type Client struct {
 	Patient PatientAI
 	Debrief DebriefAI
 	CaseGen CaseGeneratorAI
 	Action  ActionEvaluatorAI
+	Voice   VoiceAI
 	Enabled bool // haqiqiy Gemini API ulanganmi (GEMINI_API_KEY bor)
 }
 
@@ -90,9 +104,9 @@ type Client struct {
 func NewClient(cfg *config.Config, promptRepo storage.AIPromptI) *Client {
 	if cfg.GEMINI_API_KEY == "" {
 		m := &mockClient{}
-		return &Client{Patient: m, Debrief: m, Action: m, CaseGen: mockCaseGen{}, Enabled: false}
+		return &Client{Patient: m, Debrief: m, Action: m, CaseGen: mockCaseGen{}, Voice: m, Enabled: false}
 	}
 
 	g := newGeminiClient(cfg, promptRepo)
-	return &Client{Patient: g, Debrief: g, Action: g, CaseGen: geminiCaseGen{g}, Enabled: true}
+	return &Client{Patient: g, Debrief: g, Action: g, CaseGen: geminiCaseGen{g}, Voice: g, Enabled: true}
 }

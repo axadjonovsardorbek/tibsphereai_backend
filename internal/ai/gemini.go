@@ -22,6 +22,7 @@ import (
 type geminiClient struct {
 	apiKey     string
 	model      string
+	ttsModel   string
 	promptRepo storage.AIPromptI
 	httpClient *http.Client
 }
@@ -30,6 +31,7 @@ func newGeminiClient(cfg *config.Config, promptRepo storage.AIPromptI) *geminiCl
 	return &geminiClient{
 		apiKey:     cfg.GEMINI_API_KEY,
 		model:      cfg.GEMINI_MODEL,
+		ttsModel:   cfg.GEMINI_TTS_MODEL,
 		promptRepo: promptRepo,
 		httpClient: &http.Client{Timeout: 60 * time.Second},
 	}
@@ -263,6 +265,22 @@ type geminiGenerationConfig struct {
 	TopK             *float64 `json:"topK,omitempty"`
 	MaxOutputTokens  *int     `json:"maxOutputTokens,omitempty"`
 	ResponseMimeType string   `json:"responseMimeType,omitempty"`
+	// ResponseModalities/SpeechConfig - faqat *-tts modellar bilan (Synthesize)
+	// ishlatiladi: ["AUDIO"] javobni matn o'rniga audio (inlineData) qilib qaytaradi.
+	ResponseModalities []string            `json:"responseModalities,omitempty"`
+	SpeechConfig       *geminiSpeechConfig `json:"speechConfig,omitempty"`
+}
+
+type geminiSpeechConfig struct {
+	VoiceConfig *geminiVoiceConfig `json:"voiceConfig,omitempty"`
+}
+
+type geminiVoiceConfig struct {
+	PrebuiltVoiceConfig *geminiPrebuiltVoiceConfig `json:"prebuiltVoiceConfig,omitempty"`
+}
+
+type geminiPrebuiltVoiceConfig struct {
+	VoiceName string `json:"voiceName"`
 }
 
 type geminiRequest struct {
@@ -275,8 +293,17 @@ type geminiContent struct {
 	Parts []geminiPart `json:"parts"`
 }
 
+// geminiPart - matn (Text) YOKI audio/rasm kabi ikkilik ma'lumot (InlineData)
+// bo'lishi mumkin: kiritishda (Transcribe) audio yuboriladi, chiqishda
+// (Synthesize) audio qaytadi - ikkalasida ham shu maydon ishlatiladi.
 type geminiPart struct {
-	Text string `json:"text"`
+	Text       string            `json:"text,omitempty"`
+	InlineData *geminiInlineData `json:"inlineData,omitempty"`
+}
+
+type geminiInlineData struct {
+	MimeType string `json:"mimeType"`
+	Data     string `json:"data"` // baza64
 }
 
 type geminiResponse struct {
@@ -319,33 +346,121 @@ func (g *geminiClient) generateContent(ctx context.Context, prompt string, model
 		Contents:         []geminiContent{{Role: "user", Parts: []geminiPart{{Text: prompt}}}},
 		GenerationConfig: genCfg,
 	}
-	payload, err := json.Marshal(reqBody)
+	gr, usage, err := g.doRequest(ctx, g.model, reqBody)
 	if err != nil {
-		return "", nil, fmt.Errorf("gemini request marshal error: %w", err)
+		return "", usage, err
+	}
+	if len(gr.Candidates) == 0 || len(gr.Candidates[0].Content.Parts) == 0 {
+		return "", usage, fmt.Errorf("gemini returned no candidates")
 	}
 
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent", g.model)
+	var text strings.Builder
+	for _, p := range gr.Candidates[0].Content.Parts {
+		text.WriteString(p.Text)
+	}
+	return text.String(), usage, nil
+}
+
+// Transcribe - VoiceAI: audioB64 (masalan audio/webm, brauzer MediaRecorder'idan)
+// ni Gemini'ning o'zi (bosh chat modeli - alohida STT modeli shart emas,
+// ko'p tilni audio bo'yicha ham tushunadi) o'zbek tilidagi matnga aylantiradi.
+func (g *geminiClient) Transcribe(ctx context.Context, audioB64, mimeType string) (string, *Usage, error) {
+	if mimeType == "" {
+		mimeType = "audio/webm"
+	}
+	reqBody := geminiRequest{
+		Contents: []geminiContent{{
+			Role: "user",
+			Parts: []geminiPart{
+				{Text: "Ushbu audioda shifokor tomonidan aytilgan gapni eshit va so'zma-so'z, hech narsa qo'shmasdan yoki izohlamasdan, o'zbek tilida yoz. Faqat transkripsiya matnini qaytar, boshqa hech qanday matn yoki izoh qo'shma."},
+				{InlineData: &geminiInlineData{MimeType: mimeType, Data: audioB64}},
+			},
+		}},
+	}
+	gr, usage, err := g.doRequest(ctx, g.model, reqBody)
+	if err != nil {
+		return "", usage, err
+	}
+	if len(gr.Candidates) == 0 || len(gr.Candidates[0].Content.Parts) == 0 {
+		return "", usage, fmt.Errorf("gemini returned no candidates")
+	}
+	var text strings.Builder
+	for _, p := range gr.Candidates[0].Content.Parts {
+		text.WriteString(p.Text)
+	}
+	return strings.TrimSpace(text.String()), usage, nil
+}
+
+// synthesizeVoiceName - Gemini prebuilt ovozlaridan biri (Kore - neytral,
+// tabiiy ohang). Til inputning o'zidan (text) avtomatik aniqlanadi - alohida
+// "til" parametri kerak emas, matn o'zbekcha bo'lsa ovoz ham o'zbekcha chiqadi
+// (bu haqiqiy chaqiruv bilan tekshirib tasdiqlangan).
+const synthesizeVoiceName = "Kore"
+
+// Synthesize - VoiceAI: matnni (bemor javobi/klinik feedback, o'zbekcha)
+// gemini-*-tts model orqali tabiiy ovozli audioga (WAV, baza64) aylantiradi.
+func (g *geminiClient) Synthesize(ctx context.Context, text string) (string, *Usage, error) {
+	if strings.TrimSpace(text) == "" {
+		return "", nil, fmt.Errorf("synthesize: bo'sh matn")
+	}
+	reqBody := geminiRequest{
+		Contents: []geminiContent{{Role: "user", Parts: []geminiPart{{Text: text}}}},
+		GenerationConfig: &geminiGenerationConfig{
+			ResponseModalities: []string{"AUDIO"},
+			SpeechConfig: &geminiSpeechConfig{
+				VoiceConfig: &geminiVoiceConfig{
+					PrebuiltVoiceConfig: &geminiPrebuiltVoiceConfig{VoiceName: synthesizeVoiceName},
+				},
+			},
+		},
+	}
+	gr, usage, err := g.doRequest(ctx, g.ttsModel, reqBody)
+	if err != nil {
+		return "", usage, err
+	}
+	if len(gr.Candidates) == 0 || len(gr.Candidates[0].Content.Parts) == 0 {
+		return "", usage, fmt.Errorf("gemini tts: audio qaytmadi")
+	}
+	for _, p := range gr.Candidates[0].Content.Parts {
+		if p.InlineData != nil && p.InlineData.Data != "" {
+			return p.InlineData.Data, usage, nil
+		}
+	}
+	return "", usage, fmt.Errorf("gemini tts: javobda audio topilmadi")
+}
+
+// doRequest - Gemini "generateContent" endpointiga xom so'rov (model tanlanadi -
+// oddiy chat/transkripsiya uchun g.model, ovozli chiqish uchun g.ttsModel), xom
+// javob + token/xarajat (Usage) bilan qaytadi. generateContent/Transcribe/Synthesize
+// shu ustiga qurilgan.
+func (g *geminiClient) doRequest(ctx context.Context, model string, reqBody geminiRequest) (*geminiResponse, *Usage, error) {
+	payload, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, nil, fmt.Errorf("gemini request marshal error: %w", err)
+	}
+
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent", model)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
 	if err != nil {
-		return "", nil, fmt.Errorf("gemini request build error: %w", err)
+		return nil, nil, fmt.Errorf("gemini request build error: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("x-goog-api-key", g.apiKey)
 
 	resp, err := g.httpClient.Do(httpReq)
 	if err != nil {
-		return "", nil, fmt.Errorf("gemini request failed: %w", err)
+		return nil, nil, fmt.Errorf("gemini request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", nil, fmt.Errorf("gemini response read error: %w", err)
+		return nil, nil, fmt.Errorf("gemini response read error: %w", err)
 	}
 
 	var gr geminiResponse
 	if err := json.Unmarshal(body, &gr); err != nil {
-		return "", nil, fmt.Errorf("gemini response decode error: %w (status=%d, body=%s)", err, resp.StatusCode, truncate(string(body), 500))
+		return nil, nil, fmt.Errorf("gemini response decode error: %w (status=%d, body=%s)", err, resp.StatusCode, truncate(string(body), 500))
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -353,7 +468,7 @@ func (g *geminiClient) generateContent(ctx context.Context, prompt string, model
 		if gr.Error != nil && gr.Error.Message != "" {
 			msg = fmt.Sprintf("gemini API error (status %d): %s", resp.StatusCode, gr.Error.Message)
 		}
-		return "", nil, errors.New(msg)
+		return nil, nil, errors.New(msg)
 	}
 
 	// OutputTokens narx uchun candidates + thoughts (reasoning) tokenlarini
@@ -364,17 +479,9 @@ func (g *geminiClient) generateContent(ctx context.Context, prompt string, model
 		OutputTokens: gr.UsageMetadata.CandidatesTokenCount + gr.UsageMetadata.ThoughtsTokenCount,
 		TotalTokens:  gr.UsageMetadata.TotalTokenCount,
 	}
-	usage.CostUSD = calcCost(g.model, usage.PromptTokens, usage.OutputTokens)
+	usage.CostUSD = calcCost(model, usage.PromptTokens, usage.OutputTokens)
 
-	if len(gr.Candidates) == 0 || len(gr.Candidates[0].Content.Parts) == 0 {
-		return "", usage, fmt.Errorf("gemini returned no candidates")
-	}
-
-	var text strings.Builder
-	for _, p := range gr.Candidates[0].Content.Parts {
-		text.WriteString(p.Text)
-	}
-	return text.String(), usage, nil
+	return &gr, usage, nil
 }
 
 // loadPrompt - admin panelda tahrirlangan template'ni (ai_prompts jadvali)

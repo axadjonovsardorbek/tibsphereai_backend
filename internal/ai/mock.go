@@ -55,6 +55,14 @@ func (mockClient) Evaluate(ctx context.Context, caseScenario map[string]any, exp
 	}, &Usage{}, nil
 }
 
+func (mockClient) Transcribe(ctx context.Context, audioB64, mimeType string) (string, *Usage, error) {
+	return "(AI stub) audio transkripsiyasi - Gemini ulanganda bu yerda haqiqiy matn bo'ladi.", &Usage{}, nil
+}
+
+func (mockClient) Synthesize(ctx context.Context, text string) (string, *Usage, error) {
+	return "", nil, fmt.Errorf("voice synthesis is not configured: set GEMINI_API_KEY")
+}
+
 // mockCaseGen - CaseGeneratorAI uchun alohida tip, chunki mockClient'da
 // allaqachon boshqa signature bilan Generate metodi bor (DebriefAI).
 type mockCaseGen struct{}
