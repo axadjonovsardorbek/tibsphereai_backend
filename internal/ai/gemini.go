@@ -199,19 +199,56 @@ func (c geminiCaseGen) Generate(ctx context.Context, genReq *models.CaseGenReq) 
 		return nil, usage, err
 	}
 
-	var req models.CaseCreateReq
+	// expected_answer ba'zan string o'rniga {"uz","ru","en"} obyekti bo'lib keladi
+	// (admin prompti shuni so'rasa) - shuni string'ga keltiramiz.
+	var req struct {
+		models.CaseCreateReq
+		ExpectedAnswer json.RawMessage `json:"expected_answer"`
+	}
 	if err := unmarshalJSONLoose(text, &req); err != nil {
 		return nil, usage, fmt.Errorf("gemini case-generation response parse error: %w (raw: %s)", err, text)
 	}
+	out := req.CaseCreateReq
+	out.ExpectedAnswer = flattenExpectedAnswer(req.ExpectedAnswer)
+	return finishCaseGen(&out, difficulty, genReq.ExpectedAnswer), usage, nil
+}
+
+// flattenExpectedAnswer string yoki {"uz","ru","en"} obyektdan bitta matn chiqaradi
+// (uz ustun, bo'lmasa en/ru, bo'lmasa istalgan birinchi qiymat).
+func flattenExpectedAnswer(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var s string
+	if json.Unmarshal(raw, &s) == nil {
+		return s
+	}
+	var m map[string]string
+	if json.Unmarshal(raw, &m) == nil {
+		for _, k := range []string{"uz", "en", "ru"} {
+			if m[k] != "" {
+				return m[k]
+			}
+		}
+		for _, v := range m {
+			if v != "" {
+				return v
+			}
+		}
+	}
+	return ""
+}
+
+func finishCaseGen(req *models.CaseCreateReq, difficulty, adminExpected string) *models.CaseCreateReq {
 	if req.Difficulty == "" {
 		req.Difficulty = difficulty
 	}
 	// ExpectedAnswer bitta til (string) - admin kiritgan bo'lsa AI natijasidan
 	// qat'iy nazar aynan shuni saqlaymiz (aniqlik uchun, AI qayta yozib qo'ymasin).
-	if genReq.ExpectedAnswer != "" {
-		req.ExpectedAnswer = genReq.ExpectedAnswer
+	if adminExpected != "" {
+		req.ExpectedAnswer = adminExpected
 	}
-	return &req, usage, nil
+	return req
 }
 
 const defaultActionEvalPrompt = `Sen shoshilinch tibbiy yordam bo'yicha ekspert-baholovchisan. Quyidagi klinik simulyatsiya case'i (bemor holati, kutilgan qadamlar) asosida, shifokor (foydalanuvchi) hozir bajargan BITTA harakatni AHA/ERC xalqaro qo'llanmalariga tayanib baho.
