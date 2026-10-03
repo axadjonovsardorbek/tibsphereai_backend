@@ -25,10 +25,8 @@ func (h *Handler) CreatePromoCode(c *gin.Context) {
 		errs.Bad(c, err)
 		return
 	}
-	adminId := claimData(c, "user_id")
-	if adminId != "" {
-		req.CreatedBy = adminId
-	}
+	// created_by har doim tokendagi adminning ID'si (klient yuborgan qiymat e'tiborga olinmaydi).
+	req.CreatedBy = claimData(c, "user_id")
 	res, err := h.Clients.PromoCode.Create(context.Background(), &req)
 	if err != nil {
 		errs.Bad(c, err)

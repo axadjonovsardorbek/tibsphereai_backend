@@ -746,7 +746,6 @@ Update tariff
 **Hamkor/admin tanga qiymatli promokod yaratadi (TZ 5-6-bo'lim)**
 - Auth: kerak (Bearer token)
 **Body** (PromoCodeCreateReq) (majburiy):
-  - `created_by`: string
   - `expires_at`: string
   - `partner_id`: string (ixtiyoriy, bo'sh bo'lsa hamkorsiz kod)
   - `value`: integer

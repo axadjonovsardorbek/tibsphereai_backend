@@ -837,7 +837,6 @@ const MODULES = {
       {name:'target_user_id', label:'Foydalanuvchi (faqat "aynan bitta odam uchun")', type:'userpicker', showIf:v=>v.scope==='user'},
       {name:'target_user_ids', label:'Foydalanuvchilar (faqat "aniq bir nechta odam" — qidirib bir nechtasini tanlang)', type:'userpicker', multi:true, showIf:v=>v.scope==='users'},
       {name:'max_uses', label:'Nechta odam ishlata oladi (default 1)', type:'number', showIf:v=>(v.scope||'limited')==='limited'},
-      {name:'created_by', label:'Yaratuvchi (admin id)', type:'text'},
       {name:'expires_at', label:'Amal qilish muddati (YYYY-MM-DD)', type:'text'},
     ],
     canCreate:true, canUpdate:false, canDelete:true,
