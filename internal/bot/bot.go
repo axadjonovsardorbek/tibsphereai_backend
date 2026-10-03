@@ -230,12 +230,20 @@ func BotAuth(config *config.Config) {
 			⚠️ Hech qachon bu kodni boshqalar bilan ulashmang.
 			Agar bu so‘rovni siz yubormagan bo‘lsangiz, xabarni e’tiborsiz qoldiring.
 
-			📋 Kod ustiga bosib, uni nusxalashingiz mumkin.`,
+			📋 Kod ustiga bosib, uni nusxalang va pastdagi *«Ilovaga qaytish»* tugmasini bosib, kodni kiriting.`,
 				name, otp,
 			)
 
 			msg := tgbotapi.NewMessage(chatID, text)
 			msg.ParseMode = "Markdown"
+			// Mini App botga o'tganda pastga minimizatsiya bo'ladi va uni dasturiy
+			// ravishda qaytarib bo'lmaydi - shu sabab xabar tagiga ilovani qayta ochadigan
+			// tugma qo'yamiz (foydalanuvchi kodni nusxalab, shu tugma orqali qaytadi).
+			msg.ReplyMarkup = webAppInlineKeyboard{
+				InlineKeyboard: [][]webAppInlineButton{
+					{{Text: "↩️ Ilovaga qaytish", WebApp: webAppInfo{URL: config.WEBSITE_URL}}},
+				},
+			}
 			bot.Send(msg)
 
 			rdb.Set(fmt.Sprintf("tg:%s", phone_number), name, time.Minute*5)
