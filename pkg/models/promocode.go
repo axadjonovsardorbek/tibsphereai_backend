@@ -9,20 +9,30 @@ type PromoCodeCreateReq struct {
 	Value     int    `json:"value"` // tanga miqdori
 	CreatedBy string `json:"created_by"`
 	ExpiresAt string `json:"expires_at"`
+	// Scope: "user" (aynan bitta foydalanuvchi, TargetUserId majburiy), "limited"
+	// (ko'pi bilan MaxUses ta foydalanuvchi) yoki "all" (hamma uchun). Bo'sh bo'lsa "limited"
+	// va MaxUses=1 (eski xatti-harakat). Har bir foydalanuvchi bitta kodni faqat 1 marta ishlatadi.
+	Scope        string `json:"scope"`
+	TargetUserId string `json:"target_user_id"`
+	MaxUses      int    `json:"max_uses"`
 }
 
 type PromoCodeRes struct {
-	Id          *string `json:"id"`
-	Code        *string `json:"code"`
-	PartnerId   *string `json:"partner_id"`
-	PartnerName *string `json:"partner_name"`
-	Value       *int    `json:"value"`
-	CreatedBy   *string `json:"created_by"`
-	UsedBy      *string `json:"used_by"`
-	Status      *string `json:"status"` // active | used | expired
-	IssuedAt    *string `json:"issued_at"`
-	ExpiresAt   *string `json:"expires_at"`
-	UsedAt      *string `json:"used_at"`
+	Id           *string `json:"id"`
+	Code         *string `json:"code"`
+	PartnerId    *string `json:"partner_id"`
+	PartnerName  *string `json:"partner_name"`
+	Value        *int    `json:"value"`
+	CreatedBy    *string `json:"created_by"`
+	UsedBy       *string `json:"used_by"`
+	Status       *string `json:"status"` // active | used | expired
+	IssuedAt     *string `json:"issued_at"`
+	ExpiresAt    *string `json:"expires_at"`
+	UsedAt       *string `json:"used_at"`
+	Scope        *string `json:"scope"`
+	TargetUserId *string `json:"target_user_id"`
+	MaxUses      *int    `json:"max_uses"` // null = cheklanmagan (scope=all)
+	UsedCount    *int    `json:"used_count"`
 }
 
 type PromoCodeList struct {

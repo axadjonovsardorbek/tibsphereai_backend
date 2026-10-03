@@ -143,6 +143,21 @@ var (
 		Ru: "Промокод уже использован",
 		En: "Promo code already used",
 	})
+	ErrPromoCodeAlreadyRedeemed = New(http.StatusConflict, "promo_code_already_redeemed", Text{
+		Uz: "Siz bu promokodni allaqachon ishlatgansiz",
+		Ru: "Вы уже использовали этот промокод",
+		En: "You have already redeemed this promo code",
+	})
+	ErrPromoCodeNotForYou = New(http.StatusForbidden, "promo_code_not_for_you", Text{
+		Uz: "Bu promokod siz uchun emas",
+		Ru: "Этот промокод не для вас",
+		En: "This promo code is not for you",
+	})
+	ErrPromoCodeScopeInvalid = New(http.StatusBadRequest, "promo_code_scope_invalid", Text{
+		Uz: "Promokod qamrovi noto'g'ri: scope user/limited/all bo'lishi, user uchun target_user_id, limited uchun max_uses > 0 kerak",
+		Ru: "Неверная область промокода: scope user/limited/all, для user нужен target_user_id, для limited — max_uses > 0",
+		En: "Invalid promo code scope: scope must be user/limited/all, user needs target_user_id, limited needs max_uses > 0",
+	})
 	ErrPromoCodeExpired = New(http.StatusBadRequest, "promo_code_expired", Text{
 		Uz: "Promokodning muddati tugagan",
 		Ru: "Срок действия промокода истёк",

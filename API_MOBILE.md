@@ -430,6 +430,7 @@ qurilma TTS'idan (device text-to-speech) foydalanadi yoki yashiradi.
   - `code`: string
 **Javob (200):**
 - `coins_added`: integer
+**Xatolar:** `promo_code_invalid` (400), `promo_code_expired` (400), `promo_code_used` (409, limit tugagan), `promo_code_already_redeemed` (409, siz allaqachon ishlatgansiz), `promo_code_not_for_you` (403, boshqa odam uchun kod)
 
 ## Tariflar (Obuna/Coin paket)
 
