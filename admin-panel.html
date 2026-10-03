@@ -422,6 +422,58 @@ function buildFormField(container, f, values, refData, onChange){
     sel.value = getPath(values, f.name) ?? (opts[0] ? opts[0].value : '');
     wrap.appendChild(sel);
     wrap._getValue = () => sel.value;
+  } else if(f.type === 'userpicker'){
+    // Foydalanuvchini ID yozmasdan, qidirib tanlash (multi=true bo'lsa bir nechtasi).
+    const picked = new Map(); // id -> label
+    const chips = document.createElement('div');
+    chips.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px';
+    const search = document.createElement('input');
+    search.type = 'text'; search.placeholder = 'Ism, email yoki telefon bo\'yicha qidiring...';
+    const results = document.createElement('div');
+    results.style.cssText = 'max-height:180px;overflow:auto;border:1px solid var(--border,#2a3350);border-radius:8px;margin-top:6px;display:none';
+    const userLabel = u => [u.name, u.email, u.phone_number].filter(Boolean).join(' · ') || u.id;
+    const renderChips = () => {
+      chips.innerHTML = '';
+      picked.forEach((label, id) => {
+        const c = document.createElement('span');
+        c.style.cssText = 'background:#1e2a4a;border:1px solid #3b4f86;border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer';
+        c.textContent = label + '  ✕';
+        c.title = id;
+        c.onclick = () => { picked.delete(id); renderChips(); };
+        chips.appendChild(c);
+      });
+    };
+    let timer = null;
+    const runSearch = async () => {
+      const q = search.value.trim();
+      if(!q){ results.style.display = 'none'; return; }
+      const query = {limit: 10, page: 1};
+      if(q.includes('@')) query.email = q;
+      else if(/^[+\d][\d\s-]{4,}$/.test(q)) query.phone_number = q;
+      else query.name = q;
+      let items = [];
+      try{ items = extractList(await api('/web/user', {query})).items; }catch(e){}
+      results.innerHTML = '';
+      results.style.display = 'block';
+      if(!items.length){ results.innerHTML = '<div style="padding:8px" class="muted">Topilmadi</div>'; return; }
+      items.forEach(u => {
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:7px 10px;cursor:pointer;border-bottom:1px solid #1d2540';
+        row.textContent = userLabel(u) + (picked.has(u.id) ? '  ✓' : '');
+        row.onmouseenter = () => row.style.background = '#1a2342';
+        row.onmouseleave = () => row.style.background = '';
+        row.onclick = () => {
+          if(!f.multi) picked.clear();
+          picked.set(u.id, userLabel(u));
+          renderChips();
+          search.value = ''; results.style.display = 'none';
+        };
+        results.appendChild(row);
+      });
+    };
+    search.oninput = () => { clearTimeout(timer); timer = setTimeout(runSearch, 300); };
+    wrap.appendChild(chips); wrap.appendChild(search); wrap.appendChild(results);
+    wrap._getValue = () => f.multi ? Array.from(picked.keys()) : (Array.from(picked.keys())[0] || '');
   } else if(f.type === 'file'){
     const row = document.createElement('div'); row.className='rowInline';
     const inp = document.createElement('input');
@@ -480,7 +532,6 @@ function openModal({title, fields, values, onSubmit, refData}){
     try{
       fields.forEach((f, i) => {
         let v = wraps[i]._getValue();
-        if(f.list) v = String(v||'').split(/[\s,;]+/).filter(Boolean);
         setPath(out, f.name, v);
       });
     }catch(e){
@@ -783,9 +834,9 @@ const MODULES = {
       {name:'partner_id', label:'Hamkor', type:'select', asyncOptions:'partner', required:true},
       {name:'value', label:'Qiymat (tanga)', type:'number', required:true},
       {name:'scope', label:'Kim uchun', type:'select', options:[{value:'limited',label:'Bir nechta odam uchun (max_uses ta)'},{value:'user',label:'Aynan bitta odam uchun'},{value:'users',label:'Aniq bir nechta odam uchun (ro\'yxat)'},{value:'all',label:'Hamma uchun'}]},
-      {name:'target_user_id', label:'Foydalanuvchi ID (faqat "bitta odam uchun")', type:'text'},
-      {name:'target_user_ids', label:'Foydalanuvchi ID lar (faqat "aniq bir nechta odam", vergul bilan ajrating)', type:'text', list:true},
-      {name:'max_uses', label:'Nechta odam ishlata oladi (faqat "bir nechta odam uchun", default 1)', type:'number'},
+      {name:'target_user_id', label:'Foydalanuvchi (faqat "aynan bitta odam uchun")', type:'userpicker', showIf:v=>v.scope==='user'},
+      {name:'target_user_ids', label:'Foydalanuvchilar (faqat "aniq bir nechta odam" — qidirib bir nechtasini tanlang)', type:'userpicker', multi:true, showIf:v=>v.scope==='users'},
+      {name:'max_uses', label:'Nechta odam ishlata oladi (default 1)', type:'number', showIf:v=>(v.scope||'limited')==='limited'},
       {name:'created_by', label:'Yaratuvchi (admin id)', type:'text'},
       {name:'expires_at', label:'Amal qilish muddati (YYYY-MM-DD)', type:'text'},
     ],
