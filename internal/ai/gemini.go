@@ -208,6 +208,18 @@ func (c geminiCaseGen) Generate(ctx context.Context, genReq *models.CaseGenReq) 
 	if err := unmarshalJSONLoose(text, &req); err != nil {
 		return nil, usage, fmt.Errorf("gemini case-generation response parse error: %w (raw: %s)", err, text)
 	}
+	// Ba'zan model natijani {"case": {...}} kabi o'rab qaytaradi - ochamiz.
+	if len(req.Title) == 0 {
+		var wrap map[string]json.RawMessage
+		if unmarshalJSONLoose(text, &wrap) == nil && len(wrap) == 1 {
+			for _, inner := range wrap {
+				_ = unmarshalJSONLoose(string(inner), &req)
+			}
+		}
+	}
+	if len(req.Title) == 0 {
+		return nil, usage, fmt.Errorf("gemini case-generation response has no title (raw: %s)", truncate(text, 500))
+	}
 	out := req.CaseCreateReq
 	out.ExpectedAnswer = flattenExpectedAnswer(req.ExpectedAnswer)
 	return finishCaseGen(&out, difficulty, genReq.ExpectedAnswer), usage, nil
