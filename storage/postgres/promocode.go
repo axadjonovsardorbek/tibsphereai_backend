@@ -66,6 +66,12 @@ func (r *PromoCodeRepo) Create(req *m.PromoCodeCreateReq) (*m.ById, error) {
 		return nil, errs.ErrPromoCodeScopeInvalid
 	}
 
+	// partner ixtiyoriy: bo'sh bo'lsa promokod hamkorsiz (NULL) yaratiladi.
+	var partnerId interface{}
+	if req.PartnerId != "" && req.PartnerId != "string" {
+		partnerId = req.PartnerId
+	}
+
 	var createdBy interface{}
 	if req.CreatedBy != "" {
 		createdBy = req.CreatedBy
@@ -85,7 +91,7 @@ func (r *PromoCodeRepo) Create(req *m.PromoCodeCreateReq) (*m.ById, error) {
 	_, err = tx.Exec(ctx, `
 		INSERT INTO promo_codes (id, code, partner_id, value, created_by, status, issued_at, expires_at, scope, target_user_id, max_uses)
 		VALUES ($1, $2, $3, $4, $5, 'active', now(), $6, $7, $8, $9)
-	`, id, code, req.PartnerId, req.Value, createdBy, expiresAt, scope, targetUser, maxUses)
+	`, id, code, partnerId, req.Value, createdBy, expiresAt, scope, targetUser, maxUses)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating promo code: %w", err)
 	}
@@ -111,7 +117,7 @@ func (r *PromoCodeRepo) GetById(req *m.ById) (*m.PromoCodeRes, error) {
 		pc.scope, pc.target_user_id, pc.max_uses, pc.used_count,
 		COALESCE((SELECT array_agg(t.user_id::text) FROM promo_code_targets t WHERE t.promo_code_id = pc.id), '{}')
 	FROM promo_codes pc
-	JOIN partners p ON p.id = pc.partner_id
+	LEFT JOIN partners p ON p.id = pc.partner_id
 	WHERE pc.id = $1
 	`
 
@@ -151,7 +157,7 @@ func (r *PromoCodeRepo) list(req *m.PromoCodeGetListReq, forceUsedByUser bool) (
 		pc.scope, pc.target_user_id, pc.max_uses, pc.used_count,
 		COALESCE((SELECT array_agg(t.user_id::text) FROM promo_code_targets t WHERE t.promo_code_id = pc.id), '{}')
 	FROM promo_codes pc
-	JOIN partners p ON p.id = pc.partner_id
+	LEFT JOIN partners p ON p.id = pc.partner_id
 	WHERE 1=1
 	`
 

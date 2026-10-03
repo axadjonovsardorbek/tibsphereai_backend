@@ -748,7 +748,7 @@ Update tariff
 **Body** (PromoCodeCreateReq) (majburiy):
   - `created_by`: string
   - `expires_at`: string
-  - `partner_id`: string
+  - `partner_id`: string (ixtiyoriy, bo'sh bo'lsa hamkorsiz kod)
   - `value`: integer
   - `scope`: string — `user` (aynan bitta odam, `target_user_id` majburiy) | `users` (aniq bir nechta odam, `target_user_ids`: string[] majburiy) | `limited` (ko'pi bilan `max_uses` ta odam) | `all` (hamma uchun). Bo'sh bo'lsa `limited`, `max_uses=1`
   - `target_user_id`: string (faqat `scope=user`)

@@ -831,7 +831,7 @@ const MODULES = {
     ],
     columns:['id','code','partner_id','value','scope','used_count','max_uses','status','issued_at','expires_at'],
     fields:[
-      {name:'partner_id', label:'Hamkor', type:'select', asyncOptions:'partner', required:true},
+      {name:'partner_id', label:'Hamkor (ixtiyoriy)', type:'select', asyncOptions:'partner', includeEmpty:true},
       {name:'value', label:'Qiymat (tanga)', type:'number', required:true},
       {name:'scope', label:'Kim uchun', type:'select', options:[{value:'limited',label:'Bir nechta odam uchun (max_uses ta)'},{value:'user',label:'Aynan bitta odam uchun'},{value:'users',label:'Aniq bir nechta odam uchun (ro\'yxat)'},{value:'all',label:'Hamma uchun'}]},
       {name:'target_user_id', label:'Foydalanuvchi (faqat "aynan bitta odam uchun")', type:'userpicker', showIf:v=>v.scope==='user'},
