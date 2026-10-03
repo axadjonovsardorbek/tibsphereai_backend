@@ -90,6 +90,23 @@ Javobni FAQAT quyidagi JSON formatda qaytar (o'zbek tilida, boshqa hech qanday m
   "scenario": {"patient_persona": "bemor personaji tavsifi", "expected_steps": ["..."], "labs": {}, "imaging": {}, "medications": []}
 }`
 
+const caseGenFormatSuffix = `
+
+MAJBURIY CHIQISH FORMATI (yuqoridagi barcha format ko'rsatmalaridan USTUN; boshqa kalit nomlari, o'rovchi obyekt va qo'shimcha maydonlar ishlatma; faqat shu JSON, markdown va izohsiz):
+{
+  "title": {"uz": "...", "ru": "...", "en": "..."},
+  "subtitle": {"uz": "...", "ru": "...", "en": "..."},
+  "expected_answer": "bitta matn (o'zbekcha): tashxis va birinchi qadamlar",
+  "difficulty": "easy|medium|hard",
+  "chief_complaint": {"uz": "...", "ru": "...", "en": "..."},
+  "patient_age": 45,
+  "patient_gender": "male|female",
+  "expected_duration_minutes": 10,
+  "initial_vitals": {"hr": 0, "bp": "120/80", "spo2": 98, "rr": 16, "temp": 36.6, "gcs": 15},
+  "visual_state": "stable|unwell|critical",
+  "scenario": {"history": "...", "comorbidities": [], "allergies": [], "medications": [], "expected_steps": ["..."]}
+}`
+
 func (g *geminiClient) Reply(ctx context.Context, caseScenario map[string]any, expectedAnswer, question string) (*PatientReplyRes, *Usage, error) {
 	tmpl, params := g.loadPrompt(models.AIPromptPatientPersona, defaultPatientPersonaPrompt)
 	scenarioJSON, _ := json.MarshalIndent(caseScenario, "", "  ")
@@ -193,6 +210,11 @@ func (c geminiCaseGen) Generate(ctx context.Context, genReq *models.CaseGenReq) 
 	if genReq.ExpectedAnswer != "" {
 		prompt = fmt.Sprintf("%s\n\nKutilgan to'g'ri javob/tashxis (albatta shu bo'lishi kerak): %s", prompt, genReq.ExpectedAnswer)
 	}
+
+	// Admin shabloni boshqa JSON tuzilmasini so'rashi mumkin (masalan patient_info,
+	// case_id) - backend esa aynan CaseCreateReq maydonlarini kutadi, shu sabab
+	// chiqish formatini har doim oxirida majburan qayta belgilaymiz.
+	prompt += caseGenFormatSuffix
 
 	text, usage, err := g.generateContent(ctx, prompt, params, true)
 	if err != nil {
