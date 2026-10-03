@@ -9,30 +9,33 @@ type PromoCodeCreateReq struct {
 	Value     int    `json:"value"` // tanga miqdori
 	CreatedBy string `json:"created_by"`
 	ExpiresAt string `json:"expires_at"`
-	// Scope: "user" (aynan bitta foydalanuvchi, TargetUserId majburiy), "limited"
+	// Scope: "user" (aynan bitta foydalanuvchi, TargetUserId majburiy), "users" (ko'rsatilgan bir nechta foydalanuvchi, TargetUserIds majburiy), "limited"
 	// (ko'pi bilan MaxUses ta foydalanuvchi) yoki "all" (hamma uchun). Bo'sh bo'lsa "limited"
 	// va MaxUses=1 (eski xatti-harakat). Har bir foydalanuvchi bitta kodni faqat 1 marta ishlatadi.
 	Scope        string `json:"scope"`
 	TargetUserId string `json:"target_user_id"`
-	MaxUses      int    `json:"max_uses"`
+	// TargetUserIds - scope="users": aynan shu foydalanuvchilar ro'yxati (har biri 1 marta).
+	TargetUserIds []string `json:"target_user_ids"`
+	MaxUses       int      `json:"max_uses"`
 }
 
 type PromoCodeRes struct {
-	Id           *string `json:"id"`
-	Code         *string `json:"code"`
-	PartnerId    *string `json:"partner_id"`
-	PartnerName  *string `json:"partner_name"`
-	Value        *int    `json:"value"`
-	CreatedBy    *string `json:"created_by"`
-	UsedBy       *string `json:"used_by"`
-	Status       *string `json:"status"` // active | used | expired
-	IssuedAt     *string `json:"issued_at"`
-	ExpiresAt    *string `json:"expires_at"`
-	UsedAt       *string `json:"used_at"`
-	Scope        *string `json:"scope"`
-	TargetUserId *string `json:"target_user_id"`
-	MaxUses      *int    `json:"max_uses"` // null = cheklanmagan (scope=all)
-	UsedCount    *int    `json:"used_count"`
+	Id            *string  `json:"id"`
+	Code          *string  `json:"code"`
+	PartnerId     *string  `json:"partner_id"`
+	PartnerName   *string  `json:"partner_name"`
+	Value         *int     `json:"value"`
+	CreatedBy     *string  `json:"created_by"`
+	UsedBy        *string  `json:"used_by"`
+	Status        *string  `json:"status"` // active | used | expired
+	IssuedAt      *string  `json:"issued_at"`
+	ExpiresAt     *string  `json:"expires_at"`
+	UsedAt        *string  `json:"used_at"`
+	Scope         *string  `json:"scope"`
+	TargetUserId  *string  `json:"target_user_id"`
+	MaxUses       *int     `json:"max_uses"` // null = cheklanmagan (scope=all)
+	UsedCount     *int     `json:"used_count"`
+	TargetUserIds []string `json:"target_user_ids"` // scope=users
 }
 
 type PromoCodeList struct {

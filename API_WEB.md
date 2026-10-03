@@ -750,8 +750,9 @@ Update tariff
   - `expires_at`: string
   - `partner_id`: string
   - `value`: integer
-  - `scope`: string — `user` (aynan bitta odam, `target_user_id` majburiy) | `limited` (ko'pi bilan `max_uses` ta odam) | `all` (hamma uchun). Bo'sh bo'lsa `limited`, `max_uses=1`
+  - `scope`: string — `user` (aynan bitta odam, `target_user_id` majburiy) | `users` (aniq bir nechta odam, `target_user_ids`: string[] majburiy) | `limited` (ko'pi bilan `max_uses` ta odam) | `all` (hamma uchun). Bo'sh bo'lsa `limited`, `max_uses=1`
   - `target_user_id`: string (faqat `scope=user`)
+  - `target_user_ids`: string[] (faqat `scope=users`)
   - `max_uses`: integer (faqat `scope=limited`, >= 1)
 Har bir foydalanuvchi bitta kodni faqat 1 marta ishlata oladi. Noto'g'ri `scope` -> 400 `promo_code_scope_invalid`.
 **Javob (200):**
@@ -773,6 +774,7 @@ Har bir foydalanuvchi bitta kodni faqat 1 marta ishlata oladi. Noto'g'ri `scope`
 - `target_user_id`: string
 - `max_uses`: integer (null = cheklanmagan, scope=all)
 - `used_count`: integer
+- `target_user_ids`: string[] (scope=users)
 - `status`: string
 - `used_at`: string
 - `used_by`: string

@@ -41,6 +41,20 @@ func (r *PromoCodeRepo) Create(req *m.PromoCodeCreateReq) (*m.ById, error) {
 		}
 		targetUser = req.TargetUserId
 		maxUses = 1
+	case "users":
+		seen := map[string]bool{}
+		ids := req.TargetUserIds[:0:0]
+		for _, u := range req.TargetUserIds {
+			if u != "" && !seen[u] {
+				seen[u] = true
+				ids = append(ids, u)
+			}
+		}
+		if len(ids) == 0 {
+			return nil, errs.ErrPromoCodeScopeInvalid
+		}
+		req.TargetUserIds = ids
+		maxUses = len(ids)
 	case "limited":
 		if req.MaxUses < 1 {
 			return nil, errs.ErrPromoCodeScopeInvalid
@@ -61,12 +75,29 @@ func (r *PromoCodeRepo) Create(req *m.PromoCodeCreateReq) (*m.ById, error) {
 		expiresAt = req.ExpiresAt
 	}
 
-	_, err := r.db.Exec(context.Background(), `
+	ctx := context.Background()
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error while starting promo create tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Exec(ctx, `
 		INSERT INTO promo_codes (id, code, partner_id, value, created_by, status, issued_at, expires_at, scope, target_user_id, max_uses)
 		VALUES ($1, $2, $3, $4, $5, 'active', now(), $6, $7, $8, $9)
 	`, id, code, req.PartnerId, req.Value, createdBy, expiresAt, scope, targetUser, maxUses)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating promo code: %w", err)
+	}
+	if scope == "users" {
+		for _, u := range req.TargetUserIds {
+			if _, err := tx.Exec(ctx, `INSERT INTO promo_code_targets (promo_code_id, user_id) VALUES ($1, $2)`, id, u); err != nil {
+				return nil, fmt.Errorf("error while saving promo code targets: %w", err)
+			}
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("error while committing promo create: %w", err)
 	}
 
 	return &m.ById{Id: id}, nil
@@ -77,7 +108,8 @@ func (r *PromoCodeRepo) GetById(req *m.ById) (*m.PromoCodeRes, error) {
 	SELECT
 		pc.id, pc.code, pc.partner_id, p.name, pc.value,
 		pc.created_by, pc.used_by, pc.status, pc.issued_at::text, pc.expires_at::text, pc.used_at::text,
-		pc.scope, pc.target_user_id, pc.max_uses, pc.used_count
+		pc.scope, pc.target_user_id, pc.max_uses, pc.used_count,
+		COALESCE((SELECT array_agg(t.user_id::text) FROM promo_code_targets t WHERE t.promo_code_id = pc.id), '{}')
 	FROM promo_codes pc
 	JOIN partners p ON p.id = pc.partner_id
 	WHERE pc.id = $1
@@ -89,7 +121,7 @@ func (r *PromoCodeRepo) GetById(req *m.ById) (*m.PromoCodeRes, error) {
 	err := row.Scan(
 		&pc.Id, &pc.Code, &pc.PartnerId, &pc.PartnerName, &pc.Value,
 		&pc.CreatedBy, &pc.UsedBy, &pc.Status, &pc.IssuedAt, &pc.ExpiresAt, &pc.UsedAt,
-		&pc.Scope, &pc.TargetUserId, &pc.MaxUses, &pc.UsedCount,
+		&pc.Scope, &pc.TargetUserId, &pc.MaxUses, &pc.UsedCount, &pc.TargetUserIds,
 	)
 
 	if err == pgx.ErrNoRows {
@@ -116,7 +148,8 @@ func (r *PromoCodeRepo) list(req *m.PromoCodeGetListReq, forceUsedByUser bool) (
 		COUNT(pc.id) OVER() AS total_count,
 		pc.id, pc.code, pc.partner_id, p.name, pc.value,
 		pc.created_by, pc.used_by, pc.status, pc.issued_at::text, pc.expires_at::text, pc.used_at::text,
-		pc.scope, pc.target_user_id, pc.max_uses, pc.used_count
+		pc.scope, pc.target_user_id, pc.max_uses, pc.used_count,
+		COALESCE((SELECT array_agg(t.user_id::text) FROM promo_code_targets t WHERE t.promo_code_id = pc.id), '{}')
 	FROM promo_codes pc
 	JOIN partners p ON p.id = pc.partner_id
 	WHERE 1=1
@@ -154,7 +187,7 @@ func (r *PromoCodeRepo) list(req *m.PromoCodeGetListReq, forceUsedByUser bool) (
 			&totalCount,
 			&pc.Id, &pc.Code, &pc.PartnerId, &pc.PartnerName, &pc.Value,
 			&pc.CreatedBy, &pc.UsedBy, &pc.Status, &pc.IssuedAt, &pc.ExpiresAt, &pc.UsedAt,
-			&pc.Scope, &pc.TargetUserId, &pc.MaxUses, &pc.UsedCount,
+			&pc.Scope, &pc.TargetUserId, &pc.MaxUses, &pc.UsedCount, &pc.TargetUserIds,
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error while scanning promo code: %w", err)
@@ -201,6 +234,17 @@ func (r *PromoCodeRepo) Redeem(req *m.PromoCodeRedeemReq) (int, error) {
 
 	if scope == "user" && (targetUser == nil || *targetUser != req.UserId) {
 		return 0, errs.ErrPromoCodeNotForYou
+	}
+	if scope == "users" {
+		var allowed bool
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS (SELECT 1 FROM promo_code_targets WHERE promo_code_id = $1 AND user_id = $2)
+		`, id, req.UserId).Scan(&allowed); err != nil {
+			return 0, fmt.Errorf("error while checking promo targets: %w", err)
+		}
+		if !allowed {
+			return 0, errs.ErrPromoCodeNotForYou
+		}
 	}
 	var already bool
 	if err := tx.QueryRow(ctx, `
