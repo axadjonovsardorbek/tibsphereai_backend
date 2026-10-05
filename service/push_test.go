@@ -48,7 +48,7 @@ func TestPushService_SendPush_TargetUser_EmptyUserID(t *testing.T) {
 	assert.ErrorContains(t, err, "user_id required")
 }
 
-// TargetUser - FCM token DB'dan o'qilmaydi, to'g'ridan-to'g'ri UserTopic(userId)
+// TargetUser - FCM token DB'dan o'qilmaydi, to'g'ridan-to'g'ri UserTopic(userId, lang)
 // topicga yuboriladi (device Register paytida shu topicga obuna qilingan bo'ladi).
 func TestPushService_SendPush_TargetUser_SendsToUserTopic_PropagatesSendError(t *testing.T) {
 	dm := mocks.NewUserDeviceMock()

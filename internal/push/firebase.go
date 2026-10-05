@@ -75,7 +75,7 @@ func (c *Client) SendToTopic(ctx context.Context, topic, title, body string, dat
 	return nil
 }
 
-// SubscribeToTopic - device Register bo'lganda foydalanuvchi tiliga mos topicga obuna qiladi.
+// SubscribeToTopic - hozir ishlatilmaydi (obunani frontend qiladi).
 func (c *Client) SubscribeToTopic(ctx context.Context, tokens []string, topic string) error {
 	if c == nil || c.msg == nil {
 		return fmt.Errorf("push client not initialized")

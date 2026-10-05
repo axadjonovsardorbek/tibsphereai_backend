@@ -246,51 +246,9 @@ func (s *UserService) GetAll(ctx context.Context, req *m.UserGetListReq) (*m.Pag
 	return res, nil, nil
 }
 
-// Update - profil yangilanadi. Til o'zgargan bo'lsa, userning barcha registratsiya qilingan
-// qurilmalari eski til topic'laridan chiqarilib, yangi til topic'iga (all_uz/all_ru/all_en)
-// qayta obuna qilinadi (fon rejimida, javobni kutdirmaydi).
+// Update - profil yangilanadi. FCM topic obunasi frontda boshqariladi.
 func (s *UserService) Update(ctx context.Context, req *m.UserUpdateReq) (*m.Void, error) {
-	res, err := s.storage.UserS.Update(req)
-	if err != nil {
-		return res, err
-	}
-
-	if req.Language == "uz" || req.Language == "ru" || req.Language == "en" {
-		go s.resyncLanguageTopic(req.Id, req.Language)
-	}
-
-	return res, nil
-}
-
-func (s *UserService) resyncLanguageTopic(userId, newLang string) {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("resync language topic panic:", r)
-		}
-	}()
-	if s.push == nil {
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	tokens, err := s.storage.UserDeviceS.GetTokensByUser(ctx, userId)
-	if err != nil || len(tokens) == 0 {
-		return
-	}
-
-	newTopic := m.BroadcastTopic(newLang)
-	for _, lang := range []string{"uz", "ru", "en"} {
-		topic := m.BroadcastTopic(lang)
-		if topic == newTopic {
-			continue
-		}
-		_ = s.push.UnsubscribeFromTopic(ctx, tokens, topic)
-	}
-	if err := s.push.SubscribeToTopic(ctx, tokens, newTopic); err != nil {
-		fmt.Println("failed to subscribe to new language topic:", err)
-	}
+	return s.storage.UserS.Update(req)
 }
 func (s *UserService) Delete(ctx context.Context, req *m.ById) (*m.Void, error) {
 	return s.storage.UserS.Delete(req)

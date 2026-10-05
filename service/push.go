@@ -51,8 +51,8 @@ func (s *PushService) SendPush(ctx context.Context, target m.PushTarget, event m
 		msg := m.BuildLocalizedPushMessage(event, lang)
 
 		// FCM tokenni DB'dan o'qish shart emas - device Register paytida
-		// UserTopic(userId)ga obuna bo'lgan, shu topicga yuboramiz.
-		return s.push.SendToTopic(ctx, m.UserTopic(target.UserID), msg.Title, msg.Body, msg.Data)
+		// UserTopic(userId, lang)ga obuna bo'lgan, shu topicga yuboramiz.
+		return s.push.SendToTopic(ctx, m.UserTopic(target.UserID, lang), msg.Title, msg.Body, msg.Data)
 
 	default:
 		return fmt.Errorf("unknown target")

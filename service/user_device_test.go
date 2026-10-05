@@ -14,8 +14,6 @@ import (
 )
 
 func newUserDeviceTestService(dm *mocks.UserDeviceMock, um *mocks.UserMock) *UserDeviceService {
-	// push=nil - real FCM ulanishi kerak emas, s.push!=nil tekshiruvi false bo'lib
-	// obuna chaqiruvlari chetlab o'tiladi (asosiy Register/Unregister oqimini sinaydi).
 	return NewUserDeviceService(&st.Storage{UserDeviceS: dm, UserS: um}, nil)
 }
 
@@ -27,8 +25,6 @@ func TestUserDeviceService_Register(t *testing.T) {
 	req := &m.UserDeviceRegisterReq{UserId: "user-1", FCMToken: "tok1", Platform: "android"}
 	want := &m.Void{}
 	dm.On("Register", req).Return(want, nil)
-	lang := "ru"
-	um.On("GetById", &m.ById{Id: "user-1"}).Return(&m.UserRes{Language: &lang}, nil)
 
 	got, err := svc.Register(context.Background(), req)
 	require.NoError(t, err)

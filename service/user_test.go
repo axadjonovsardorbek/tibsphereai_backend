@@ -205,49 +205,7 @@ func TestUserService_AddPoints(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// --- Update / resyncLanguageTopic ---
-
-// Til o'zgarganda fon rejimida qurilma tokenlari qidirilishi kerak (topic
-// qayta-obuna qilish uchun). push=&push.Client{} (msg=nil) - real FCM shart emas,
-// faqat GetTokensByUser chaqirilganini sinxron tekshiramiz.
-func TestUserService_Update_LanguageChange_TriggersResync(t *testing.T) {
-	um := mocks.NewUserMock()
-	dm := mocks.NewUserDeviceMock()
-	svc := newUserTestService(um, dm, nil, &config.Config{}, &push.Client{})
-
-	req := &m.UserUpdateReq{Id: "user-1", Language: "ru"}
-	um.On("Update", req).Return(&m.Void{}, nil)
-
-	done := make(chan struct{})
-	dm.On("GetTokensByUser", mock.Anything, "user-1").Return([]string{"tok1"}, nil).Run(func(args mock.Arguments) {
-		close(done)
-	})
-
-	_, err := svc.Update(context.Background(), req)
-	require.NoError(t, err)
-
-	select {
-	case <-done:
-	case <-time.After(2 * time.Second):
-		t.Fatal("timed out waiting for resyncLanguageTopic")
-	}
-}
-
-// Til o'zgarmasa (bo'sh yoki noma'lum til) - fon jarayoni umuman ishga tushmasligi kerak.
-func TestUserService_Update_NoLanguageChange_NoResync(t *testing.T) {
-	um := mocks.NewUserMock()
-	dm := mocks.NewUserDeviceMock()
-	svc := newUserTestService(um, dm, nil, &config.Config{}, &push.Client{})
-
-	req := &m.UserUpdateReq{Id: "user-1", Name: "Alice"}
-	um.On("Update", req).Return(&m.Void{}, nil)
-
-	_, err := svc.Update(context.Background(), req)
-	require.NoError(t, err)
-
-	time.Sleep(50 * time.Millisecond)
-	dm.AssertNotCalled(t, "GetTokensByUser", mock.Anything, mock.Anything)
-}
+// --- Update ---
 
 func TestUserService_Update_Error(t *testing.T) {
 	um := mocks.NewUserMock()
