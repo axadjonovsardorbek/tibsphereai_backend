@@ -22,7 +22,7 @@ services:
       PGDATA: /data/postgres
       POSTGRES_DB: ${POSTGRES_NAME}
     volumes:
-      - tibsphereai_postgres_data:/var/lib/postgres/data
+      - tibsphereai_postgres_data:/data/postgres
     ports:
       - "127.0.0.1:${HOST_POSTGRES_PORT}:5432"
     networks:
