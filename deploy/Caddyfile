@@ -1,0 +1,32 @@
+# Server: /etc/caddy/Caddyfile. DNS A records for every host -> server IP.
+# Caddy issues and renews HTTPS certificates itself.
+
+tibstation.uz {
+	reverse_proxy localhost:8080   # tibcase.web
+}
+
+admin.tibstation.uz {
+	reverse_proxy localhost:3000   # tibcase.admin
+}
+
+prod.tibstation.uz {                # prod backend
+	request_body {
+		max_size 50MB
+	}
+	reverse_proxy localhost:8005
+}
+
+minio.tibstation.uz {              # prod minio
+	reverse_proxy localhost:9020
+}
+
+dev.tibstation.uz {            # dev backend
+	request_body {
+		max_size 50MB
+	}
+	reverse_proxy localhost:8004
+}
+
+dev-minio.tibstation.uz {          # dev minio
+	reverse_proxy localhost:9010
+}

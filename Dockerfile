@@ -20,8 +20,6 @@ COPY --from=builder /app/main .
 COPY --from=builder /app/api/casbin/model.conf ./api/casbin/
 COPY --from=builder /app/api/casbin/policy.csv ./api/casbin/
 
-COPY .env .
-
 RUN chmod +x ./main
 
 CMD ["./main"]

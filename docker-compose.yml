@@ -5,7 +5,7 @@ services:
     image: ghcr.io/kukymbr/goose-docker:3.23.0
     environment:
       - GOOSE_DRIVER=postgres
-      - GOOSE_DBSTRING=host=postgres-tibsphereai port=5432 user=postgres password=1111 dbname=tibsphereai sslmode=disable
+      - GOOSE_DBSTRING=host=postgres-tibsphereai port=5432 user=postgres password=${POSTGRES_PASSWORD} dbname=${POSTGRES_NAME} sslmode=disable
     volumes:
       - ./migrations:/migrations
     depends_on:
@@ -15,17 +15,16 @@ services:
       - tibsphereai
 
   postgres-tibsphereai:
-    container_name: postgres-tibsphereai
     image: postgres
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 1111
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PGDATA: /data/postgres
-      POSTGRES_DB: tibsphereai
+      POSTGRES_DB: ${POSTGRES_NAME}
     volumes:
       - tibsphereai_postgres_data:/var/lib/postgres/data
     ports:
-      - "127.0.0.1:5473:5432"
+      - "127.0.0.1:${HOST_POSTGRES_PORT}:5432"
     networks:
       - tibsphereai
     restart: unless-stopped
@@ -36,20 +35,20 @@ services:
       retries: 5
 
   tibsphereai:
-    container_name: tibsphereai
     build: .
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8004:8004"
+      - "127.0.0.1:${HOST_APP_PORT}:8004"
+    env_file:
+      - ${ENV_FILE:-.env}
     environment:
+      - AUTH_PORT=:8004
       - POSTGRES_HOST=postgres-tibsphereai
       - POSTGRES_PORT=5432
       - REDIS_HOST=redis-tibsphereai
       - REDIS_PORT=:6379
       - MINIO_ENDPOINT=minio-tibsphereai
       - MINIO_PORT=:9010
-      - BASE_URL=https://dev-medic.axadjonovsardorbek.uz
-      - MINIO_DOMAIN=https://dev-medic-minio.axadjonovsardorbek.uz
     depends_on:
       - postgres-tibsphereai
       - redis-tibsphereai
@@ -60,23 +59,21 @@ services:
 
   redis-tibsphereai:
     image: redis:latest
-    container_name: redis-tibsphereai
     restart: unless-stopped
     ports:
-      - "127.0.0.1:6337:6379"
+      - "127.0.0.1:${HOST_REDIS_PORT}:6379"
     networks:
       - tibsphereai
 
   minio-tibsphereai:
     image: quay.io/minio/minio
-    container_name: minio-tibsphereai
     restart: unless-stopped
     environment:
-      - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin123
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
     ports:
-      - "127.0.0.1:9010:9010"
-      - "127.0.0.1:9011:9011"
+      - "127.0.0.1:${HOST_MINIO_PORT}:9010"
+      - "127.0.0.1:${HOST_MINIO_CONSOLE_PORT}:9011"
     command: server /data --address ":9010" --console-address ":9011"
     volumes:
       - tibsphereai_minio_data:/data

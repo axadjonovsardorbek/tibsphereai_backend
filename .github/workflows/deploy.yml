@@ -1,13 +1,16 @@
-name: Deploy to dev server
+name: Deploy
 
+# main -> prod (/opt/tibsphereai-prod), dev -> dev (/opt/tibsphereai-dev)
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch: {}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      TARGET: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
     steps:
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
@@ -15,11 +18,14 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: TARGET
           script: |
             set -e
-            cd /opt/tibsphereai
-            git fetch origin main
-            git reset --hard origin/main
-            docker compose up -d --build
-            docker compose run --rm migrate-road
+            BRANCH=$([ "$TARGET" = prod ] && echo main || echo dev)
+            cd /opt/tibsphereai-$TARGET
+            git fetch origin $BRANCH
+            git reset --hard origin/$BRANCH
+            DC="docker compose -p tibsphereai-$TARGET --env-file .env.$TARGET"
+            $DC up -d --build
+            $DC run --rm migrate-road
             docker image prune -f

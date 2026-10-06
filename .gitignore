@@ -1,5 +1,7 @@
 .env
 .prod.env
+.env.dev
+.env.prod
 internal/secrets
 bin/
 tools/
