@@ -20,6 +20,7 @@ jobs:
             set -e
             TARGET=${{ github.ref_name == 'main' && 'prod' || 'dev' }}
             BRANCH=$([ "$TARGET" = prod ] && echo main || echo dev)
+            git config --global --add safe.directory /opt/tibsphereai-$TARGET
             cd /opt/tibsphereai-$TARGET
             git fetch origin $BRANCH
             git reset --hard origin/$BRANCH
