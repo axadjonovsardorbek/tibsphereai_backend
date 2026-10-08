@@ -189,7 +189,7 @@ func (r *OrderRepo) Create(req *m.OrderCreateReq) (*m.OrderCreateRes, error) {
 func (r *OrderRepo) GetById(req *m.ById) (*m.OrderStatisticRes, error) {
 	query := `
 	SELECT
-		o.id, o.user_id, u.name, u.phone_number,
+		o.id, o.user_id, COALESCE(u.name, ''), COALESCE(u.phone_number, ''),
 		o.tariff_id, t.name AS tariff_name, o.duration,
 		o.amount, o.coins_used, o.tariff_amount,
 		o.payment_type, o.status, o.created_at::text, o.paid_at::text
@@ -223,7 +223,7 @@ func (r *OrderRepo) GetAll(req *m.OrderGetListReq) (*m.PaginationResponse, *m.Or
 	query := `
 	SELECT
 		COUNT(o.id) OVER() AS total_count,
-		o.id, o.user_id, u.name, u.phone_number,
+		o.id, o.user_id, COALESCE(u.name, ''), COALESCE(u.phone_number, ''),
 		o.tariff_id, t.name AS tariff_name, o.duration,
 		o.amount, o.coins_used, o.tariff_amount,
 		o.payment_type, o.status, o.created_at::text, o.paid_at::text
