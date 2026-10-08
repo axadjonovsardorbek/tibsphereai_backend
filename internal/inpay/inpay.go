@@ -202,9 +202,11 @@ func (c *Client) Create(ctx context.Context, r CreateReq) (*CreateRes, error) {
 
 // GetTransaction - webhook imzosiz bo'lgani uchun holatni shu orqali server-to-server tasdiqlaymiz.
 func (c *Client) GetTransaction(ctx context.Context, orderID string) (*Transaction, error) {
+	// Javob ba'zan tekis, ba'zan "data" ichida keladi - ikkalasini ham qabul qilamiz.
 	var out struct {
 		apiError
 		Transaction
+		Data *Transaction `json:"data"`
 	}
 	err := c.authed(ctx, func() (*http.Request, error) {
 		return http.NewRequestWithContext(ctx, http.MethodGet,
@@ -212,6 +214,9 @@ func (c *Client) GetTransaction(ctx context.Context, orderID string) (*Transacti
 	}, &out)
 	if err != nil {
 		return nil, fmt.Errorf("inpay transactions: %w", err)
+	}
+	if out.Data != nil {
+		return out.Data, nil
 	}
 	return &out.Transaction, nil
 }
