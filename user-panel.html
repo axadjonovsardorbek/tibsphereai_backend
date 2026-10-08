@@ -1818,16 +1818,18 @@ async function renderTariffs(main){
     const buyRow = document.createElement('div'); buyRow.style.display='flex'; buyRow.style.gap='6px'; buyRow.style.marginTop='8px';
     const coinsInp = document.createElement('input'); coinsInp.type='number'; coinsInp.placeholder='Tanga (ixtiyoriy)'; coinsInp.style.width='100%';
     if(isCoinPkg) coinsInp.style.display='none'; // tangaga tanga sotib olib bo'lmaydi
+    const provSel = document.createElement('select');
+    [['click','Click'],['inpay','inPAY']].forEach(([v,l])=>{ const o=document.createElement('option'); o.value=v; o.textContent=l; provSel.appendChild(o); });
     const buyBtn = document.createElement('button'); buyBtn.className='primary'; buyBtn.textContent='💳 Sotib olish';
     buyBtn.onclick = async ()=>{
       try{
-        const res = await api('/mobile/subscription', {method:'POST', body:{tariff_id:t.id, coins_used:Number(coinsInp.value||0)}});
+        const res = await api('/mobile/subscription', {method:'POST', body:{tariff_id:t.id, coins_used:Number(coinsInp.value||0), provider:provSel.value}});
         if(res.just_paid) toast(isCoinPkg ? 'Tangalar hisobga qo\'shildi!' : 'To\'liq tangadan to\'landi — obuna faollashdi!', 'ok');
-        else if(res.url) openPayLink(res.url);
+        else if(res.url) { if(provSel.value==='inpay') window.open(res.url,'_blank'); else openPayLink(res.url); }
         else toast('Buyurtma yaratildi: '+res.order_id, 'ok');
       }catch(e){}
     };
-    buyRow.appendChild(coinsInp); buyRow.appendChild(buyBtn);
+    buyRow.appendChild(coinsInp); buyRow.appendChild(provSel); buyRow.appendChild(buyBtn);
     c.appendChild(buyRow);
     grid.appendChild(c);
   });

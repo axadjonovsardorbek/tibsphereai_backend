@@ -1737,3 +1737,16 @@ func (mk *AIUsageLogMock) GetSummary() (*m.AIUsageSummaryRes, error) {
 	}
 	return r0, args.Error(1)
 }
+
+func (mk *OrderMock) InpayAttach(orderId string, inpayOrderId string) error {
+	return mk.Called(orderId, inpayOrderId).Error(0)
+}
+
+func (mk *OrderMock) InpayComplete(inpayOrderId string, success bool, transactionId int64, paidAmount float64) (*m.CompleteResult, error) {
+	args := mk.Called(inpayOrderId, success, transactionId, paidAmount)
+	var r0 *m.CompleteResult
+	if args.Get(0) != nil {
+		r0 = args.Get(0).(*m.CompleteResult)
+	}
+	return r0, args.Error(1)
+}

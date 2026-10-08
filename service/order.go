@@ -3,8 +3,11 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 	"tibsphereai/internal/helper"
+	"tibsphereai/internal/inpay"
 	m "tibsphereai/pkg/models"
 	st "tibsphereai/storage/postgres"
 	"time"
@@ -16,6 +19,16 @@ type OrderService struct {
 	storage st.Storage
 	rdb     *redis.Client
 	push    *PushService
+
+	inpay      *inpay.Client
+	baseURL    string
+	websiteURL string
+}
+
+// WithInpay - inPAY provayderini ulaydi (kalitlar env'da yo'q bo'lsa provider o'chiq turadi).
+func (s *OrderService) WithInpay(c *inpay.Client, baseURL, websiteURL string) *OrderService {
+	s.inpay, s.baseURL, s.websiteURL = c, baseURL, websiteURL
+	return s
 }
 
 func NewOrderService(storage *st.Storage, rdb *redis.Client, push *PushService) *OrderService {
@@ -32,6 +45,68 @@ func (s *OrderService) Create(ctx context.Context, req *m.OrderCreateReq) (*m.Or
 	}
 	if res.JustPaid {
 		s.onJustPaid(req.UserId, res.Id)
+		return res, nil
+	}
+	if req.Provider == "inpay" {
+		url, err := s.createInpayPayment(ctx, res.Id)
+		if err != nil {
+			return nil, err
+		}
+		res.Url = url
+	}
+	return res, nil
+}
+
+// createInpayPayment - inPAY'da to'lov yaratadi va uning order_id'sini bizning order bilan bog'laydi.
+func (s *OrderService) createInpayPayment(ctx context.Context, orderId string) (string, error) {
+	if !s.inpay.Enabled() {
+		return "", errors.New("inpay provider is not configured")
+	}
+	o, err := s.storage.OrderS.GetById(&m.ById{Id: orderId})
+	if err != nil {
+		return "", err
+	}
+	if o == nil {
+		return "", errors.New("order not found")
+	}
+	pay, err := s.inpay.Create(ctx, inpay.CreateReq{
+		Amount:      o.Amount,
+		Description: "TibSphere order " + orderId,
+		CallbackURL: strings.TrimRight(s.baseURL, "/") + "/inpay/callback",
+		ReturnURL:   s.websiteURL,
+	})
+	if err != nil {
+		return "", err
+	}
+	if err := s.storage.OrderS.InpayAttach(orderId, pay.OrderID); err != nil {
+		return "", err
+	}
+	return pay.PayURL, nil
+}
+
+// InpayCallback - inPAY webhook'i imzosiz, shuning uchun body'ga ishonmaymiz: holat va summani
+// inPAY'dan (GET /transactions/) server-to-server qayta olib, shunga qarab to'lovni yakunlaymiz.
+func (s *OrderService) InpayCallback(ctx context.Context, inpayOrderId string, transactionId int64) (*m.CompleteResult, error) {
+	if !s.inpay.Enabled() {
+		return nil, errors.New("inpay provider is not configured")
+	}
+	tx, err := s.inpay.GetTransaction(ctx, inpayOrderId)
+	if err != nil {
+		return nil, err
+	}
+	switch tx.Status {
+	case inpay.StatusSuccess:
+	case inpay.StatusFailed, inpay.StatusCancelled:
+	default: // pending - hali yakunlanmagan
+		return &m.CompleteResult{Error: 0, ErrorNote: "pending"}, nil
+	}
+
+	res, err := s.storage.OrderS.InpayComplete(inpayOrderId, tx.Status == inpay.StatusSuccess, transactionId, tx.Amount)
+	if err != nil || res == nil {
+		return res, err
+	}
+	if res.JustPaid {
+		s.onJustPaid(res.PaidUserId, res.PaidOrderId)
 	}
 	return res, nil
 }

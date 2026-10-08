@@ -42,11 +42,14 @@ type OrderCreateReq struct {
 	UserId    string `json:"user_id"`
 	TariffId  string `json:"tariff_id"`
 	CoinsUsed int    `json:"coins_used"`
+	// Provider - "click" (default) yoki "inpay".
+	Provider string `json:"provider"`
 }
 
 type OrderCreateBody struct {
 	TariffId  string `json:"tariff_id"`
 	CoinsUsed int    `json:"coins_used"`
+	Provider  string `json:"provider"` // click (default) | inpay
 }
 
 type OrderCreateRes struct {

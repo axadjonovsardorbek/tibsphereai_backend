@@ -665,3 +665,14 @@ Get a appRoute by their ID
 **Javob (200):**
 - `count`: integer
 - `partners`: PartnerMobileRes[]
+
+## inPAY to'lov (yangi provider)
+
+`POST /mobile/subscription` body: `{"tariff_id": "...", "coins_used": 0, "provider": "inpay"}`
+(`provider`: `click` — default, yoki `inpay`).
+
+Javob: `{"order_id": "...", "url": "<inPAY pay_url>", "just_paid": false}`.
+Frontend `url` ni ochadi (yangi tab / webview). To'lov tugagach inPAY backend webhook'iga
+(`POST /inpay/callback`) xabar beradi va order `PAID` bo'ladi — frontend
+`GET /web/order/{id}` yoki obuna holatini poll qilib natijani bilib oladi.
+`just_paid: true` (to'liq tangaga yopilgan) bo'lsa `url` bo'sh bo'ladi. Minimal to'lov 1000 so'm.

@@ -33,7 +33,14 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 		return
 	}
 
-	req := m.OrderCreateReq{UserId: userId, TariffId: body.TariffId, CoinsUsed: body.CoinsUsed}
+	switch body.Provider {
+	case "", "click", "inpay":
+	default:
+		errs.Bad(c, fmt.Errorf("provider must be click or inpay"))
+		return
+	}
+
+	req := m.OrderCreateReq{UserId: userId, TariffId: body.TariffId, CoinsUsed: body.CoinsUsed, Provider: body.Provider}
 
 	res, err := h.Clients.Order.Create(context.Background(), &req)
 	if err != nil {
@@ -68,7 +75,7 @@ func (h *Handler) GetByIdOrder(c *gin.Context) {
 // @Param user_id query string false "User ID"
 // @Param tariff_id query string false "Tariff ID"
 // @Param status query string false "Order Status" Enums(NEW, PAID, CANCELLED, RESERVED, EXPIRED)
-// @Param payment_type query string false "Payment Type" Enums(click, admin)
+// @Param payment_type query string false "Payment Type" Enums(click, payme, inpay, coins, admin)
 // @Param type query string false "range, day, week, month, year"
 // @Param day query string false "YYYY-MM-DD"
 // @Param from query string false "YYYY-MM-DD"

@@ -3,6 +3,7 @@ package clients
 import (
 	"tibsphereai/internal/ai"
 	"tibsphereai/internal/config"
+	"tibsphereai/internal/inpay"
 	"tibsphereai/internal/push"
 	"tibsphereai/service"
 	"tibsphereai/storage/postgres"
@@ -57,7 +58,7 @@ func NewClients(cfg *config.Config, conn *postgres.Storage, rdb *redis.Client, p
 		Faq:              service.NewFaqService(conn, rdb),
 		Notification:     service.NewNotificationService(conn, rdb, pushSvc),
 		AppRoute:         service.NewAppRouteService(conn, rdb),
-		Order:            service.NewOrderService(conn, rdb, pushSvc),
+		Order:            service.NewOrderService(conn, rdb, pushSvc).WithInpay(inpay.NewClient(cfg.INPAY_BASE_URL, cfg.INPAY_MERCHANT_ID, cfg.INPAY_MERCHANT_TOKEN), cfg.BASE_URL, cfg.WEBSITE_URL),
 		Tariff:           service.NewTariffService(conn, rdb),
 		PromoCode:        service.NewPromoCodeService(conn, rdb, userSvc),
 		Partner:          service.NewPartnerService(conn),

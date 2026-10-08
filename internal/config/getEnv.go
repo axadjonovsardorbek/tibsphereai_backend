@@ -25,7 +25,7 @@ type Config struct {
 	GROUP_ID          string
 	GROUP_FOR_INFO_ID string
 
-	BASE_URL               string
+	BASE_URL string
 	// WEBSITE_URL - Telegram bot menu tugmalari (Case yechish/Bo'limlar/Profil/Biz
 	// haqimizda) bosilganda ochiladigan web ilova manzili (internal/bot).
 	WEBSITE_URL            string
@@ -34,6 +34,9 @@ type Config struct {
 	CLICK_SECRET_KEY       string
 	PAYME_MERCHANT_ID      string
 	PAYME_SECRET_KEY       string
+	INPAY_BASE_URL         string
+	INPAY_MERCHANT_ID      string
+	INPAY_MERCHANT_TOKEN   string
 	PAYMENT_PROVIDER_TOKEN string
 	PAYMENT_CURRENCY       string
 	PAYMENT_BOT_TOKEN      string
@@ -102,6 +105,9 @@ func Load() Config {
 	config.CLICK_SECRET_KEY = cast.ToString(coalesce("CLICK_SECRET_KEY", "test_click_secret_key"))
 	config.PAYME_MERCHANT_ID = cast.ToString(coalesce("PAYME_MERCHANT_ID", ""))
 	config.PAYME_SECRET_KEY = cast.ToString(coalesce("PAYME_SECRET_KEY", "test_payme_secret_key"))
+	config.INPAY_BASE_URL = cast.ToString(coalesce("INPAY_BASE_URL", "https://inpay.uz/api/v1"))
+	config.INPAY_MERCHANT_ID = cast.ToString(coalesce("INPAY_MERCHANT_ID", ""))
+	config.INPAY_MERCHANT_TOKEN = cast.ToString(coalesce("INPAY_MERCHANT_TOKEN", ""))
 
 	config.PAYMENT_PROVIDER_TOKEN = cast.ToString(coalesce("PAYMENT_PROVIDER_TOKEN", "TEST:631330408:TEST:631330408"))
 	config.PAYMENT_CURRENCY = cast.ToString(coalesce("PAYMENT_CURRENCY", "UZS"))

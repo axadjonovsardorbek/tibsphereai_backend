@@ -170,6 +170,11 @@ type OrderI interface {
 	PaymeCancelTransaction(paymeId string, reason int) (*m.PaymeTransactionResult, error)
 	PaymeCheckTransaction(paymeId string) (*m.PaymeTransactionResult, error)
 	PaymeGetStatement(fromMs, toMs int64) ([]m.PaymeStatementItem, error)
+
+	// inPAY (https://inpay.uz/api/): InpayAttach - inPAY order_id'ni orders qatoriga bog'laydi;
+	// InpayComplete - webhook natijasini idempotent qo'llaydi (PAID/CANCELLED).
+	InpayAttach(orderId, inpayOrderId string) error
+	InpayComplete(inpayOrderId string, success bool, transactionId int64, paidAmount float64) (*m.CompleteResult, error)
 }
 
 // PromoCodeI - Hamkor promokodlari (TZ 5-6-bo'lim). Hamkor/admin OLDINDAN tanga

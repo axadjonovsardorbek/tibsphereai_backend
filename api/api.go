@@ -58,6 +58,7 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 	router.POST("/click/prepare", h.ClickPrepare)
 	router.POST("/click/complete", h.ClickComplete)
 	router.POST("/payme", h.PaymeRPC)
+	router.POST("/inpay/callback", h.InpayCallback)
 	router.POST("/mobile/auth/user/otp/send", h.SendConfirmation)
 	router.POST("/mobile/auth/user/otp/confirm", h.VerifyConfirmation)
 	router.POST("/auth/token/refresh", h.RefreshToken)
