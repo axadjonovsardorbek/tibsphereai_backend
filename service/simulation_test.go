@@ -352,7 +352,7 @@ func TestSimulationService_Finish_NoActions_NoReward(t *testing.T) {
 	sm.On("GetEvents", "sess-1").Return([]m.SimulationEventReq{{Type: "question"}}, nil)
 
 	req := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "manual"}
-	sm.On("Finish", req, 100, 0, 0).Return(&m.SimulationFinishRes{SessionId: "sess-1"}, nil)
+	sm.On("Finish", req, 0, 0, 0).Return(&m.SimulationFinishRes{SessionId: "sess-1"}, nil) // harakatsiz finish: final_score 0 (100 emas)
 
 	got, err := svc.Finish(context.Background(), req)
 	require.NoError(t, err)

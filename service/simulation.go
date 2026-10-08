@@ -305,7 +305,8 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 	// hisobga olinadi. AI mavjud bo'lmasa (Debrief=nil, mock/GEMINI_API_KEY
 	// yo'q) yoki xato bersa, jarimasiz (finalScore=healthPercent) davom etadi.
 	var debrief *m.DebriefReportCreateReq
-	if s.ai != nil && s.ai.Debrief != nil && caseRes != nil && eErr == nil {
+	noActions := eErr == nil && actionCount == 0
+	if !noActions && s.ai != nil && s.ai.Debrief != nil && caseRes != nil && eErr == nil {
 		d, usage, dErr := s.ai.Debrief.Generate(ctx, caseRes.Scenario, events)
 		if dErr != nil {
 			fmt.Println("debrief AI generation failed:", dErr)
@@ -321,7 +322,12 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 		}
 	}
 
+	// Hech qanday klinik harakat qilinmasa health_percent 100'da qolgan bo'ladi, lekin
+	// bu "100% muvaffaqiyat" emas - hech narsa qilmagan foydalanuvchining natijasi 0%.
 	finalScore := healthPercent
+	if noActions {
+		finalScore = 0
+	}
 	if debrief != nil {
 		finalScore -= len(debrief.IncorrectSteps) * incorrectStepPenaltyPct
 		if finalScore < 0 {
