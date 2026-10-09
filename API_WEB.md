@@ -855,9 +855,7 @@ point_transactions (kind=coin): coin_purchase, category_unlock, referral_reward,
 - `to` (query, string): 2024-06-30
 - `page` (query, integer): Page
 - `limit` (query, integer): Limit
-**Javob (200):**
-- `count`: integer
-- `transactions`: CoinTransactionRes[]
+**Javob (200):** `PaginationResponse` — `data`: CoinTransactionRes[] (`total`, `page`, `limit`, `total_pages`, `has_previous`, `has_next`)
 
 ### `GET /web/coin-transaction/summary`
 **Tangalar savdosi monitoringi - umumiy ko'rinish**

@@ -84,6 +84,7 @@ type PushEvent struct {
 
 	OrderID    string
 	Amount     string
+	Coins      int // > 0 bo'lsa to'lov tanga paketi uchun (obuna emas)
 	FailReason string
 
 	// AdminTitleJSON/AdminBodyJSON - master_notifications.title/message kabi
@@ -129,7 +130,7 @@ func buildUzPushMessage(e PushEvent) PushMessage {
 	case EventPaymentSuccess:
 		return PushMessage{
 			Title: "To'lov qabul qilindi ✅",
-			Body:  "Premium obunangiz faollashtirildi.",
+			Body:  coinBody(e, "Premium obunangiz faollashtirildi.", "Hisobingizga +%d tanga qo'shildi."),
 			Data:  map[string]string{"type": "payment_success", "order_id": e.OrderID, "amount": e.Amount},
 		}
 	case EventPaymentFailed:
@@ -168,7 +169,7 @@ func buildRuPushMessage(e PushEvent) PushMessage {
 	case EventPaymentSuccess:
 		return PushMessage{
 			Title: "Оплата принята ✅",
-			Body:  "Ваша Premium подписка активирована.",
+			Body:  coinBody(e, "Ваша Premium подписка активирована.", "На ваш счёт зачислено +%d монет."),
 			Data:  map[string]string{"type": "payment_success", "order_id": e.OrderID, "amount": e.Amount},
 		}
 	case EventPaymentFailed:
@@ -207,7 +208,7 @@ func buildEnPushMessage(e PushEvent) PushMessage {
 	case EventPaymentSuccess:
 		return PushMessage{
 			Title: "Payment received ✅",
-			Body:  "Your Premium subscription is now active.",
+			Body:  coinBody(e, "Your Premium subscription is now active.", "+%d coins have been added to your balance."),
 			Data:  map[string]string{"type": "payment_success", "order_id": e.OrderID, "amount": e.Amount},
 		}
 	case EventPaymentFailed:
@@ -227,4 +228,12 @@ func buildEnPushMessage(e PushEvent) PushMessage {
 	default:
 		return PushMessage{Title: "Notification", Body: "You have a new message", Data: map[string]string{"type": "unknown"}}
 	}
+}
+
+// coinBody - tanga paketi to'lovi uchun (e.Coins > 0) tangaga mos matn, aks holda obuna matni.
+func coinBody(e PushEvent, subscription, coinsFmt string) string {
+	if e.Coins > 0 {
+		return fmt.Sprintf(coinsFmt, e.Coins)
+	}
+	return subscription
 }

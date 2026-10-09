@@ -181,7 +181,7 @@ func (s *OrderService) onJustPaid(userId, orderId string) {
 		pushCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		pushEvent := m.PushEvent{Type: m.EventPaymentSuccess, OrderID: orderId}
+		pushEvent := m.PushEvent{Type: m.EventPaymentSuccess, OrderID: orderId, Coins: s.coinPackageCoins(orderId)}
 		pushTarget := m.PushTarget{Type: m.TargetUser, UserID: userId}
 		_ = s.push.SendPush(pushCtx, pushTarget, pushEvent)
 
@@ -277,4 +277,23 @@ func (s *OrderService) reconcileInpay(ctx context.Context) {
 			fmt.Println("inpay reconcile: paid", id)
 		}
 	}
+}
+
+// coinPackageCoins - order tanga paketi uchun bo'lsa paketdagi tanga sonini qaytaradi
+// (bildirishnoma matni "obuna" emas, "tanga qo'shildi" bo'lishi uchun); aks holda 0.
+func (s *OrderService) coinPackageCoins(orderId string) (coins int) {
+	defer func() {
+		if r := recover(); r != nil {
+			coins = 0
+		}
+	}()
+	o, err := s.storage.OrderS.GetById(&m.ById{Id: orderId})
+	if err != nil || o == nil || s.storage.TariffS == nil {
+		return 0
+	}
+	t, err := s.storage.TariffS.GetById(&m.ById{Id: o.TariffId})
+	if err != nil || t == nil || t.Kind == nil || *t.Kind != "coin_package" || t.Coins == nil {
+		return 0
+	}
+	return *t.Coins
 }

@@ -21,7 +21,7 @@ import (
 // @Param to query string false "2024-06-30"
 // @Param page query int false "Page"
 // @Param limit query int false "Limit"
-// @Success 200 {object} models.CoinTransactionList
+// @Success 200 {object} models.PaginationResponse
 // @Security BearerAuth
 // @Router /web/coin-transaction [get]
 func (h *Handler) GetAllCoinTransactions(c *gin.Context) {
@@ -36,13 +36,13 @@ func (h *Handler) GetAllCoinTransactions(c *gin.Context) {
 		Filter: m.Pagination{Page: page, Limit: limit},
 	}
 
-	pagination, res, err := h.Clients.CoinTransaction.GetAll(context.Background(), &req)
+	pagination, _, err := h.Clients.CoinTransaction.GetAll(context.Background(), &req)
 	if err != nil {
 		errs.Bad(c, err)
 		return
 	}
 
-	pagination.Data = res
+	// pagination.Data storage'da allaqachon tranzaksiyalar massivi (boshqa ro'yxatlar kabi).
 	c.JSON(http.StatusOK, pagination)
 }
 
