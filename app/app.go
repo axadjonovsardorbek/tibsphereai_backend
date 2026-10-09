@@ -65,6 +65,7 @@ func Run(cf *config.Config) {
 
 	go bot.BotAuth(cf)
 	go services.StudyPlan.RunReminderScheduler(ctx)
+	go services.Order.RunInpayReconciler(ctx)
 
 	router := api.NewApi(handlers, rdb)
 	log.Println("Server is running on port ", cf.AUTH_PORT)

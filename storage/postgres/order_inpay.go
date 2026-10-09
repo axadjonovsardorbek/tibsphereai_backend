@@ -91,3 +91,30 @@ func (r *OrderRepo) InpayComplete(inpayOrderId string, success bool, transaction
 		JustPaid: true, PaidUserId: userId, PaidOrderId: orderId,
 	}, nil
 }
+
+// InpayListPending - oxirgi 24 soatdagi, hali PAID bo'lmagan inPAY buyurtmalari.
+func (r *OrderRepo) InpayListPending() ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	defer cancel()
+
+	rows, err := r.db.Query(ctx, `
+		SELECT inpay_order_id FROM orders
+		WHERE inpay_order_id IS NOT NULL AND status IN ('NEW','EXPIRED')
+		  AND created_at >= now() - interval '24 hours'
+		ORDER BY created_at DESC LIMIT 100
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("inpay list pending: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}

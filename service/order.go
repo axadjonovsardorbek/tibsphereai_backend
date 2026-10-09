@@ -235,3 +235,46 @@ func (s *OrderService) PaymeCheckTransaction(ctx context.Context, paymeId string
 func (s *OrderService) PaymeGetStatement(ctx context.Context, fromMs, toMs int64) ([]m.PaymeStatementItem, error) {
 	return s.storage.OrderS.PaymeGetStatement(fromMs, toMs)
 }
+
+// RunInpayReconciler - webhook yetib kelmay qolsa ham to'lov qotib qolmasligi uchun
+// kutilayotgan inPAY buyurtmalarini har 10 soniyada inPAY'dan tekshirib, yakunlaydi.
+func (s *OrderService) RunInpayReconciler(ctx context.Context) {
+	if !s.inpay.Enabled() {
+		return
+	}
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.reconcileInpay(ctx)
+		}
+	}
+}
+
+func (s *OrderService) reconcileInpay(ctx context.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("inpay reconcile panic:", r)
+		}
+	}()
+	ids, err := s.storage.OrderS.InpayListPending()
+	if err != nil {
+		fmt.Println("inpay reconcile list:", err)
+		return
+	}
+	for _, id := range ids {
+		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		res, err := s.InpayCallback(cctx, id, 0)
+		cancel()
+		if err != nil {
+			fmt.Println("inpay reconcile", id, err)
+			continue
+		}
+		if res != nil && res.JustPaid {
+			fmt.Println("inpay reconcile: paid", id)
+		}
+	}
+}

@@ -174,6 +174,9 @@ type OrderI interface {
 	// inPAY (https://inpay.uz/api/): InpayAttach - inPAY order_id'ni orders qatoriga bog'laydi;
 	// InpayComplete - webhook natijasini idempotent qo'llaydi (PAID/CANCELLED).
 	InpayAttach(orderId, inpayOrderId string) error
+	// InpayListPending - hali to'lanmagan, inPAY'ga bog'langan buyurtmalarning inPAY order_id'lari
+	// (webhook kelmay qolgan holatda zaxira tekshiruv uchun).
+	InpayListPending() ([]string, error)
 	InpayComplete(inpayOrderId string, success bool, transactionId int64, paidAmount float64) (*m.CompleteResult, error)
 }
 

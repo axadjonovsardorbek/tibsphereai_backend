@@ -1750,3 +1750,12 @@ func (mk *OrderMock) InpayComplete(inpayOrderId string, success bool, transactio
 	}
 	return r0, args.Error(1)
 }
+
+func (mk *OrderMock) InpayListPending() ([]string, error) {
+	args := mk.Called()
+	var r0 []string
+	if args.Get(0) != nil {
+		r0 = args.Get(0).([]string)
+	}
+	return r0, args.Error(1)
+}
