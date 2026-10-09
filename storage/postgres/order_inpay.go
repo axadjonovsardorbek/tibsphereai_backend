@@ -9,12 +9,14 @@ import (
 )
 
 // InpayAttach - inPAY yaratgan order_id'ni bizning orders qatoriga bog'laydi (payment_type='inpay').
+// created_at yangilanadi: oldingi (to'lanmagan) buyurtma qayta ishlatilsa ham sana to'lov
+// yaratilgan vaqtni ko'rsatsin.
 func (r *OrderRepo) InpayAttach(orderId, inpayOrderId string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
 	defer cancel()
 
 	_, err := r.db.Exec(ctx, `
-		UPDATE orders SET inpay_order_id = $2, payment_type = 'inpay', updated_at = now()
+		UPDATE orders SET inpay_order_id = $2, payment_type = 'inpay', created_at = now(), updated_at = now()
 		WHERE id = $1::uuid AND status IN ('NEW','EXPIRED')
 	`, orderId, inpayOrderId)
 	if err != nil {
