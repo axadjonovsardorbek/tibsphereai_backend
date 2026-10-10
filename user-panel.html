@@ -303,6 +303,11 @@
       </div>
     </div>
 
+    <div class="field" style="margin-top:10px">
+      <label>Referral kod (ixtiyoriy — faqat yangi hisob uchun)</label>
+      <input id="referralInput" placeholder="masalan: A1B2C3D4" style="text-transform:uppercase">
+    </div>
+
     <div id="loginErr"></div>
   </div>
 </div>
@@ -619,7 +624,7 @@ function showGoogleFallback(){ document.getElementById('googleFallback').classLi
 async function onGoogleCredential(resp){
   document.getElementById('loginErr').textContent='';
   try{
-    const res = await rawPost('/mobile/auth/google', {id_token: resp.credential});
+    const res = await rawPost('/mobile/auth/google', {id_token: resp.credential, referral_code: refCode()});
     saveSession(res);
   }catch(e){ document.getElementById('loginErr').style.color='#fca5a5'; document.getElementById('loginErr').textContent = e.message; }
 }
@@ -647,6 +652,8 @@ async function checkAccount(){
   }catch(e){ document.getElementById('loginErr').textContent = e.message; document.getElementById('loginErr').style.color = '#fca5a5'; }
 }
 
+function refCode(){ return (document.getElementById('referralInput')?.value || '').trim().toUpperCase(); }
+
 async function sendOtp(){
   const identifier = document.getElementById('identifierInput').value.trim();
   const type = document.getElementById('otpTypeInput').value;
@@ -666,7 +673,7 @@ async function confirmOtp(){
   const confirmation_code = document.getElementById('otpCodeInput').value.trim();
   document.getElementById('loginErr').textContent='';
   try{
-    const res = await rawPost('/mobile/auth/user/otp/confirm', {identifier, confirmation_code, type});
+    const res = await rawPost('/mobile/auth/user/otp/confirm', {identifier, confirmation_code, type, referral_code: refCode()});
     saveSession(res);
   }catch(e){ document.getElementById('loginErr').style.color='#fca5a5'; document.getElementById('loginErr').textContent = e.message; }
 }
@@ -676,7 +683,7 @@ async function doGoogleLogin(){
   document.getElementById('loginErr').textContent='';
   if(!id_token){ document.getElementById('loginErr').textContent='id_token kiriting'; return; }
   try{
-    const res = await rawPost('/mobile/auth/google', {id_token});
+    const res = await rawPost('/mobile/auth/google', {id_token, referral_code: refCode()});
     saveSession(res);
   }catch(e){ document.getElementById('loginErr').style.color='#fca5a5'; document.getElementById('loginErr').textContent = e.message; }
 }
@@ -830,6 +837,7 @@ async function renderProfile(){
     {key:'studyplan', label:'🗓 O\'quv rejasi', render: renderStudyPlan},
     {key:'notifications', label:'🔔 Bildirishnomalar', render: renderNotifications},
     {key:'tariffs', label:'💳 Tariflar', render: renderTariffs},
+    {key:'referral', label:'🎁 Referral', render: renderReferral},
     {key:'promocode', label:'🎟 Promokod', render: renderPromocode},
     {key:'info2', label:'ℹ️ Ilova haqida', render: renderInfo},
     {key:'logout', label:'🚪 Chiqish', render: (body)=>{ body.innerHTML=''; logout(); }},
@@ -1847,6 +1855,32 @@ function openPayLink(url){
 /* ============================================================
    PROMOCODE
    ============================================================ */
+async function renderReferral(main){
+  main.innerHTML = '<p class="pageDesc">/mobile/referral</p>';
+  let r;
+  try{ r = await api('/mobile/referral'); }catch(e){ main.innerHTML += '<p class="muted">Xatolik</p>'; return; }
+  const card = document.createElement('div'); card.className='card stat';
+  card.innerHTML = '<h4>Sizning referral kodingiz</h4>'
+    + '<p style="font-size:26px;font-weight:800;letter-spacing:2px;margin:6px 0">'+esc(r.referral_code)+'</p>'
+    + '<p class="muted">Do\'stingiz ro\'yxatdan o\'tayotganda shu kodni kiritsa: siz <b>+'+esc(r.referrer_reward)+'</b> tanga, u <b>+'+esc(r.referred_reward)+'</b> tanga oladi.</p>';
+  const copyBtn = document.createElement('button'); copyBtn.className='primary'; copyBtn.textContent='📋 Nusxalash'; copyBtn.style.marginTop='8px';
+  copyBtn.onclick = async ()=>{ try{ await navigator.clipboard.writeText(r.referral_code); toast('Nusxalandi','ok'); }catch(e){ toast(r.referral_code,'ok'); } };
+  card.appendChild(copyBtn);
+  main.appendChild(card);
+
+  const stats = document.createElement('p'); stats.style.margin='14px 0 6px';
+  stats.innerHTML = '👥 Taklif qilinganlar: <b>'+esc(r.invited_count)+'</b> · 🪙 Olingan tanga: <b>'+esc(r.total_coins_earned)+'</b>';
+  main.appendChild(stats);
+
+  const list = r.invited || [];
+  if(!list.length){ const p=document.createElement('p'); p.className='muted'; p.textContent='Hali hech kim taklif qilinmagan.'; main.appendChild(p); return; }
+  const table = document.createElement('table');
+  table.innerHTML = '<thead><tr><th>Ism</th><th>Sana</th><th>Tanga</th></tr></thead>';
+  const tb = document.createElement('tbody');
+  list.forEach(i=>{ const tr=document.createElement('tr'); tr.innerHTML='<td>'+esc(i.name||'—')+'</td><td>'+esc((i.joined_at||'').slice(0,10))+'</td><td>+'+esc(i.coins_given)+'</td>'; tb.appendChild(tr); });
+  table.appendChild(tb); main.appendChild(table);
+}
+
 async function renderPromocode(main){
   main.innerHTML = '<p class="pageDesc">/mobile/promocode</p>';
   const row = document.createElement('div'); row.style.display='flex'; row.style.gap='8px'; row.style.maxWidth='420px'; row.style.marginBottom='16px';
