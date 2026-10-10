@@ -186,6 +186,7 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 		{
 			caseGrp.POST("", h.CreateCase)
 			caseGrp.POST("/ai-generate", h.GenerateCaseWithAI)
+			caseGrp.POST("/import", h.ImportCases)
 			caseGrp.GET("", h.GetAllCases)
 			caseGrp.GET("/:id", h.GetByIdCase)
 			caseGrp.PUT("/:id/update", h.UpdateCase)

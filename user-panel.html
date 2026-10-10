@@ -440,6 +440,28 @@ async function api(path, {method='GET', body=null, isForm=false, query=null, sil
   return data;
 }
 
+/* Simulyatsiyani boshlaydi. Bepul limit tugagan bo'lsa va admin "Case ochish narxi"
+   (case_coin_cost) belgilagan bo'lsa - foydalanuvchidan tasdiq so'rab, tanga evaziga
+   (use_coins:true) qayta urinadi. Tasdiqsiz tanga hech qachon yechilmaydi. */
+async function startSim(body){
+  try{
+    return await api('/mobile/simulation/start', {method:'POST', body, silent:true});
+  }catch(e){
+    const isLimit = e.status===403 && JSON.stringify(e.data||'').includes('daily_limit_reached');
+    if(isLimit){
+      let cost = 0;
+      try{ const l = await api('/mobile/user/limit', {silent:true}); cost = (l && l.case_coin_cost) || 0; }catch(_){}
+      if(cost > 0 && confirmDialog('Bepul limit tugadi. Case '+cost+' tanga evaziga boshlansinmi?')){
+        const res = await api('/mobile/simulation/start', {method:'POST', body:{...body, use_coins:true}});
+        try{ renderTopProfile(); }catch(_){}
+        return res;
+      }
+    }
+    toast(e.message, 'err');
+    throw e;
+  }
+}
+
 function extractList(json){
   if(Array.isArray(json)) return {items: json, count: json.length};
   if(json && typeof json === 'object'){
@@ -792,7 +814,7 @@ async function renderHomeNew(){
     cta.disabled = true; const orig = cta.innerHTML; cta.innerHTML = '⏳ Qidirilmoqda...';
     try{
       const rndRes = await api('/mobile/case/random', {query:{category_id:catSel.value, difficulty:homeDifficulty}});
-      const startRes = await api('/mobile/simulation/start', {method:'POST', body:{case_id:rndRes.id, duration_minutes:homeDuration}});
+      const startRes = await startSim({case_id:rndRes.id, duration_minutes:homeDuration});
       startRes.case_id = startRes.case_id || rndRes.id;
       openSimulation(startRes);
     }catch(e){}
@@ -1117,7 +1139,7 @@ async function renderCatalog(){
     const startBtn = document.createElement('button'); startBtn.className='primary'; startBtn.textContent='🩺 Simulyatsiyani boshlash';
     startBtn.onclick = async ()=>{
       try{
-        const res = await api('/mobile/simulation/start', {method:'POST', body:{case_id:cs.id}});
+        const res = await startSim({case_id:cs.id});
         overlay.remove();
         openSimulation(res);
       }catch(e){}
@@ -1420,7 +1442,7 @@ async function openSimulation(startRes){
     try{ await api('/mobile/simulation/'+sim.sessionId+'/finish', {method:'PUT', body:{reason:'manual'}, silent:true}); }catch(e){}
     if(sim.caseId){
       try{
-        const res = await api('/mobile/simulation/start', {method:'POST', body:{case_id:sim.caseId, duration_minutes: sim.timeLimitSec?Math.round(sim.timeLimitSec/60):0}});
+        const res = await startSim({case_id:sim.caseId, duration_minutes: sim.timeLimitSec?Math.round(sim.timeLimitSec/60):0});
         closeSimView(); openSimulation(res);
       }catch(e){}
     }

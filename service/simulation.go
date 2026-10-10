@@ -31,33 +31,78 @@ func (s *SimulationService) hasActiveSubscription(userId string) bool {
 }
 
 // Start - kirish huquqi 2 bosqichda tekshiriladi: 1) faol Premium obuna (cheksiz),
-// 2) kunlik bepul urinish (appSettings). Ikkalasi ham yo'q bo'lsa ErrDailyLimitReached
-// (bo'lim (category) tanga evaziga sotib olish - coin bilan narxlash - olib tashlangan).
+// 2) kunlik bepul urinish (appSettings), 3) limit tugagan bo'lsa va foydalanuvchi use_coins
+// bilan rozi bo'lsa - case_coin_cost tanga evaziga. Hech biri bo'lmasa ErrDailyLimitReached.
 func (s *SimulationService) Start(ctx context.Context, req *m.SimulationStartReq) (*m.SimulationStartRes, error) {
 	hasSub := s.hasActiveSubscription(req.UserId)
 
+	spentCoins := 0
 	if !hasSub {
 		ok, err := s.appSettings.HasFreeAttemptLeft(ctx, req.UserId)
 		if err != nil {
 			return nil, err
 		}
 		if !ok {
-			return nil, errs.ErrDailyLimitReached
+			// Bepul limit tugadi: foydalanuvchi aniq rozi bo'lsa (use_coins) va narx
+			// sozlangan bo'lsa, case tanga evaziga boshlanadi.
+			cost := s.appSettings.CaseCoinCost(ctx)
+			if !req.UseCoins || cost <= 0 {
+				return nil, errs.ErrDailyLimitReached
+			}
+			if err := s.spendCoins(ctx, req.UserId, cost); err != nil {
+				return nil, err
+			}
+			spentCoins = cost
 		}
 	}
 
 	res, err := s.storage.SimulationS.Start(req)
 	if err != nil {
+		if spentCoins > 0 {
+			s.refundCoins(ctx, req.UserId, spentCoins)
+		}
 		return nil, err
 	}
 
-	if !hasSub {
+	if spentCoins > 0 {
+		s.logCoinSpend(ctx, req.UserId, spentCoins, res.SessionId)
+	} else if !hasSub {
 		if err := s.appSettings.ConsumeFreeAttempt(ctx, req.UserId); err != nil {
 			fmt.Println("failed to consume free attempt:", err)
 		}
 	}
 
 	return res, nil
+}
+
+// spendCoins - balansdan atomik yechadi (yetarli bo'lmasa ErrInsufficientCoins).
+func (s *SimulationService) spendCoins(ctx context.Context, userId string, cost int) error {
+	tag, err := s.storage.Db.Exec(ctx, `
+		UPDATE users SET coins = coins - $1, updated_at = now()
+		WHERE id = $2 AND deleted_at = 0 AND coins >= $1
+	`, cost, userId)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return errs.ErrInsufficientCoins
+	}
+	return nil
+}
+
+func (s *SimulationService) refundCoins(ctx context.Context, userId string, cost int) {
+	if _, err := s.storage.Db.Exec(ctx, `UPDATE users SET coins = coins + $1, updated_at = now() WHERE id = $2`, cost, userId); err != nil {
+		fmt.Println("failed to refund coins after failed start:", err)
+	}
+}
+
+func (s *SimulationService) logCoinSpend(ctx context.Context, userId string, cost int, sessionId string) {
+	if _, err := s.storage.Db.Exec(ctx, `
+		INSERT INTO point_transactions (id, user_id, kind, delta, reason, reference_type, reference_id)
+		VALUES (gen_random_uuid(), $1, 'coin', $2, 'case_unlock', 'simulation', $3)
+	`, userId, -cost, sessionId); err != nil {
+		fmt.Println("failed to log case_unlock coin spend:", err)
+	}
 }
 
 // friendlyAIError - AI provayder (Gemini) xatosining xom texnik matni

@@ -38,6 +38,19 @@ func (s *AppSettingService) DailyFreeLimit(ctx context.Context) int {
 	return s.defaultLim
 }
 
+// CaseCoinCost - limit tugaganda 1 ta case'ni boshlash narxi (tanga). Sozlanmagan yoki
+// manfiy bo'lsa 0 (tanga bilan ochish o'chiq).
+func (s *AppSettingService) CaseCoinCost(ctx context.Context) int {
+	setting, err := s.storage.AppSettingS.Get(m.AppSettingCaseCoinCost)
+	if err != nil || setting == nil {
+		return 0
+	}
+	if v, err := strconv.Atoi(setting.Value); err == nil && v > 0 {
+		return v
+	}
+	return 0
+}
+
 // HasFreeAttemptLeft - kunlik limit tekshiruvi (Premium bo'lmagan foydalanuvchilar uchun).
 func (s *AppSettingService) HasFreeAttemptLeft(ctx context.Context, userId string) (bool, error) {
 	used, err := s.storage.AppSettingS.GetTodayFreeAttemptsUsed(userId)
@@ -143,5 +156,5 @@ func (s *AppSettingService) GetLimitStatus(ctx context.Context, userId string) (
 	if remaining < 0 {
 		remaining = 0
 	}
-	return &m.UserLimitStatusRes{Used: used, Total: total, Remaining: remaining}, nil
+	return &m.UserLimitStatusRes{Used: used, Total: total, Remaining: remaining, CaseCoinCost: s.CaseCoinCost(ctx)}, nil
 }

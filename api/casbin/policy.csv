@@ -81,6 +81,7 @@ p, admin, /web/topic/:id/update, PUT
 p, admin, /web/topic/:id/delete, DELETE
 p, admin, /web/case, POST
 p, admin, /web/case/ai-generate, POST
+p, admin, /web/case/import, POST
 p, admin, /web/case, GET
 p, admin, /web/case/:id, GET
 p, admin, /web/case/:id/update, PUT

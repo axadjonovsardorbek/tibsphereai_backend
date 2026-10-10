@@ -31,13 +31,14 @@ func (h *Handler) StartSimulation(c *gin.Context) {
 	var body struct {
 		CaseId          string `json:"case_id"`
 		DurationMinutes int    `json:"duration_minutes"`
+		UseCoins        bool   `json:"use_coins"`
 	}
 	if err := c.BindJSON(&body); err != nil {
 		errs.Bad(c, err)
 		return
 	}
 
-	res, err := h.Clients.Simulation.Start(context.Background(), &m.SimulationStartReq{UserId: userId, CaseId: body.CaseId, DurationMinutes: body.DurationMinutes})
+	res, err := h.Clients.Simulation.Start(context.Background(), &m.SimulationStartReq{UserId: userId, CaseId: body.CaseId, DurationMinutes: body.DurationMinutes, UseCoins: body.UseCoins})
 	if err != nil {
 		errs.Bad(c, err)
 		return

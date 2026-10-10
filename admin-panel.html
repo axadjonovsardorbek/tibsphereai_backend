@@ -499,6 +499,52 @@ function buildFormField(container, f, values, refData, onChange){
   return wrap;
 }
 
+/* Case'larni bitta .xlsx/.csv fayldan ommaviy yuklash (POST /web/case/import).
+   Birinchi qator - sarlavha. "Darhol e'lon qilish" belgilansa case'lar draft emas, published bo'ladi. */
+const CASE_IMPORT_HEADERS = ['topic','title_uz','title_ru','title_en','subtitle_uz','subtitle_ru','subtitle_en','chief_complaint_uz','chief_complaint_ru','chief_complaint_en','difficulty','patient_age','patient_gender','expected_duration_minutes','hr','bp','spo2','rr','temp','gcs','visual_state','expected_answer','cover_image_url','order_num','scenario'];
+function openCaseImport(refresh){
+  const overlay = document.createElement('div'); overlay.className='modalOverlay';
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+  const modal = document.createElement('div'); modal.className='modal';
+  modal.innerHTML = '<h3>Case\'larni fayldan yuklash</h3>'+
+    '<p class="muted" style="font-size:12px;margin:6px 0 10px">Bitta <b>.xlsx</b> yoki <b>.csv</b> fayl, birinchi qator - sarlavha, har keyingi qator - bitta case. '+
+    'Majburiy: <code>title_uz</code> (yoki title_ru/title_en). <code>topic</code> - mavzu nomi yoki ID. <code>difficulty</code>: easy|medium|hard (bo\'sh = medium). '+
+    '<code>scenario</code> - ixtiyoriy JSON. Ko\'pi bilan 500 qator.</p>';
+  const tpl = document.createElement('button'); tpl.className='sm'; tpl.textContent='⬇️ Namuna CSV';
+  tpl.onclick = ()=>{
+    const sample = ['Kardiologiya','Ko\'krak og\'rig\'i','','','','','','Ko\'krak qafasida siquvchi og\'riq','','','medium','55','male','10','110','140/90','96','20','36.8','15','','','','1','']; 
+    const csv = '\ufeff' + CASE_IMPORT_HEADERS.join(',') + '\n' + sample.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',') + '\n';
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'})); a.download='cases-template.csv'; a.click();
+  };
+  modal.appendChild(tpl);
+  const fileRow = document.createElement('div'); fileRow.className='field'; fileRow.style.marginTop='10px';
+  const fileInp = document.createElement('input'); fileInp.type='file'; fileInp.accept='.xlsx,.csv';
+  fileRow.innerHTML='<label>Fayl (.xlsx / .csv)</label>'; fileRow.appendChild(fileInp); modal.appendChild(fileRow);
+  const pubRow = document.createElement('label'); pubRow.style.cssText='display:flex;gap:8px;align-items:center;margin:8px 0';
+  const pubChk = document.createElement('input'); pubChk.type='checkbox';
+  pubRow.appendChild(pubChk); pubRow.appendChild(document.createTextNode('Darhol e\'lon qilish (deploy) — aks holda draft bo\'lib qoladi'));
+  modal.appendChild(pubRow);
+  const result = document.createElement('div'); result.style.cssText='max-height:220px;overflow:auto;font-size:12px;margin-top:8px'; modal.appendChild(result);
+  const footer = document.createElement('div'); footer.className='modalFooter';
+  const closeBtn = document.createElement('button'); closeBtn.textContent='Yopish'; closeBtn.onclick=()=>overlay.remove();
+  const goBtn = document.createElement('button'); goBtn.className='primary'; goBtn.textContent='📥 Yuklash';
+  goBtn.onclick = async ()=>{
+    if(!fileInp.files[0]){ toast('Fayl tanlang','err'); return; }
+    const fd = new FormData(); fd.append('file', fileInp.files[0]); fd.append('publish', pubChk.checked ? 'true' : 'false');
+    goBtn.disabled = true; result.innerHTML='<span class="muted">Yuklanmoqda...</span>';
+    try{
+      const r = await api('/web/case/import', {method:'POST', body:fd, isForm:true});
+      let html = '<p>✅ Yaratildi: <b>'+esc(r.created)+'</b> / '+esc(r.total)+(pubChk.checked?' · e\'lon qilindi: <b>'+esc(r.published)+'</b>':'')+(r.failed?' · ❌ xato: <b>'+esc(r.failed)+'</b>':'')+'</p>';
+      if((r.errors||[]).length) html += '<ul>'+r.errors.map(x=>'<li>Qator '+esc(x.row)+': '+esc(x.message)+'</li>').join('')+'</ul>';
+      result.innerHTML = html;
+      if(r.created) refresh();
+    }catch(e){ result.innerHTML=''; }
+    goBtn.disabled = false;
+  };
+  footer.appendChild(closeBtn); footer.appendChild(goBtn); modal.appendChild(footer);
+  overlay.appendChild(modal); document.body.appendChild(overlay);
+}
+
 function openModal({title, fields, values, onSubmit, refData}){
   const overlay = document.createElement('div');
   overlay.className = 'modalOverlay';
@@ -807,7 +853,9 @@ const MODULES = {
           }
         });
       };
-      return [b];
+      const imp = document.createElement('button'); imp.className='primary'; imp.textContent='📥 Excel/CSV yuklash';
+      imp.onclick = ()=>openCaseImport(refresh);
+      return [b, imp];
     }
   },
   partner: {
@@ -836,7 +884,7 @@ const MODULES = {
       {name:'scope', label:'Kim uchun', type:'select', options:[{value:'limited',label:'Bir nechta odam uchun (max_uses ta)'},{value:'user',label:'Aynan bitta odam uchun'},{value:'users',label:'Aniq bir nechta odam uchun (ro\'yxat)'},{value:'all',label:'Hamma uchun'}]},
       {name:'target_user_id', label:'Foydalanuvchi (faqat "aynan bitta odam uchun")', type:'userpicker', showIf:v=>v.scope==='user'},
       {name:'target_user_ids', label:'Foydalanuvchilar (faqat "aniq bir nechta odam" — qidirib bir nechtasini tanlang)', type:'userpicker', multi:true, showIf:v=>v.scope==='users'},
-      {name:'max_uses', label:'Nechta odam ishlata oladi (default 1)', type:'number', showIf:v=>(v.scope||'limited')==='limited'},
+      {name:'max_uses', label:'Foydalanuvchilar soni — nechta odam ishlata oladi (default 1)', type:'number', showIf:v=>(v.scope||'limited')==='limited'},
       {name:'expires_at', label:'Amal qilish muddati (YYYY-MM-DD)', type:'text'},
     ],
     canCreate:true, canUpdate:false, canDelete:true,
@@ -1291,7 +1339,7 @@ async function renderCoinMonitoring(){
 
   const toolbar = document.createElement('div'); toolbar.className='toolbar';
   const reasonSel = document.createElement('select');
-  [['','— barcha sabablar —'],['coin_purchase','Tanga sotib olish'],['category_unlock','Bo\'lim ochish'],['referral_reward','Referral'],['promo_redeem','Promokod'],['simulation_finish','Simulyatsiya']].forEach(([v,l])=>{
+  [['','— barcha sabablar —'],['coin_purchase','Tanga sotib olish'],['category_unlock','Bo\'lim ochish'],['case_unlock','Case ochish (tanga)'],['referral_reward','Referral'],['promo_redeem','Promokod'],['simulation_finish','Simulyatsiya']].forEach(([v,l])=>{
     const o=document.createElement('option'); o.value=v; o.textContent=l; reasonSel.appendChild(o);
   });
   const userI = document.createElement('input'); userI.placeholder='User ID';
@@ -1526,6 +1574,29 @@ async function renderSettings(){
         rewardInputs.medium_multiplier.value = r.medium_multiplier;
         rewardInputs.hard_multiplier.value = r.hard_multiplier;
       }
+    }catch(e){}
+  })();
+
+  // --- Case ochish narxi (tanga): kunlik bepul limit tugagach, obunasiz foydalanuvchi
+  // 1 ta case'ni shu narxga (tanga) boshlashi mumkin. 0 - o'chiq. Kalit: case_coin_cost. ---
+  const coinCard = document.createElement('div'); coinCard.className='card'; coinCard.style.marginBottom='16px';
+  coinCard.innerHTML = '<div class="v" style="font-size:16px;margin-bottom:4px">🪙 Case ochish narxi (tanga)</div>'+
+    '<div class="l" style="margin-bottom:10px">Kunlik bepul limit tugagach, Premium bo\'lmagan foydalanuvchi 1 ta case\'ni shu miqdordagi tanga evaziga '+
+    'boshlashi mumkin (foydalanuvchi tasdiqlagandan keyin yechiladi). <b>0</b> - bu imkoniyat o\'chiq.</div>';
+  const coinRow = document.createElement('div'); coinRow.style.cssText='display:flex;gap:8px;align-items:center;max-width:320px';
+  const coinInp = document.createElement('input'); coinInp.type='number'; coinInp.min='0'; coinInp.step='1'; coinInp.placeholder='masalan: 5';
+  const coinBtn = document.createElement('button'); coinBtn.className='primary'; coinBtn.textContent='💾 Saqlash';
+  coinBtn.onclick = async()=>{
+    const v = Math.max(0, parseInt(coinInp.value||'0', 10) || 0);
+    try{ await api('/web/setting', {method:'PUT', body:{key:'case_coin_cost', value:String(v)}}); coinInp.value=v; toast('Case narxi saqlandi','ok'); }catch(e){}
+  };
+  coinRow.appendChild(coinInp); coinRow.appendChild(coinBtn); coinCard.appendChild(coinRow);
+  main.appendChild(coinCard);
+  (async()=>{
+    try{
+      const all = await api('/web/setting');
+      const it = (Array.isArray(all)?all:[]).find(x=>x.key==='case_coin_cost');
+      coinInp.value = it ? it.value : '0';
     }catch(e){}
   })();
 

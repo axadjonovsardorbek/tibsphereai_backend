@@ -8,6 +8,9 @@ type SimulationStartReq struct {
 	// DurationMinutes - home ekranda tanlangan davomiylik (masalan 5/10/15),
 	// berilsa case'ning o'z expected_duration_minutes'ini bosib o'tadi.
 	DurationMinutes int `json:"duration_minutes"`
+	// UseCoins - bepul limit tugagan bo'lsa case'ni tanga evaziga boshlashga rozilik
+	// (narx app_settings.case_coin_cost). false bo'lsa tanga hech qachon yechilmaydi.
+	UseCoins bool `json:"use_coins"`
 }
 
 type SimulationStartRes struct {

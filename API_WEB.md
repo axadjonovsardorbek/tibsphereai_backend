@@ -1341,3 +1341,16 @@ File upload
 - `file` (formData, file) (majburiy): File
 **Javob (200):**
 `string`
+
+## Case'larni fayldan ommaviy yuklash
+
+### `POST /web/case/import` (multipart/form-data)
+- `file` — `.xlsx` yoki `.csv` (≤5MB, ≤500 qator). Birinchi qator — sarlavha.
+- `publish` — `true` bo'lsa yaratilgan case'lar darhol e'lon qilinadi, aks holda draft.
+- Ustunlar: `topic` (mavzu nomi yoki ID), `title_uz/ru/en` (kamida bittasi majburiy), `subtitle_*`, `chief_complaint_*`,
+  `difficulty` (easy|medium|hard, bo'sh = medium), `patient_age`, `patient_gender`, `expected_duration_minutes`,
+  `hr`, `bp`, `spo2`, `rr`, `temp`, `gcs`, `visual_state`, `expected_answer`, `cover_image_url`, `order_num`, `scenario` (JSON).
+- Javob: `{total, created, published, failed, ids[], errors[{row, message}]}` — xatoli qatorlar o'tkazib yuboriladi.
+
+## Case ochish narxi (tanga)
+`PUT /web/setting` `{"key":"case_coin_cost","value":"5"}` — kunlik bepul limit tugagach case'ni tanga evaziga boshlash narxi (0 = o'chiq).

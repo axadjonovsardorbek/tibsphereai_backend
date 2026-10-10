@@ -2,8 +2,11 @@ package handler
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"net/http"
 	"tibsphereai/pkg/errs"
+	"tibsphereai/service"
 
 	m "tibsphereai/pkg/models"
 
@@ -255,4 +258,48 @@ func (h *Handler) GetRandomCase(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, res)
+}
+
+// ImportCases godoc
+// @Summary Case'larni bitta Excel (.xlsx) yoki CSV fayldan ommaviy yuklash
+// @Description Birinchi qator - sarlavha: topic, title_uz/ru/en, subtitle_uz/ru/en, chief_complaint_uz/ru/en,
+// @Description difficulty (easy|medium|hard), patient_age, patient_gender, expected_duration_minutes,
+// @Description hr, bp, spo2, rr, temp, gcs, visual_state, expected_answer, cover_image_url, order_num, scenario (JSON).
+// @Description publish=true bo'lsa yaratilgan case'lar darhol e'lon qilinadi (deploy), aks holda draft.
+// @Tags case
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true ".xlsx yoki .csv"
+// @Param publish formData bool false "Darhol e'lon qilish"
+// @Success 200 {object} models.CaseImportRes
+// @Security BearerAuth
+// @Router /web/case/import [post]
+func (h *Handler) ImportCases(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 5<<20)
+
+	fh, err := c.FormFile("file")
+	if err != nil {
+		errs.Bad(c, fmt.Errorf("file majburiy (.xlsx yoki .csv): %w", err))
+		return
+	}
+	f, err := fh.Open()
+	if err != nil {
+		errs.Bad(c, err)
+		return
+	}
+	defer f.Close()
+	data, err := io.ReadAll(f)
+	if err != nil {
+		errs.Bad(c, err)
+		return
+	}
+
+	rows, err := service.ParseCaseImportFile(fh.Filename, data)
+	if err != nil {
+		errs.Bad(c, err)
+		return
+	}
+
+	publish := c.PostForm("publish") == "true"
+	c.JSON(http.StatusOK, h.Clients.Case.ImportCases(c.Request.Context(), rows, publish))
 }

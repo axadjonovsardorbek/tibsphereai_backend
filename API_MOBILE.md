@@ -676,3 +676,11 @@ Frontend `url` ni ochadi (yangi tab / webview). To'lov tugagach inPAY backend we
 (`POST /inpay/callback`) xabar beradi va order `PAID` bo'ladi — frontend
 `GET /web/order/{id}` yoki obuna holatini poll qilib natijani bilib oladi.
 `just_paid: true` (to'liq tangaga yopilgan) bo'lsa `url` bo'sh bo'ladi. Minimal to'lov 1000 so'm.
+
+## Limit tugaganda case'ni tanga evaziga boshlash
+
+- `GET /mobile/user/limit` javobida `case_coin_cost` (0 = o'chiq) keladi.
+- Bepul limit tugagan va obunasiz foydalanuvchida `POST /mobile/simulation/start` `403 daily_limit_reached` qaytaradi.
+  `case_coin_cost > 0` bo'lsa, foydalanuvchidan tasdiq so'rab, shu so'rovni `"use_coins": true` bilan qayta yuboring:
+  narx balansdan yechiladi (yetarli bo'lmasa `insufficient_coins`), tranzaksiya sababi `case_unlock`.
+  `use_coins` bo'lmasa tanga hech qachon yechilmaydi.

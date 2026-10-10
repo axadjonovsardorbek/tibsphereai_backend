@@ -143,3 +143,20 @@ type CaseRandomReq struct {
 	CategoryId string `json:"category_id"` // bo'sh - filtersiz (istalgan bo'lim)
 	Difficulty string `json:"difficulty"`  // easy|medium|hard, bo'sh - filtersiz
 }
+
+// CaseImportRowError - fayldagi bitta qator xatosi (Row - fayldagi qator raqami, sarlavha = 1).
+type CaseImportRowError struct {
+	Row     int    `json:"row"`
+	Message string `json:"message"`
+}
+
+// CaseImportRes - Excel/CSV orqali ommaviy yuklash natijasi. Xatoli qatorlar o'tkazib
+// yuboriladi, qolganlari baribir yaratiladi (qisman muvaffaqiyat).
+type CaseImportRes struct {
+	Total     int                  `json:"total"`
+	Created   int                  `json:"created"`
+	Published int                  `json:"published"`
+	Failed    int                  `json:"failed"`
+	Ids       []string             `json:"ids"`
+	Errors    []CaseImportRowError `json:"errors"`
+}

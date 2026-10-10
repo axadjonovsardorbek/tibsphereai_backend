@@ -16,6 +16,10 @@ type AppSettingRes struct {
 
 const AppSettingDailyFreeLimit = "daily_free_limit"
 
+// AppSettingCaseCoinCost - kunlik bepul limit tugaganda 1 ta case'ni boshlash narxi (tanga).
+// 0 - tanga bilan ochish o'chiq.
+const AppSettingCaseCoinCost = "case_coin_cost"
+
 // AppSettingVoiceEnabled - "true"/"false", platforma ovozli funksiyasi (shikoyat/chat
 // matnini frontend TTS orqali o'qib berish) global yoqilgan/o'chirilganini bildiradi.
 const AppSettingVoiceEnabled = "voice_enabled"
@@ -32,6 +36,9 @@ type UserLimitStatusRes struct {
 	Total           int  `json:"total"`
 	Remaining       int  `json:"remaining"`
 	HasSubscription bool `json:"has_subscription"` // true - limit cheksiz (Premium)
+	// CaseCoinCost - limit tugagach 1 ta case necha tanga turishi (0 - o'chiq). Frontend
+	// shu bilan "N tanga evaziga boshlash" tugmasini ko'rsatadi.
+	CaseCoinCost int `json:"case_coin_cost"`
 }
 
 // --- Case qiyinlik darajasi (difficulty) koeffitsienti (admin sozlaydi) ---
