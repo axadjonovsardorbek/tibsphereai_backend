@@ -893,10 +893,11 @@ const MODULES = {
       {name:'scope', label:'Kim uchun', type:'select', options:[{value:'limited',label:'Bir nechta odam uchun (max_uses ta)'},{value:'user',label:'Aynan bitta odam uchun'},{value:'users',label:'Aniq bir nechta odam uchun (ro\'yxat)'},{value:'all',label:'Hamma uchun'}]},
       {name:'target_user_id', label:'Foydalanuvchi (faqat "aynan bitta odam uchun")', type:'userpicker', showIf:v=>v.scope==='user'},
       {name:'target_user_ids', label:'Foydalanuvchilar (faqat "aniq bir nechta odam" — qidirib bir nechtasini tanlang)', type:'userpicker', multi:true, showIf:v=>v.scope==='users'},
-      {name:'max_uses', label:'Maksimal ishlatish (Jami) — kod hammasi bo\'lib necha marta ishlatilishi mumkin (default 1)', type:'number', showIf:v=>(v.scope||'limited')==='limited'},
-      {name:'max_uses_per_user', label:'Maksimal ishlatish (Har bir foydalanuvchi) — bitta odam necha marta ishlata oladi (default 1)', type:'number'},
+      {name:'max_uses', label:'Maksimal ishlatish (Jami) — kod hammasi bo\'lib necha marta ishlatilishi mumkin (0 = cheksiz)', type:'number', showIf:v=>(v.scope||'limited')==='limited'},
+      {name:'max_uses_per_user', label:'Maksimal ishlatish (Har bir foydalanuvchi) — bitta odam necha marta ishlata oladi (0 = cheksiz)', type:'number'},
       {name:'expires_at', label:'Amal qilish muddati (YYYY-MM-DD)', type:'text'},
     ],
+    createValues:{scope:'limited', max_uses:1, max_uses_per_user:1},
     canCreate:true, canUpdate:false, canDelete:true,
   },
   admin: {
@@ -1033,7 +1034,7 @@ async function renderGenericModule(key){
     openModal({
       title: 'Yangi: ' + cfg.label,
       fields: refFields,
-      values: {},
+      values: cfg.createValues || {},
       onSubmit: async (body)=>{
         await api(cfg.base, {method:'POST', body});
         toast('Yaratildi', 'ok');

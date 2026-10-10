@@ -17,9 +17,10 @@ type PromoCodeCreateReq struct {
 	// TargetUserIds - scope="users": aynan shu foydalanuvchilar ro'yxati (har biri 1 marta).
 	TargetUserIds []string `json:"target_user_ids"`
 	// MaxUses - JAMI ishlatishlar soni (scope="limited"). MaxUsesPerUser - bitta foydalanuvchi
-	// bitta kodni necha marta ishlata olishi (default 1).
-	MaxUses        int `json:"max_uses"`
-	MaxUsesPerUser int `json:"max_uses_per_user"`
+	// bitta kodni necha marta ishlata olishi. Ikkalasida ham: ko'rsatilmasa (null) - 1,
+	// 0 - CHEKSIZ, manfiy - xato.
+	MaxUses        *int `json:"max_uses"`
+	MaxUsesPerUser *int `json:"max_uses_per_user"`
 }
 
 type PromoCodeRes struct {

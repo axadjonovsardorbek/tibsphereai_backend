@@ -1357,5 +1357,6 @@ File upload
 
 ### Promokod: ishlatish limitlari
 `POST /web/promocode` body: `max_uses` — JAMI ishlatishlar soni (`scope=limited`), `max_uses_per_user` — bitta foydalanuvchi
-bir kodni necha marta ishlata olishi (default 1). `scope=user` da jami = `max_uses_per_user`, `scope=users` da jami = odamlar soni × `max_uses_per_user`.
+bir kodni necha marta ishlata olishi. Ikkalasida ham: ko'rsatilmasa — **1**, **0 — cheksiz**, manfiy — xato.
+`scope=user` da jami = `max_uses_per_user`, `scope=users` da jami = odamlar soni × `max_uses_per_user` (0 bo'lsa cheksiz).
 Limitdan oshsa: `promo_code_already_redeemed` (shaxsiy limit) yoki `promo_code_used` (jami limit).

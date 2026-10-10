@@ -29,13 +29,17 @@ func (r *PromoCodeRepo) Create(req *m.PromoCodeCreateReq) (*m.ById, error) {
 	scope := req.Scope
 	if scope == "" {
 		scope = "limited"
-		if req.MaxUses == 0 {
-			req.MaxUses = 1
-		}
 	}
-	perUser := req.MaxUsesPerUser
-	if perUser < 1 {
-		perUser = 1
+	// ko'rsatilmasa - 1; 0 - cheksiz; manfiy - xato.
+	orDefault := func(p *int) (int, bool) {
+		if p == nil {
+			return 1, true
+		}
+		return *p, *p >= 0
+	}
+	perUser, ok := orDefault(req.MaxUsesPerUser)
+	if !ok {
+		return nil, errs.ErrPromoCodeScopeInvalid
 	}
 	var targetUser, maxUses interface{}
 	switch scope {
@@ -44,7 +48,9 @@ func (r *PromoCodeRepo) Create(req *m.PromoCodeCreateReq) (*m.ById, error) {
 			return nil, errs.ErrPromoCodeScopeInvalid
 		}
 		targetUser = req.TargetUserId
-		maxUses = perUser
+		if perUser > 0 {
+			maxUses = perUser
+		}
 	case "users":
 		seen := map[string]bool{}
 		ids := req.TargetUserIds[:0:0]
@@ -58,12 +64,17 @@ func (r *PromoCodeRepo) Create(req *m.PromoCodeCreateReq) (*m.ById, error) {
 			return nil, errs.ErrPromoCodeScopeInvalid
 		}
 		req.TargetUserIds = ids
-		maxUses = len(ids) * perUser
+		if perUser > 0 {
+			maxUses = len(ids) * perUser
+		}
 	case "limited":
-		if req.MaxUses < 1 {
+		total, ok := orDefault(req.MaxUses)
+		if !ok {
 			return nil, errs.ErrPromoCodeScopeInvalid
 		}
-		maxUses = req.MaxUses
+		if total > 0 {
+			maxUses = total
+		} // 0 - jami cheksiz (max_uses NULL)
 	case "all":
 		// cheklanmagan: max_uses NULL
 	default:
@@ -263,7 +274,7 @@ func (r *PromoCodeRepo) Redeem(req *m.PromoCodeRedeemReq) (int, error) {
 	`, id, req.UserId).Scan(&userUses); err != nil {
 		return 0, fmt.Errorf("error while checking promo redemption: %w", err)
 	}
-	if userUses >= perUser {
+	if perUser > 0 && userUses >= perUser { // 0 - cheksiz
 		return 0, errs.ErrPromoCodeAlreadyRedeemed
 	}
 	if status == "expired" || expired {
