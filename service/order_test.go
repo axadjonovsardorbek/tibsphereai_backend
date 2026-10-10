@@ -65,12 +65,14 @@ func TestOrderService_Create_NotJustPaid_NoNotification(t *testing.T) {
 	svc := newOrderTestService(om, nm)
 
 	req := &m.OrderCreateReq{UserId: "user-1", TariffId: "tariff-1"}
-	want := &m.OrderCreateRes{Id: "order-2", Url: "https://checkout.paycom.uz/xxx", JustPaid: false}
+	want := &m.OrderCreateRes{Id: "order-2", JustPaid: false}
 	om.On("Create", req).Return(want, nil)
 
-	got, err := svc.Create(context.Background(), req)
-	require.NoError(t, err)
-	assert.Equal(t, want, got)
+	// Click olib tashlangan: gateway kerak bo'lgan buyurtma faqat inPAY orqali yaratiladi,
+	// inPAY sozlanmagan test service'da esa aniq xato qaytadi (va bildirishnoma yaratilmaydi).
+	_, err := svc.Create(context.Background(), req)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "inpay provider is not configured")
 
 	time.Sleep(50 * time.Millisecond)
 	nm.AssertNotCalled(t, "Create", mock.Anything)

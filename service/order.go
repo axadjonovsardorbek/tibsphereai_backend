@@ -47,7 +47,8 @@ func (s *OrderService) Create(ctx context.Context, req *m.OrderCreateReq) (*m.Or
 		s.onJustPaid(req.UserId, res.Id)
 		return res, nil
 	}
-	if req.Provider == "inpay" {
+	// Click to'lovdan olib tashlandi: provider berilmasa ham inPAY ishlatiladi.
+	{
 		url, err := s.createInpayPayment(ctx, res.Id)
 		if err != nil {
 			return nil, err

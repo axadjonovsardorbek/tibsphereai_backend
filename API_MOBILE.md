@@ -669,7 +669,7 @@ Get a appRoute by their ID
 ## inPAY to'lov (yangi provider)
 
 `POST /mobile/subscription` body: `{"tariff_id": "...", "coins_used": 0, "provider": "inpay"}`
-(`provider`: `click` — default, yoki `inpay`).
+(`provider` ixtiyoriy: faqat `inpay`; Click to'lovdan olib tashlangan, berilmasa ham inPAY ishlatiladi).
 
 Javob: `{"order_id": "...", "url": "<inPAY pay_url>", "just_paid": false}`.
 Frontend `url` ni ochadi (yangi tab / webview). To'lov tugagach inPAY backend webhook'iga

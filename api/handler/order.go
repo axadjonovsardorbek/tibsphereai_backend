@@ -34,9 +34,9 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 	}
 
 	switch body.Provider {
-	case "", "click", "inpay":
+	case "", "inpay":
 	default:
-		errs.Bad(c, fmt.Errorf("provider must be click or inpay"))
+		errs.Bad(c, fmt.Errorf("provider must be inpay"))
 		return
 	}
 
