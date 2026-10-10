@@ -517,6 +517,15 @@ function openCaseImport(refresh){
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'})); a.download='cases-template.csv'; a.click();
   };
   modal.appendChild(tpl);
+  const tplX = document.createElement('button'); tplX.className='sm'; tplX.style.marginLeft='6px'; tplX.textContent='⬇️ Namuna Excel (.xlsx)';
+  tplX.onclick = async ()=>{
+    try{
+      const res = await fetch(state.baseUrl.replace(/\/$/,'') + '/web/case/import/template', {headers:{'Authorization':'Bearer '+state.access}});
+      if(!res.ok) throw new Error('Xatolik ('+res.status+')');
+      const a = document.createElement('a'); a.href = URL.createObjectURL(await res.blob()); a.download='cases-template.xlsx'; a.click();
+    }catch(e){ toast(e.message,'err'); }
+  };
+  modal.appendChild(tplX);
   const fileRow = document.createElement('div'); fileRow.className='field'; fileRow.style.marginTop='10px';
   const fileInp = document.createElement('input'); fileInp.type='file'; fileInp.accept='.xlsx,.csv';
   fileRow.innerHTML='<label>Fayl (.xlsx / .csv)</label>'; fileRow.appendChild(fileInp); modal.appendChild(fileRow);

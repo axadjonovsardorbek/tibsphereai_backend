@@ -56,7 +56,7 @@ func TestCaseService_ImportCases(t *testing.T) {
 
 	rows := []map[string]string{
 		{"_row": "2", "title_uz": "A", "temp": "36,6"},
-		{"_row": "3", "difficulty": "hard"},                       // title yo'q
+		{"_row": "3", "difficulty": "hard"},                        // title yo'q
 		{"_row": "4", "title_uz": "B", "difficulty": "impossible"}, // yaroqsiz difficulty
 	}
 	res := svc.ImportCases(context.Background(), rows, true)

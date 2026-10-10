@@ -303,3 +303,20 @@ func (h *Handler) ImportCases(c *gin.Context) {
 	publish := c.PostForm("publish") == "true"
 	c.JSON(http.StatusOK, h.Clients.Case.ImportCases(c.Request.Context(), rows, publish))
 }
+
+// CaseImportTemplate godoc
+// @Summary Case yuklash uchun Excel shablon (.xlsx)
+// @Tags case
+// @Produce application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+// @Success 200 {file} file
+// @Security BearerAuth
+// @Router /web/case/import/template [get]
+func (h *Handler) CaseImportTemplate(c *gin.Context) {
+	data, err := service.CaseImportTemplateXLSX()
+	if err != nil {
+		errs.Bad(c, err)
+		return
+	}
+	c.Header("Content-Disposition", `attachment; filename="cases-template.xlsx"`)
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", data)
+}
