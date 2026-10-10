@@ -16,26 +16,30 @@ type PromoCodeCreateReq struct {
 	TargetUserId string `json:"target_user_id"`
 	// TargetUserIds - scope="users": aynan shu foydalanuvchilar ro'yxati (har biri 1 marta).
 	TargetUserIds []string `json:"target_user_ids"`
-	MaxUses       int      `json:"max_uses"`
+	// MaxUses - JAMI ishlatishlar soni (scope="limited"). MaxUsesPerUser - bitta foydalanuvchi
+	// bitta kodni necha marta ishlata olishi (default 1).
+	MaxUses        int `json:"max_uses"`
+	MaxUsesPerUser int `json:"max_uses_per_user"`
 }
 
 type PromoCodeRes struct {
-	Id            *string  `json:"id"`
-	Code          *string  `json:"code"`
-	PartnerId     *string  `json:"partner_id"`
-	PartnerName   *string  `json:"partner_name"`
-	Value         *int     `json:"value"`
-	CreatedBy     *string  `json:"created_by"`
-	UsedBy        *string  `json:"used_by"`
-	Status        *string  `json:"status"` // active | used | expired
-	IssuedAt      *string  `json:"issued_at"`
-	ExpiresAt     *string  `json:"expires_at"`
-	UsedAt        *string  `json:"used_at"`
-	Scope         *string  `json:"scope"`
-	TargetUserId  *string  `json:"target_user_id"`
-	MaxUses       *int     `json:"max_uses"` // null = cheklanmagan (scope=all)
-	UsedCount     *int     `json:"used_count"`
-	TargetUserIds []string `json:"target_user_ids"` // scope=users
+	Id             *string  `json:"id"`
+	Code           *string  `json:"code"`
+	PartnerId      *string  `json:"partner_id"`
+	PartnerName    *string  `json:"partner_name"`
+	Value          *int     `json:"value"`
+	CreatedBy      *string  `json:"created_by"`
+	UsedBy         *string  `json:"used_by"`
+	Status         *string  `json:"status"` // active | used | expired
+	IssuedAt       *string  `json:"issued_at"`
+	ExpiresAt      *string  `json:"expires_at"`
+	UsedAt         *string  `json:"used_at"`
+	Scope          *string  `json:"scope"`
+	TargetUserId   *string  `json:"target_user_id"`
+	MaxUses        *int     `json:"max_uses"` // jami ishlatishlar; null = cheklanmagan (scope=all)
+	MaxUsesPerUser *int     `json:"max_uses_per_user"`
+	UsedCount      *int     `json:"used_count"`
+	TargetUserIds  []string `json:"target_user_ids"` // scope=users
 }
 
 type PromoCodeList struct {

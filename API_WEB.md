@@ -1354,3 +1354,8 @@ File upload
 
 ## Case ochish narxi (tanga)
 `PUT /web/setting` `{"key":"case_coin_cost","value":"5"}` — kunlik bepul limit tugagach case'ni tanga evaziga boshlash narxi (0 = o'chiq).
+
+### Promokod: ishlatish limitlari
+`POST /web/promocode` body: `max_uses` — JAMI ishlatishlar soni (`scope=limited`), `max_uses_per_user` — bitta foydalanuvchi
+bir kodni necha marta ishlata olishi (default 1). `scope=user` da jami = `max_uses_per_user`, `scope=users` da jami = odamlar soni × `max_uses_per_user`.
+Limitdan oshsa: `promo_code_already_redeemed` (shaxsiy limit) yoki `promo_code_used` (jami limit).

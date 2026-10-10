@@ -33,6 +33,10 @@ func (r *PromoCodeRepo) Create(req *m.PromoCodeCreateReq) (*m.ById, error) {
 			req.MaxUses = 1
 		}
 	}
+	perUser := req.MaxUsesPerUser
+	if perUser < 1 {
+		perUser = 1
+	}
 	var targetUser, maxUses interface{}
 	switch scope {
 	case "user":
@@ -40,7 +44,7 @@ func (r *PromoCodeRepo) Create(req *m.PromoCodeCreateReq) (*m.ById, error) {
 			return nil, errs.ErrPromoCodeScopeInvalid
 		}
 		targetUser = req.TargetUserId
-		maxUses = 1
+		maxUses = perUser
 	case "users":
 		seen := map[string]bool{}
 		ids := req.TargetUserIds[:0:0]
@@ -54,7 +58,7 @@ func (r *PromoCodeRepo) Create(req *m.PromoCodeCreateReq) (*m.ById, error) {
 			return nil, errs.ErrPromoCodeScopeInvalid
 		}
 		req.TargetUserIds = ids
-		maxUses = len(ids)
+		maxUses = len(ids) * perUser
 	case "limited":
 		if req.MaxUses < 1 {
 			return nil, errs.ErrPromoCodeScopeInvalid
@@ -89,9 +93,9 @@ func (r *PromoCodeRepo) Create(req *m.PromoCodeCreateReq) (*m.ById, error) {
 	defer tx.Rollback(ctx)
 
 	_, err = tx.Exec(ctx, `
-		INSERT INTO promo_codes (id, code, partner_id, value, created_by, status, issued_at, expires_at, scope, target_user_id, max_uses)
-		VALUES ($1, $2, $3, $4, $5, 'active', now(), $6, $7, $8, $9)
-	`, id, code, partnerId, req.Value, createdBy, expiresAt, scope, targetUser, maxUses)
+		INSERT INTO promo_codes (id, code, partner_id, value, created_by, status, issued_at, expires_at, scope, target_user_id, max_uses, max_uses_per_user)
+		VALUES ($1, $2, $3, $4, $5, 'active', now(), $6, $7, $8, $9, $10)
+	`, id, code, partnerId, req.Value, createdBy, expiresAt, scope, targetUser, maxUses, perUser)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating promo code: %w", err)
 	}
@@ -114,7 +118,7 @@ func (r *PromoCodeRepo) GetById(req *m.ById) (*m.PromoCodeRes, error) {
 	SELECT
 		pc.id, pc.code, pc.partner_id, p.name, pc.value,
 		pc.created_by, pc.used_by, pc.status, pc.issued_at::text, pc.expires_at::text, pc.used_at::text,
-		pc.scope, pc.target_user_id, pc.max_uses, pc.used_count,
+		pc.scope, pc.target_user_id, pc.max_uses, pc.max_uses_per_user, pc.used_count,
 		COALESCE((SELECT array_agg(t.user_id::text) FROM promo_code_targets t WHERE t.promo_code_id = pc.id), '{}')
 	FROM promo_codes pc
 	LEFT JOIN partners p ON p.id = pc.partner_id
@@ -127,7 +131,7 @@ func (r *PromoCodeRepo) GetById(req *m.ById) (*m.PromoCodeRes, error) {
 	err := row.Scan(
 		&pc.Id, &pc.Code, &pc.PartnerId, &pc.PartnerName, &pc.Value,
 		&pc.CreatedBy, &pc.UsedBy, &pc.Status, &pc.IssuedAt, &pc.ExpiresAt, &pc.UsedAt,
-		&pc.Scope, &pc.TargetUserId, &pc.MaxUses, &pc.UsedCount, &pc.TargetUserIds,
+		&pc.Scope, &pc.TargetUserId, &pc.MaxUses, &pc.MaxUsesPerUser, &pc.UsedCount, &pc.TargetUserIds,
 	)
 
 	if err == pgx.ErrNoRows {
@@ -154,7 +158,7 @@ func (r *PromoCodeRepo) list(req *m.PromoCodeGetListReq, forceUsedByUser bool) (
 		COUNT(pc.id) OVER() AS total_count,
 		pc.id, pc.code, pc.partner_id, p.name, pc.value,
 		pc.created_by, pc.used_by, pc.status, pc.issued_at::text, pc.expires_at::text, pc.used_at::text,
-		pc.scope, pc.target_user_id, pc.max_uses, pc.used_count,
+		pc.scope, pc.target_user_id, pc.max_uses, pc.max_uses_per_user, pc.used_count,
 		COALESCE((SELECT array_agg(t.user_id::text) FROM promo_code_targets t WHERE t.promo_code_id = pc.id), '{}')
 	FROM promo_codes pc
 	LEFT JOIN partners p ON p.id = pc.partner_id
@@ -193,7 +197,7 @@ func (r *PromoCodeRepo) list(req *m.PromoCodeGetListReq, forceUsedByUser bool) (
 			&totalCount,
 			&pc.Id, &pc.Code, &pc.PartnerId, &pc.PartnerName, &pc.Value,
 			&pc.CreatedBy, &pc.UsedBy, &pc.Status, &pc.IssuedAt, &pc.ExpiresAt, &pc.UsedAt,
-			&pc.Scope, &pc.TargetUserId, &pc.MaxUses, &pc.UsedCount, &pc.TargetUserIds,
+			&pc.Scope, &pc.TargetUserId, &pc.MaxUses, &pc.MaxUsesPerUser, &pc.UsedCount, &pc.TargetUserIds,
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error while scanning promo code: %w", err)
@@ -208,7 +212,7 @@ func (r *PromoCodeRepo) list(req *m.PromoCodeGetListReq, forceUsedByUser bool) (
 
 // Redeem - foydalanuvchi mobil ilovada kodni kiritganda (TZ 2.3-bo'lim). Qamrovga qarab:
 // "user" - faqat target_user_id; "limited" - max_uses ta foydalanuvchigacha; "all" - hamma.
-// Har bir foydalanuvchi bitta kodni faqat 1 marta ishlatadi. Hammasi bitta tranzaksiyada
+// Har bir foydalanuvchi bitta kodni ko'pi bilan max_uses_per_user marta (default 1) ishlatadi. Hammasi bitta tranzaksiyada
 // (qator qulflanadi), shuning uchun parallel so'rovlar limitdan oshib keta olmaydi.
 // Tanga miqdorini qaytaradi (service qatlami shu qiymat bilan UserS.AddPoints chaqiradi).
 func (r *PromoCodeRepo) Redeem(req *m.PromoCodeRedeemReq) (int, error) {
@@ -224,13 +228,14 @@ func (r *PromoCodeRepo) Redeem(req *m.PromoCodeRedeemReq) (int, error) {
 		targetUser        *string
 		maxUses           *int
 		usedCount, value  int
+		perUser           int
 		expired           bool
 	)
 	err = tx.QueryRow(ctx, `
-		SELECT id, status, scope, target_user_id, max_uses, used_count, value,
+		SELECT id, status, scope, target_user_id, max_uses, used_count, value, max_uses_per_user,
 		       (expires_at IS NOT NULL AND expires_at <= now())
 		FROM promo_codes WHERE code = $1 FOR UPDATE
-	`, req.Code).Scan(&id, &status, &scope, &targetUser, &maxUses, &usedCount, &value, &expired)
+	`, req.Code).Scan(&id, &status, &scope, &targetUser, &maxUses, &usedCount, &value, &perUser, &expired)
 	if err == pgx.ErrNoRows {
 		return 0, errs.ErrPromoCodeInvalid
 	}
@@ -252,13 +257,13 @@ func (r *PromoCodeRepo) Redeem(req *m.PromoCodeRedeemReq) (int, error) {
 			return 0, errs.ErrPromoCodeNotForYou
 		}
 	}
-	var already bool
+	var userUses int
 	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM promo_code_redemptions WHERE promo_code_id = $1 AND user_id = $2)
-	`, id, req.UserId).Scan(&already); err != nil {
+		SELECT count(*) FROM promo_code_redemptions WHERE promo_code_id = $1 AND user_id = $2
+	`, id, req.UserId).Scan(&userUses); err != nil {
 		return 0, fmt.Errorf("error while checking promo redemption: %w", err)
 	}
-	if already {
+	if userUses >= perUser {
 		return 0, errs.ErrPromoCodeAlreadyRedeemed
 	}
 	if status == "expired" || expired {
