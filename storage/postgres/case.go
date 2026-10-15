@@ -35,15 +35,20 @@ func (r *CaseRepo) Create(req *m.CaseCreateReq) (*m.ById, error) {
 		topicId = req.TopicId
 	}
 
+	maxAttempts := req.MaxAttempts
+	if maxAttempts <= 0 {
+		maxAttempts = m.DefaultCaseMaxAttempts
+	}
+
 	_, err := r.db.Exec(context.Background(), `
 		INSERT INTO cases (
 			id, topic_id, title, subtitle, expected_answer, cover_image_url, difficulty, chief_complaint,
 			patient_age, patient_gender, expected_duration_minutes, initial_vitals,
-			visual_state, scenario, status, is_ai_generated, order_num
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'draft',$15,$16)
+			visual_state, scenario, status, is_ai_generated, order_num, max_attempts
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'draft',$15,$16,$17)
 	`, id, topicId, req.Title, req.Subtitle, req.ExpectedAnswer, req.CoverImageUrl, req.Difficulty, req.ChiefComplaint,
 		req.PatientAge, req.PatientGender, req.ExpectedDurationMinutes, string(vitals),
-		req.VisualState, string(scenario), req.IsAIGenerated, req.OrderNum)
+		req.VisualState, string(scenario), req.IsAIGenerated, req.OrderNum, maxAttempts)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating case: %w", err)
 	}
@@ -56,7 +61,7 @@ const caseColumns = `
 	c.id, c.topic_id, t.name, cat.id, cat.name,
 	c.title, c.subtitle, c.expected_answer, c.cover_image_url, c.difficulty, c.chief_complaint,
 	c.patient_age, c.patient_gender, c.expected_duration_minutes, c.initial_vitals,
-	c.visual_state, c.scenario, c.status, c.is_ai_generated, c.order_num, c.created_at::text, c.updated_at::text
+	c.visual_state, c.scenario, c.status, c.is_ai_generated, c.order_num, c.created_at::text, c.updated_at::text, c.max_attempts
 `
 
 const caseJoins = `
@@ -71,7 +76,7 @@ func scanCase(row interface{ Scan(...interface{}) error }) (*m.CaseRes, error) {
 		&c.Id, &c.TopicId, &topicNameJSON, &c.CategoryId, &categoryNameJSON,
 		&titleJSON, &subtitleJSON, &c.ExpectedAnswer, &c.CoverImageUrl, &c.Difficulty, &chiefJSON,
 		&c.PatientAge, &c.PatientGender, &c.ExpectedDurationMinutes, &vitalsJSON,
-		&c.VisualState, &scenarioJSON, &c.Status, &c.IsAIGenerated, &c.OrderNum, &c.CreatedAt, &c.UpdatedAt,
+		&c.VisualState, &scenarioJSON, &c.Status, &c.IsAIGenerated, &c.OrderNum, &c.CreatedAt, &c.UpdatedAt, &c.MaxAttempts,
 	)
 	if err != nil {
 		return nil, err
@@ -162,7 +167,7 @@ func (r *CaseRepo) GetAll(req *m.CaseGetListReq) (*m.PaginationResponse, *m.Case
 			&total, &c.Id, &c.TopicId, &topicNameJSON, &c.CategoryId, &categoryNameJSON,
 			&titleJSON, &subtitleJSON, &c.ExpectedAnswer, &c.CoverImageUrl, &c.Difficulty, &chiefJSON,
 			&c.PatientAge, &c.PatientGender, &c.ExpectedDurationMinutes, &vitalsJSON,
-			&c.VisualState, &scenarioJSON, &c.Status, &c.IsAIGenerated, &c.OrderNum, &c.CreatedAt, &c.UpdatedAt,
+			&c.VisualState, &scenarioJSON, &c.Status, &c.IsAIGenerated, &c.OrderNum, &c.CreatedAt, &c.UpdatedAt, &c.MaxAttempts,
 		); err != nil {
 			return nil, nil, fmt.Errorf("error while scanning case: %w", err)
 		}
@@ -217,6 +222,9 @@ func (r *CaseRepo) Update(req *m.CaseUpdateReq) (*m.Void, error) {
 	add("patient_age", req.PatientAge)
 	add("patient_gender", req.PatientGender)
 	add("expected_duration_minutes", req.ExpectedDurationMinutes)
+	if req.MaxAttempts > 0 {
+		add("max_attempts", req.MaxAttempts)
+	}
 	vitals, _ := json.Marshal(req.InitialVitals)
 	add("initial_vitals", string(vitals))
 	if req.VisualState != "" && req.VisualState != "string" {
@@ -274,7 +282,7 @@ func (r *CaseRepo) Publish(req *m.ById) (*m.Void, error) {
 const mobileCaseColumns = `
 		c.id, c.topic_id, t.name ->> $1, cat.id, cat.name ->> $1,
 		c.title ->> $1, c.subtitle ->> $1, c.cover_image_url, c.difficulty,
-		c.chief_complaint ->> $1, c.patient_age, c.patient_gender, c.expected_duration_minutes,
+		c.chief_complaint ->> $1, c.patient_age, c.patient_gender, c.expected_duration_minutes, c.max_attempts,
 		EXISTS(SELECT 1 FROM favorites f WHERE f.case_id = c.id AND f.user_id = $2) AS is_favorite,
 		COALESCE((
 			SELECT s.status FROM simulation_sessions s
@@ -292,7 +300,7 @@ func scanCaseMobile(row interface{ Scan(...interface{}) error }) (*m.CaseMobileR
 	c := m.CaseMobileRes{}
 	err := row.Scan(
 		&c.Id, &c.TopicId, &c.TopicName, &c.CategoryId, &c.CategoryName, &c.Title, &c.Subtitle, &c.CoverImageUrl, &c.Difficulty,
-		&c.ChiefComplaint, &c.PatientAge, &c.PatientGender, &c.ExpectedDurationMinutes,
+		&c.ChiefComplaint, &c.PatientAge, &c.PatientGender, &c.ExpectedDurationMinutes, &c.MaxAttempts,
 		&c.IsFavorite, &c.Status,
 	)
 	if err != nil {
@@ -349,7 +357,7 @@ func (r *CaseRepo) GetAllMobile(req *m.CaseGetListMobileReq) (*m.PaginationRespo
 	query := `SELECT COUNT(*) OVER() AS total_count,
 		sub.id, sub.topic_id, sub.topic_name, sub.category_id, sub.category_name, sub.title, sub.subtitle,
 		sub.cover_image_url, sub.difficulty, sub.chief_complaint, sub.patient_age, sub.patient_gender,
-		sub.expected_duration_minutes, sub.is_favorite, sub.user_status
+		sub.expected_duration_minutes, sub.max_attempts, sub.is_favorite, sub.user_status
 	FROM (` + inner + `) AS sub(
 		id, topic_id, topic_name, category_id, category_name, title, subtitle, cover_image_url, difficulty,
 		chief_complaint, patient_age, patient_gender, expected_duration_minutes, is_favorite, user_status, order_num
@@ -376,7 +384,7 @@ func (r *CaseRepo) GetAllMobile(req *m.CaseGetListMobileReq) (*m.PaginationRespo
 		var total int
 		if err := rows.Scan(
 			&total, &c.Id, &c.TopicId, &c.TopicName, &c.CategoryId, &c.CategoryName, &c.Title, &c.Subtitle, &c.CoverImageUrl, &c.Difficulty,
-			&c.ChiefComplaint, &c.PatientAge, &c.PatientGender, &c.ExpectedDurationMinutes,
+			&c.ChiefComplaint, &c.PatientAge, &c.PatientGender, &c.ExpectedDurationMinutes, &c.MaxAttempts,
 			&c.IsFavorite, &c.Status,
 		); err != nil {
 			return nil, nil, fmt.Errorf("error while scanning case: %w", err)

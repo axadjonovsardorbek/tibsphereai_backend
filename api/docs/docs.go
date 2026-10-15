@@ -55,6 +55,29 @@ const docTemplate = `{
                 }
             }
         },
+        "/inpay/callback": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment"
+                ],
+                "summary": "inPAY webhook (imzosiz; holat inPAY API orqali qayta tekshiriladi)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/mobile/about": {
             "get": {
                 "security": [
@@ -3744,6 +3767,73 @@ const docTemplate = `{
                 }
             }
         },
+        "/web/case/import": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Birinchi qator - sarlavha: topic, title_uz/ru/en, subtitle_uz/ru/en, chief_complaint_uz/ru/en,\ndifficulty (easy|medium|hard), patient_age, patient_gender, expected_duration_minutes,\nhr, bp, spo2, rr, temp, gcs, visual_state, expected_answer, cover_image_url, order_num, scenario (JSON).\npublish=true bo'lsa yaratilgan case'lar darhol e'lon qilinadi (deploy), aks holda draft.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "case"
+                ],
+                "summary": "Case'larni bitta Excel (.xlsx) yoki CSV fayldan ommaviy yuklash",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": ".xlsx yoki .csv",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Darhol e'lon qilish",
+                        "name": "publish",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.CaseImportRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/case/import/template": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ],
+                "tags": [
+                    "case"
+                ],
+                "summary": "Case yuklash uchun Excel shablon (.xlsx)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
         "/web/case/{id}": {
             "get": {
                 "security": [
@@ -4143,7 +4233,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.CoinTransactionList"
+                            "$ref": "#/definitions/models.PaginationResponse"
                         }
                     }
                 }
@@ -5510,6 +5600,9 @@ const docTemplate = `{
                     {
                         "enum": [
                             "click",
+                            "payme",
+                            "inpay",
+                            "coins",
                             "admin"
                         ],
                         "type": "string",
@@ -7516,6 +7609,10 @@ const docTemplate = `{
                 "is_ai_generated": {
                     "type": "boolean"
                 },
+                "max_attempts": {
+                    "description": "0 yoki bo'sh = default (DefaultCaseMaxAttempts)",
+                    "type": "integer"
+                },
                 "order_num": {
                     "type": "integer"
                 },
@@ -7563,6 +7660,46 @@ const docTemplate = `{
                 },
                 "topic": {
                     "type": "string"
+                }
+            }
+        },
+        "models.CaseImportRes": {
+            "type": "object",
+            "properties": {
+                "created": {
+                    "type": "integer"
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CaseImportRowError"
+                    }
+                },
+                "failed": {
+                    "type": "integer"
+                },
+                "ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "published": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.CaseImportRowError": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "row": {
+                    "type": "integer"
                 }
             }
         },
@@ -7620,6 +7757,10 @@ const docTemplate = `{
                 },
                 "is_favorite": {
                     "type": "boolean"
+                },
+                "max_attempts": {
+                    "description": "sessiyada yuborish mumkin bo'lgan xabarlar soni",
+                    "type": "integer"
                 },
                 "patient_age": {
                     "type": "integer"
@@ -7686,6 +7827,9 @@ const docTemplate = `{
                 },
                 "is_ai_generated": {
                     "type": "boolean"
+                },
+                "max_attempts": {
+                    "type": "integer"
                 },
                 "order_num": {
                     "type": "integer"
@@ -7759,6 +7903,10 @@ const docTemplate = `{
                 },
                 "initial_vitals": {
                     "$ref": "#/definitions/models.CaseVitals"
+                },
+                "max_attempts": {
+                    "description": "0 = o'zgartirilmaydi",
+                    "type": "integer"
                 },
                 "order_num": {
                     "type": "integer"
@@ -7972,50 +8120,6 @@ const docTemplate = `{
                 "total_spent": {
                     "description": "category_unlock va h.k. (manfiy tranzaksiyalar, musbat songa aylantirilgan)",
                     "type": "integer"
-                }
-            }
-        },
-        "models.CoinTransactionList": {
-            "type": "object",
-            "properties": {
-                "count": {
-                    "type": "integer"
-                },
-                "transactions": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.CoinTransactionRes"
-                    }
-                }
-            }
-        },
-        "models.CoinTransactionRes": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "delta": {
-                    "description": "musbat - qo'shilgan, manfiy - sarflangan",
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "reason": {
-                    "type": "string"
-                },
-                "reference_id": {
-                    "type": "string"
-                },
-                "reference_type": {
-                    "type": "string"
-                },
-                "user_id": {
-                    "type": "string"
-                },
-                "user_name": {
-                    "type": "string"
                 }
             }
         },
@@ -8611,6 +8715,10 @@ const docTemplate = `{
                 "coins_used": {
                     "type": "integer"
                 },
+                "provider": {
+                    "description": "inpay (default)",
+                    "type": "string"
+                },
                 "tariff_id": {
                     "type": "string"
                 }
@@ -8674,6 +8782,30 @@ const docTemplate = `{
                 },
                 "user_phone": {
                     "type": "string"
+                }
+            }
+        },
+        "models.PaginationResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "has_next": {
+                    "type": "boolean"
+                },
+                "has_previous": {
+                    "type": "boolean"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
                 }
             }
         },
@@ -8803,8 +8935,29 @@ const docTemplate = `{
                 "expires_at": {
                     "type": "string"
                 },
+                "max_uses": {
+                    "description": "MaxUses - JAMI ishlatishlar soni (scope=\"limited\"). MaxUsesPerUser - bitta foydalanuvchi\nbitta kodni necha marta ishlata olishi. Ikkalasida ham: ko'rsatilmasa (null) - 1,\n0 - CHEKSIZ, manfiy - xato.",
+                    "type": "integer"
+                },
+                "max_uses_per_user": {
+                    "type": "integer"
+                },
                 "partner_id": {
                     "type": "string"
+                },
+                "scope": {
+                    "description": "Scope: \"user\" (aynan bitta foydalanuvchi, TargetUserId majburiy), \"users\" (ko'rsatilgan bir nechta foydalanuvchi, TargetUserIds majburiy), \"limited\"\n(ko'pi bilan MaxUses ta foydalanuvchi) yoki \"all\" (hamma uchun). Bo'sh bo'lsa \"limited\"\nva MaxUses=1 (eski xatti-harakat). Har bir foydalanuvchi bitta kodni faqat 1 marta ishlatadi.",
+                    "type": "string"
+                },
+                "target_user_id": {
+                    "type": "string"
+                },
+                "target_user_ids": {
+                    "description": "TargetUserIds - scope=\"users\": aynan shu foydalanuvchilar ro'yxati (har biri 1 marta).",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "value": {
                     "description": "tanga miqdori",
@@ -8852,21 +9005,44 @@ const docTemplate = `{
                 "issued_at": {
                     "type": "string"
                 },
+                "max_uses": {
+                    "description": "jami ishlatishlar; null = cheklanmagan (scope=all)",
+                    "type": "integer"
+                },
+                "max_uses_per_user": {
+                    "type": "integer"
+                },
                 "partner_id": {
                     "type": "string"
                 },
                 "partner_name": {
                     "type": "string"
                 },
+                "scope": {
+                    "type": "string"
+                },
                 "status": {
                     "description": "active | used | expired",
                     "type": "string"
+                },
+                "target_user_id": {
+                    "type": "string"
+                },
+                "target_user_ids": {
+                    "description": "scope=users",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "used_at": {
                     "type": "string"
                 },
                 "used_by": {
                     "type": "string"
+                },
+                "used_count": {
+                    "type": "integer"
                 },
                 "value": {
                     "type": "integer"
@@ -9162,6 +9338,15 @@ const docTemplate = `{
         "models.SimulationEventRes": {
             "type": "object",
             "properties": {
+                "attempts_left": {
+                    "type": "integer"
+                },
+                "attempts_used": {
+                    "type": "integer"
+                },
+                "finish_result": {
+                    "$ref": "#/definitions/models.SimulationFinishRes"
+                },
                 "health_delta": {
                     "type": "integer"
                 },
@@ -9171,10 +9356,18 @@ const docTemplate = `{
                 "is_correct": {
                     "type": "boolean"
                 },
+                "max_attempts": {
+                    "description": "MaxAttempts/AttemptsUsed/AttemptsLeft - \"question\" (chat/javob) xabarlari limiti.\nAttemptsLeft 0 bo'lsa sessiya shu xabardan keyin avtomatik yakunlanadi\n(SessionEnded=true, FinishResult).",
+                    "type": "integer"
+                },
                 "response": {
                     "description": "AI javobi / lab natijasi va h.k.",
                     "type": "object",
                     "additionalProperties": {}
+                },
+                "session_ended": {
+                    "description": "SessionEnded - health_percent shu harakatdan keyin 0'ga tushib, sessiya\nserver tomonidan avtomatik yakunlangan bo'lsa true (bemor \"o'ldi\").\nFrontend shu bayroqni ko'rsa, keyingi buyruq/xabar yuborishni to'xtatib,\nFinishResult'dagi debrief/XP/coin natijasini ko'rsatishi kerak.",
+                    "type": "boolean"
                 }
             }
         },
@@ -9215,6 +9408,10 @@ const docTemplate = `{
         "models.SimulationSessionRes": {
             "type": "object",
             "properties": {
+                "attempts_used": {
+                    "description": "sessiyada yuborilgan \"question\" xabarlari soni",
+                    "type": "integer"
+                },
                 "case_id": {
                     "type": "string"
                 },
@@ -9235,6 +9432,10 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
+                },
+                "max_attempts": {
+                    "description": "case.max_attempts",
+                    "type": "integer"
                 },
                 "started_at": {
                     "type": "string"
@@ -9261,6 +9462,10 @@ const docTemplate = `{
                 },
                 "initial_vitals": {
                     "$ref": "#/definitions/models.CaseVitals"
+                },
+                "max_attempts": {
+                    "description": "shu sessiyada yuborish mumkin bo'lgan xabarlar soni",
+                    "type": "integer"
                 },
                 "session_id": {
                     "type": "string"
@@ -9557,6 +9762,10 @@ const docTemplate = `{
         "models.UserLimitStatusRes": {
             "type": "object",
             "properties": {
+                "case_coin_cost": {
+                    "description": "CaseCoinCost - limit tugagach 1 ta case necha tanga turishi (0 - o'chiq). Frontend\nshu bilan \"N tanga evaziga boshlash\" tugmasini ko'rsatadi.",
+                    "type": "integer"
+                },
                 "has_subscription": {
                     "description": "true - limit cheksiz (Premium)",
                     "type": "boolean"

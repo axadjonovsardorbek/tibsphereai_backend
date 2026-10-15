@@ -240,6 +240,50 @@ func TestSimulationService_AddEvent_AutoFinishesOnHealthZero(t *testing.T) {
 	assert.Equal(t, finishRes, got.FinishResult)
 }
 
+// AddEvent - case.max_attempts (xabarlar limiti) tugasa sessiya
+// Finish(reason="attempts_exhausted") bilan avtomatik yakunlanadi; limitdan
+// oldin esa davom etadi va attempts_left to'g'ri qaytadi.
+func TestSimulationService_AddEvent_AttemptsLimit(t *testing.T) {
+	cases := []struct {
+		name      string
+		used      int
+		wantEnded bool
+		wantLeft  int
+	}{
+		{"limitdan oldin davom etadi", 2, false, 1},
+		{"limit tugadi - yakunlanadi", 3, true, 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			sm := mocks.NewSimulationMock()
+			cm := mocks.NewCaseMock()
+			am := mocks.NewAppSettingMock()
+			aiClient := &ai.Client{Patient: fakePatientAI{reply: "Boshim og'riyapti"}}
+			svc := newSimulationTestService(t, sm, cm, mocks.NewUserMock(), mocks.NewDebriefMock(), am, aiClient)
+
+			caseId, health, max := "case-1", 100, 3
+			sm.On("GetById", &m.ById{Id: "sess-1"}).Return(&m.SimulationSessionRes{CaseId: &caseId, HealthPercent: &health}, nil)
+			cm.On("GetById", &m.ById{Id: "case-1"}).Return(&m.CaseRes{MaxAttempts: &max}, nil)
+
+			req := &m.SimulationEventReq{SessionId: "sess-1", Type: "question", Payload: map[string]any{"question": "Qayerda og'riq bor?"}}
+			sm.On("AddEvent", req, true, 0).Return(&m.SimulationEventRes{Response: map[string]any{}, HealthPercent: 100, AttemptsUsed: tc.used}, nil)
+
+			if tc.wantEnded {
+				am.On("Get", mock.Anything).Return(nil, errors.New("not set")).Maybe()
+				sm.On("GetEvents", "sess-1").Return([]m.SimulationEventReq{{Type: "question"}}, nil)
+				sm.On("Finish", &m.SimulationFinishReq{SessionId: "sess-1", Reason: "attempts_exhausted"}, 0, 0, 0).
+					Return(&m.SimulationFinishRes{SessionId: "sess-1"}, nil)
+			}
+
+			got, err := svc.AddEvent(context.Background(), req)
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantEnded, got.SessionEnded)
+			assert.Equal(t, 3, got.MaxAttempts)
+			assert.Equal(t, tc.wantLeft, got.AttemptsLeft)
+		})
+	}
+}
+
 // fakeActionEvalAI - ai.ActionEvaluatorAI ning test uchun soxta implementatsiyasi.
 type fakeActionEvalAI struct {
 	res *ai.ActionEvalRes

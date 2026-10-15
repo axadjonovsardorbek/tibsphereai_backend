@@ -18,6 +18,7 @@ type SimulationStartRes struct {
 	CaseId          string     `json:"case_id"`
 	HealthPercent   int        `json:"health_percent"`
 	TimeLimitSecond int        `json:"time_limit_seconds"`
+	MaxAttempts     int        `json:"max_attempts"` // shu sessiyada yuborish mumkin bo'lgan xabarlar soni
 	InitialVitals   CaseVitals `json:"initial_vitals"`
 	VisualState     string     `json:"visual_state"`
 	WSUrl           string     `json:"ws_url"`
@@ -36,6 +37,12 @@ type SimulationEventRes struct {
 	HealthDelta   int            `json:"health_delta"`
 	HealthPercent int            `json:"health_percent"`
 	Response      map[string]any `json:"response"` // AI javobi / lab natijasi va h.k.
+	// MaxAttempts/AttemptsUsed/AttemptsLeft - "question" (chat/javob) xabarlari limiti.
+	// AttemptsLeft 0 bo'lsa sessiya shu xabardan keyin avtomatik yakunlanadi
+	// (SessionEnded=true, FinishResult).
+	MaxAttempts  int `json:"max_attempts"`
+	AttemptsUsed int `json:"attempts_used"`
+	AttemptsLeft int `json:"attempts_left"`
 	// SessionEnded - health_percent shu harakatdan keyin 0'ga tushib, sessiya
 	// server tomonidan avtomatik yakunlangan bo'lsa true (bemor "o'ldi").
 	// Frontend shu bayroqni ko'rsa, keyingi buyruq/xabar yuborishni to'xtatib,
@@ -46,7 +53,7 @@ type SimulationEventRes struct {
 
 type SimulationFinishReq struct {
 	SessionId string `json:"session_id"`
-	Reason    string `json:"reason"` // manual|health_zero|timeout
+	Reason    string `json:"reason"` // manual|health_zero|timeout|solved|attempts_exhausted
 }
 
 type SimulationFinishRes struct {
@@ -64,6 +71,8 @@ type SimulationSessionRes struct {
 	CaseTitle     *string `json:"case_title"`
 	Status        *string `json:"status"`
 	HealthPercent *int    `json:"health_percent"`
+	MaxAttempts   *int    `json:"max_attempts"`  // case.max_attempts
+	AttemptsUsed  *int    `json:"attempts_used"` // sessiyada yuborilgan "question" xabarlari soni
 	FinalScore    *int    `json:"final_score"`
 	XPEarned      *int    `json:"xp_earned"`
 	CoinsEarned   *int    `json:"coins_earned"`

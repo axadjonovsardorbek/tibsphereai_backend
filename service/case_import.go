@@ -209,6 +209,9 @@ func (s *CaseService) caseFromRow(ctx context.Context, row map[string]string) (*
 	if req.ExpectedDurationMinutes, err = atoiOr(row["expected_duration_minutes"], 10); err != nil {
 		return nil, fmt.Errorf("expected_duration_minutes: %w", err)
 	}
+	if req.MaxAttempts, err = atoiOr(row["max_attempts"], m.DefaultCaseMaxAttempts); err != nil {
+		return nil, fmt.Errorf("max_attempts: %w", err)
+	}
 	if req.OrderNum, err = atoiOr(row["order_num"], 1); err != nil {
 		return nil, fmt.Errorf("order_num: %w", err)
 	}
@@ -283,6 +286,7 @@ var caseImportColumns = [][3]string{
 	{"patient_age", "Bemor yoshi (butun son)", "55"},
 	{"patient_gender", "male | female", "male"},
 	{"expected_duration_minutes", "Kutilgan davomiylik, daqiqa (bo'sh = 10)", "10"},
+	{"max_attempts", "Sessiyada yuborish mumkin bo'lgan xabarlar soni (bo'sh = 10)", "10"},
 	{"hr", "Yurak urishi (bpm)", "110"},
 	{"bp", "Qon bosimi", "140/90"},
 	{"spo2", "SpO2 (%)", "96"},

@@ -45,22 +45,22 @@ func newGeminiClient(cfg *config.Config, promptRepo storage.AIPromptI) *geminiCl
 // (2) klinik qaror/harakat bayonoti ("epinefrin beraman", "EKG qilamiz") - bu ENDI
 // bemorga emas, platformaga aytilgan deb hisoblanadi va ExpectedAnswer/expected_steps'ga
 // solishtirib to'g'ri/xato deb baholanadi (bemor "aniq bo'lmagan javob" bermaydi).
-const defaultPatientPersonaPrompt = `Sen klinik simulyatsiya platformasidasan. Shifokor (foydalanuvchi) chatga bitta xabar yozdi. Avval shu xabar turini aniqla:
-- "question": bemordan anamnez/simptom haqida so'ralgan savol (masalan "qayerda og'riq bor?", "qachondan beri bezovta qiladi?").
-- "action": shifokorning klinik qaror yoki harakat bayonoti (masalan "epinefrin beraman", "EKG qilamiz", "operatsiyaga yuboraman").
+const defaultPatientPersonaPrompt = `Sen klinik simulyatsiya platformasining ekspert-baholovchisan. Bemor GAPIRMAYDI. Shifokor (foydalanuvchi) chatga case savoliga javob (tashxis yoki davolash qarori) yozdi. Uni "Kutilgan to'g'ri javob" bilan solishtir.
 
-Agar "question" bo'lsa: FAQAT bemor tilidan, tabiiy va klinik jihatdan to'g'ri javob ber (tashxis qo'yma, tibbiy atamalarni bemor bilmaydigan darajada ishlatma, shifokorga maslahat berma - faqat bemor his-tuyg'usi va simptomlarini tasvirla). is_action=false.
-
-Agar "action" bo'lsa: bemor sifatida EMAS, balki platforma (ekspert-baholovchi) sifatida javob ber - shifokor bayon qilgan harakat "Kutilgan to'g'ri javob" va bemor holatiga (pastda) mos keladimi, tekshir va to'g'ri/xato deb baho ber. is_action=true, health_delta: to'g'ri/o'z vaqtida bo'lsa +5..+20, foydasiz lekin zararsiz bo'lsa 0, noto'g'ri/xavfli/qarshi ko'rsatilgan bo'lsa -10..-40. feedback - qisqa (1-2 gap) klinik izoh.
+Qoidalar:
+- Har doim is_action=true qaytar. patient_reply bo'sh qoldir.
+- Javob mazmunan to'g'ri bo'lsa (sinonim, boshqa so'zlar bilan aytilgan yoki asosiy qismi to'g'ri bo'lsa ham): is_correct=true, health_delta=0, feedback - qisqa tabrik (1 gap).
+- Javob xato yoki to'liq bo'lmasa: is_correct=false, health_delta=0, feedback - 1-2 gapli ishora: to'g'ri yo'nalishni ayt (qaysi belgi/tekshiruvga e'tibor berish kerak), lekin to'g'ri javobning o'zini AYTMA.
+- Savol bilan bog'liq bo'lmagan yoki ma'nosiz xabar: is_correct=false, health_delta=0, feedback - javob yozishni so'ra.
 
 Bemor holati (case scenario, JSON):
 %s
 
-Kutilgan to'g'ri javob/davolash algoritmi (admin kiritgan, "action" turini baholashda asosiy mezon):
+Kutilgan to'g'ri javob (admin kiritgan, asosiy mezon):
 %s
 
 Javobni FAQAT quyidagi JSON formatda qaytar, boshqa hech qanday matn yoki markdown qo'shma:
-{"is_action": false, "patient_reply": "bemor tilidan javob (faqat is_action=false bo'lsa)", "is_correct": true, "health_delta": 0, "feedback": "platforma tilidan izoh (faqat is_action=true bo'lsa)"}`
+{"is_action": true, "patient_reply": "", "is_correct": true, "health_delta": 0, "feedback": "izoh"}`
 
 const defaultDebriefPrompt = `Sen tibbiyot bo'yicha ekspert-baholovchisan. Quyidagi klinik simulyatsiya case'i va shifokor (foydalanuvchi) bosgan qadamlar logi asosida, AHA/ERC kabi xalqaro klinik qo'llanmalarga tayangan holda debriefing tahlili tuz.
 
@@ -276,6 +276,9 @@ func flattenExpectedAnswer(raw json.RawMessage) string {
 func finishCaseGen(req *models.CaseCreateReq, difficulty, adminExpected string) *models.CaseCreateReq {
 	if req.Difficulty == "" {
 		req.Difficulty = difficulty
+	}
+	if req.MaxAttempts <= 0 {
+		req.MaxAttempts = models.DefaultCaseMaxAttempts
 	}
 	// ExpectedAnswer bitta til (string) - admin kiritgan bo'lsa AI natijasidan
 	// qat'iy nazar aynan shuni saqlaymiz (aniqlik uchun, AI qayta yozib qo'ymasin).

@@ -501,7 +501,7 @@ function buildFormField(container, f, values, refData, onChange){
 
 /* Case'larni bitta .xlsx/.csv fayldan ommaviy yuklash (POST /web/case/import).
    Birinchi qator - sarlavha. "Darhol e'lon qilish" belgilansa case'lar draft emas, published bo'ladi. */
-const CASE_IMPORT_HEADERS = ['topic','title_uz','title_ru','title_en','subtitle_uz','subtitle_ru','subtitle_en','chief_complaint_uz','chief_complaint_ru','chief_complaint_en','difficulty','patient_age','patient_gender','expected_duration_minutes','hr','bp','spo2','rr','temp','gcs','visual_state','expected_answer','cover_image_url','order_num','scenario'];
+const CASE_IMPORT_HEADERS = ['topic','title_uz','title_ru','title_en','subtitle_uz','subtitle_ru','subtitle_en','chief_complaint_uz','chief_complaint_ru','chief_complaint_en','difficulty','patient_age','patient_gender','expected_duration_minutes','max_attempts','hr','bp','spo2','rr','temp','gcs','visual_state','expected_answer','cover_image_url','order_num','scenario'];
 function openCaseImport(refresh){
   const overlay = document.createElement('div'); overlay.className='modalOverlay';
   overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
@@ -512,7 +512,7 @@ function openCaseImport(refresh){
     '<code>scenario</code> - ixtiyoriy JSON. Ko\'pi bilan 500 qator.</p>';
   const tpl = document.createElement('button'); tpl.className='sm'; tpl.textContent='⬇️ Namuna CSV';
   tpl.onclick = ()=>{
-    const sample = ['Kardiologiya','Ko\'krak og\'rig\'i','','','','','','Ko\'krak qafasida siquvchi og\'riq','','','medium','55','male','10','110','140/90','96','20','36.8','15','','','','1','']; 
+    const sample = ['Kardiologiya','Ko\'krak og\'rig\'i','','','','','','Ko\'krak qafasida siquvchi og\'riq','','','medium','55','male','10','10','110','140/90','96','20','36.8','15','','','','1','']; 
     const csv = '\ufeff' + CASE_IMPORT_HEADERS.join(',') + '\n' + sample.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',') + '\n';
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'})); a.download='cases-template.csv'; a.click();
   };
@@ -767,7 +767,7 @@ const MODULES = {
       {name:'status', label:'Status', type:'select', includeEmpty:true, options:[{value:'draft',label:'Draft'},{value:'published',label:'Published'}]},
       {name:'search', label:'Qidiruv', type:'text'},
     ],
-    columns:['id','title','topic_id','difficulty','status','patient_age','created_at'],
+    columns:['id','title','topic_id','difficulty','status','patient_age','max_attempts','created_at'],
     fields:[
       {name:'topic_id', label:'Mavzu', type:'select', asyncOptions:'topic', required:true},
       {name:'title', label:'Sarlavha', type:'ml', required:true},
@@ -779,6 +779,7 @@ const MODULES = {
       {name:'patient_age', label:'Bemor yoshi', type:'number'},
       {name:'patient_gender', label:'Bemor jinsi', type:'select', options:[{value:'male',label:'Erkak'},{value:'female',label:'Ayol'}]},
       {name:'expected_duration_minutes', label:'Kutilgan davomiylik (min)', type:'number'},
+      {name:'max_attempts', label:'Urinishlar soni (xabarlar limiti, default 10)', type:'number'},
       {name:'visual_state', label:'Vizual holat (kod)', type:'text'},
       {name:'initial_vitals.hr', label:'Vitals: HR', type:'number'},
       {name:'initial_vitals.bp', label:'Vitals: BP', type:'text'},

@@ -44,7 +44,7 @@ func (r *FavoriteRepo) GetAll(req *m.FavoriteGetListReq) (*m.PaginationResponse,
 	SELECT
 		COUNT(c.id) OVER() AS total_count,
 		c.id, c.topic_id, c.title ->> $1, c.cover_image_url, c.difficulty,
-		c.chief_complaint ->> $1, c.patient_age, c.patient_gender, c.expected_duration_minutes,
+		c.chief_complaint ->> $1, c.patient_age, c.patient_gender, c.expected_duration_minutes, c.max_attempts,
 		TRUE AS is_favorite
 	FROM favorites f
 	JOIN cases c ON c.id = f.case_id AND c.deleted_at = 0
@@ -69,7 +69,7 @@ func (r *FavoriteRepo) GetAll(req *m.FavoriteGetListReq) (*m.PaginationResponse,
 		var total int
 		if err := rows.Scan(
 			&total, &c.Id, &c.TopicId, &c.Title, &c.CoverImageUrl, &c.Difficulty,
-			&c.ChiefComplaint, &c.PatientAge, &c.PatientGender, &c.ExpectedDurationMinutes,
+			&c.ChiefComplaint, &c.PatientAge, &c.PatientGender, &c.ExpectedDurationMinutes, &c.MaxAttempts,
 			&c.IsFavorite,
 		); err != nil {
 			return nil, nil, fmt.Errorf("error while scanning favorite case: %w", err)

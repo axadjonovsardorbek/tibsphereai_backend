@@ -181,6 +181,7 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 		}
 	}
 
+	answeredCorrectly := false
 	if caseRes != nil && !transcribeFailed {
 		if req.Type == "question" {
 			question, _ := req.Payload["question"].(string)
@@ -194,6 +195,15 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 				// ExpectedAnswer'ga solishtirib to'g'ri/xato deb baholanadi.
 				isCorrect, healthDelta = reply.IsCorrect, reply.HealthDelta
 				responseExtra["feedback"] = reply.Feedback
+				// Javob urinishi sifatida belgilanadi: Finish faqat to'g'ri topilgan
+				// javobni klinik harakat deb hisoblaydi, to'g'ri bo'lsa sessiya
+				// quyida avtomatik yakunlanadi.
+				answeredCorrectly = reply.IsCorrect
+				if req.Payload == nil {
+					req.Payload = map[string]any{}
+				}
+				req.Payload["is_answer"] = true
+				req.Payload["answer_correct"] = reply.IsCorrect
 			} else {
 				responseExtra["patient_reply"] = reply.PatientReply
 			}
@@ -237,6 +247,13 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 	if err != nil {
 		return nil, err
 	}
+	res.MaxAttempts = m.DefaultCaseMaxAttempts
+	if caseRes != nil && caseRes.MaxAttempts != nil && *caseRes.MaxAttempts > 0 {
+		res.MaxAttempts = *caseRes.MaxAttempts
+	}
+	if res.AttemptsLeft = res.MaxAttempts - res.AttemptsUsed; res.AttemptsLeft < 0 {
+		res.AttemptsLeft = 0
+	}
 	for k, v := range responseExtra {
 		res.Response[k] = v
 	}
@@ -248,6 +265,25 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 		finishRes, fErr := s.Finish(ctx, &m.SimulationFinishReq{SessionId: req.SessionId, Reason: "health_zero"})
 		if fErr != nil {
 			fmt.Println("failed to auto-finish simulation on health_zero:", fErr)
+		} else {
+			res.SessionEnded = true
+			res.FinishResult = finishRes
+		}
+	} else if !answeredCorrectly && res.MaxAttempts > 0 && res.AttemptsUsed >= res.MaxAttempts {
+		// Xabarlar limiti tugadi (case.max_attempts) - sessiya avtomatik yakunlanadi.
+		finishRes, fErr := s.Finish(ctx, &m.SimulationFinishReq{SessionId: req.SessionId, Reason: "attempts_exhausted"})
+		if fErr != nil {
+			fmt.Println("failed to auto-finish simulation on attempts exhausted:", fErr)
+		} else {
+			res.SessionEnded = true
+			res.FinishResult = finishRes
+		}
+	} else if answeredCorrectly {
+		// Foydalanuvchi to'g'ri javob topdi - sessiya avtomatik yakunlanadi va
+		// AI debrief/XP/coin natijasi bir xil "session_ended" yo'li bilan qaytadi.
+		finishRes, fErr := s.Finish(ctx, &m.SimulationFinishReq{SessionId: req.SessionId, Reason: "solved"})
+		if fErr != nil {
+			fmt.Println("failed to auto-finish simulation on correct answer:", fErr)
 		} else {
 			res.SessionEnded = true
 			res.FinishResult = finishRes
@@ -340,6 +376,9 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 		for _, e := range events {
 			if e.Type != "question" {
 				actionCount++
+			} else if ok, _ := e.Payload["answer_correct"].(bool); ok {
+				// chat orqali berilgan to'g'ri javob ham klinik harakat hisoblanadi
+				actionCount++
 			}
 		}
 	}
@@ -383,7 +422,7 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 	xp, coins := 0, 0
 	if actionCount > 0 {
 		xp = xpBase * finalScore / 100
-		if req.Reason != "health_zero" {
+		if req.Reason != "health_zero" && req.Reason != "attempts_exhausted" {
 			coins = coinBase * finalScore / 100
 		}
 	}

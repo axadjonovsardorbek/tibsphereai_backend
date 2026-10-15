@@ -16,6 +16,10 @@ type CaseGenReq struct {
 	ExpectedAnswer string `json:"expected_answer"`
 }
 
+// DefaultCaseMaxAttempts - case.max_attempts ko'rsatilmagan (0) bo'lsa ishlatiladigan
+// default: bitta sessiyada foydalanuvchi yubora oladigan xabarlar soni.
+const DefaultCaseMaxAttempts = 10
+
 type CaseCreateReq struct {
 	TopicId                 string            `json:"topic_id"`
 	Title                   map[string]string `json:"title"`
@@ -27,6 +31,7 @@ type CaseCreateReq struct {
 	PatientAge              int               `json:"patient_age"`
 	PatientGender           string            `json:"patient_gender"`
 	ExpectedDurationMinutes int               `json:"expected_duration_minutes"`
+	MaxAttempts             int               `json:"max_attempts"` // 0 yoki bo'sh = default (DefaultCaseMaxAttempts)
 	InitialVitals           CaseVitals        `json:"initial_vitals"`
 	VisualState             string            `json:"visual_state"`
 	Scenario                map[string]any    `json:"scenario"`
@@ -55,6 +60,7 @@ type CaseUpdateReq struct {
 	PatientAge              int               `json:"patient_age"`
 	PatientGender           string            `json:"patient_gender"`
 	ExpectedDurationMinutes int               `json:"expected_duration_minutes"`
+	MaxAttempts             int               `json:"max_attempts"` // 0 = o'zgartirilmaydi
 	InitialVitals           CaseVitals        `json:"initial_vitals"`
 	VisualState             string            `json:"visual_state"`
 	Scenario                map[string]any    `json:"scenario"`
@@ -76,6 +82,7 @@ type CaseRes struct {
 	PatientAge              *int              `json:"patient_age"`
 	PatientGender           *string           `json:"patient_gender"`
 	ExpectedDurationMinutes *int              `json:"expected_duration_minutes"`
+	MaxAttempts             *int              `json:"max_attempts"`
 	InitialVitals           *CaseVitals       `json:"initial_vitals"`
 	VisualState             *string           `json:"visual_state"`
 	Scenario                map[string]any    `json:"scenario"`
@@ -117,6 +124,7 @@ type CaseMobileRes struct {
 	PatientAge              *int    `json:"patient_age"`
 	PatientGender           *string `json:"patient_gender"`
 	ExpectedDurationMinutes *int    `json:"expected_duration_minutes"`
+	MaxAttempts             *int    `json:"max_attempts"` // sessiyada yuborish mumkin bo'lgan xabarlar soni
 	IsFavorite              *bool   `json:"is_favorite"`
 	Status                  *string `json:"status"` // new|active|completed|failed|abandoned (foydalanuvchi holati)
 }

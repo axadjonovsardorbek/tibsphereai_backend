@@ -421,6 +421,7 @@ BACKEND_STRUCTURE.md 2-bo'lim: tibbiy yo'nalishlar (Kardiologiya, Terapiya va h.
   - `difficulty`: string
   - `expected_answer`: string
   - `expected_duration_minutes`: integer
+  - `max_attempts`: integer — sessiyada yuborish mumkin bo'lgan xabarlar soni (default 10)
   - `initial_vitals`: CaseVitals
   - `is_ai_generated`: boolean
   - `order_num`: integer
@@ -459,6 +460,7 @@ BACKEND_STRUCTURE.md 2-bo'lim: tibbiy yo'nalishlar (Kardiologiya, Terapiya va h.
 - `difficulty`: string
 - `expected_answer`: string
 - `expected_duration_minutes`: integer
+- `max_attempts`: integer — sessiyada yuborish mumkin bo'lgan xabarlar soni (default 10)
 - `id`: string
 - `initial_vitals`: CaseVitals
 - `is_ai_generated`: boolean
@@ -501,6 +503,7 @@ BACKEND_STRUCTURE.md 2-bo'lim: tibbiy yo'nalishlar (Kardiologiya, Terapiya va h.
   - `difficulty`: string
   - `expected_answer`: string
   - `expected_duration_minutes`: integer
+  - `max_attempts`: integer — sessiyada yuborish mumkin bo'lgan xabarlar soni (default 10)
   - `id`: string
   - `initial_vitals`: CaseVitals
   - `order_num`: integer
@@ -1348,7 +1351,7 @@ File upload
 - `file` — `.xlsx` yoki `.csv` (≤5MB, ≤500 qator). Birinchi qator — sarlavha.
 - `publish` — `true` bo'lsa yaratilgan case'lar darhol e'lon qilinadi, aks holda draft.
 - Ustunlar: `topic` (mavzu nomi yoki ID), `title_uz/ru/en` (kamida bittasi majburiy), `subtitle_*`, `chief_complaint_*`,
-  `difficulty` (easy|medium|hard, bo'sh = medium), `patient_age`, `patient_gender`, `expected_duration_minutes`,
+  `difficulty` (easy|medium|hard, bo'sh = medium), `patient_age`, `patient_gender`, `expected_duration_minutes`, `max_attempts` (bo'sh = 10),
   `hr`, `bp`, `spo2`, `rr`, `temp`, `gcs`, `visual_state`, `expected_answer`, `cover_image_url`, `order_num`, `scenario` (JSON).
 - Javob: `{total, created, published, failed, ids[], errors[{row, message}]}` — xatoli qatorlar o'tkazib yuboriladi.
 
@@ -1360,3 +1363,9 @@ File upload
 bir kodni necha marta ishlata olishi. Ikkalasida ham: ko'rsatilmasa — **1**, **0 — cheksiz**, manfiy — xato.
 `scope=user` da jami = `max_uses_per_user`, `scope=users` da jami = odamlar soni × `max_uses_per_user` (0 bo'lsa cheksiz).
 Limitdan oshsa: `promo_code_already_redeemed` (shaxsiy limit) yoki `promo_code_used` (jami limit).
+
+## Case urinishlar limiti (`max_attempts`)
+Har bir case'da `max_attempts` (default `10`) - foydalanuvchi bitta sessiyada shu case'ga nechta xabar (`question`
+turidagi chat/javob, ovozli ham) yubora olishi. Limitga yetsa sessiya avtomatik yakunlanadi (`failed`, tanga yo'q).
+`POST/PUT /web/case`, `GET /web/case*`, fayldan yuklash (`max_attempts` ustuni) va AI generatsiyada qo'llab-quvvatlanadi.
+`PUT` da `max_attempts` yuborilmasa yoki `0` bo'lsa eski qiymat o'zgarmaydi.

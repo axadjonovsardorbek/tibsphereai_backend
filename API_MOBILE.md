@@ -247,6 +247,7 @@ O'z referral_code'i, taklif qilganlar soni va ular evaziga olingan tangalar
 - `cover_image_url`: string
 - `difficulty`: string
 - `expected_duration_minutes`: integer
+- `max_attempts`: integer — sessiyada yuborish mumkin bo'lgan xabarlar soni
 - `id`: string
 - `is_favorite`: boolean
 - `patient_age`: integer
@@ -270,6 +271,7 @@ O'z referral_code'i, taklif qilganlar soni va ular evaziga olingan tangalar
 - `cover_image_url`: string
 - `difficulty`: string
 - `expected_duration_minutes`: integer
+- `max_attempts`: integer — sessiyada yuborish mumkin bo'lgan xabarlar soni
 - `id`: string
 - `is_favorite`: boolean
 - `patient_age`: integer
@@ -326,6 +328,7 @@ O'z referral_code'i, taklif qilganlar soni va ular evaziga olingan tangalar
 - `case_id`: string
 - `health_percent`: integer
 - `initial_vitals`: CaseVitals
+- `max_attempts`: integer — xabarlar limiti (case.max_attempts)
 - `session_id`: string
 - `time_limit_seconds`: integer
 - `visual_state`: string
@@ -343,6 +346,8 @@ O'z referral_code'i, taklif qilganlar soni va ular evaziga olingan tangalar
 - `final_score`: integer
 - `health_percent`: integer
 - `id`: string
+- `max_attempts`: integer
+- `attempts_used`: integer — yuborilgan `question` xabarlari soni
 - `started_at`: string
 - `status`: string
 - `user_id`: string
@@ -362,6 +367,8 @@ O'z referral_code'i, taklif qilganlar soni va ular evaziga olingan tangalar
 - `health_percent`: integer
 - `is_correct`: boolean
 - `response`: object (key->object)
+- `max_attempts`, `attempts_used`, `attempts_left`: integer — xabarlar limiti (faqat `question` turi hisoblanadi)
+- `session_ended`: boolean — `attempts_left=0` (yoki HP 0 / to'g'ri javob) bo'lsa `true`, `finish_result` bilan birga
 
 ### `PUT /mobile/simulation/{id}/finish`
 **Sessiyani yakunlash (BACKEND_STRUCTURE.md 4,5-bo'lim)**

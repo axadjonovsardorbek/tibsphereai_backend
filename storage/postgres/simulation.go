@@ -25,11 +25,11 @@ func (r *SimulationRepo) Start(req *m.SimulationStartReq) (*m.SimulationStartRes
 	ctx := context.Background()
 
 	var vitalsJSON, visualState string
-	var timeLimit int
+	var timeLimit, maxAttempts int
 	err := r.db.QueryRow(ctx, `
-		SELECT initial_vitals::text, visual_state, expected_duration_minutes * 60
+		SELECT initial_vitals::text, visual_state, expected_duration_minutes * 60, max_attempts
 		FROM cases WHERE id = $1 AND deleted_at = 0 AND status = 'published'
-	`, req.CaseId).Scan(&vitalsJSON, &visualState, &timeLimit)
+	`, req.CaseId).Scan(&vitalsJSON, &visualState, &timeLimit, &maxAttempts)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("case not found: %s", req.CaseId)
 	}
@@ -61,6 +61,7 @@ func (r *SimulationRepo) Start(req *m.SimulationStartReq) (*m.SimulationStartRes
 		CaseId:          req.CaseId,
 		HealthPercent:   100,
 		TimeLimitSecond: timeLimit,
+		MaxAttempts:     maxAttempts,
 		InitialVitals:   vitals,
 		VisualState:     visualState,
 		WSUrl:           fmt.Sprintf("/mobile/simulation/%s/ws", id),
@@ -94,7 +95,16 @@ func (r *SimulationRepo) AddEvent(req *m.SimulationEventReq, isCorrect bool, hea
 		return nil, fmt.Errorf("error while updating health: %w", err)
 	}
 
+	// Urinish = shu sessiyadagi "question" (chat/javob) xabarlari soni.
+	var attemptsUsed int
+	if err := r.db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM simulation_events WHERE session_id = $1 AND type = 'question'
+	`, req.SessionId).Scan(&attemptsUsed); err != nil {
+		return nil, fmt.Errorf("error while counting attempts: %w", err)
+	}
+
 	return &m.SimulationEventRes{
+		AttemptsUsed:  attemptsUsed,
 		IsCorrect:     isCorrect,
 		HealthDelta:   healthDelta,
 		HealthPercent: healthPercent,
@@ -110,7 +120,7 @@ func (r *SimulationRepo) Finish(req *m.SimulationFinishReq, finalScore, xpEarned
 	ctx := context.Background()
 
 	status := "completed"
-	if req.Reason == "health_zero" {
+	if req.Reason == "health_zero" || req.Reason == "attempts_exhausted" {
 		status = "failed"
 	}
 
@@ -140,7 +150,9 @@ func (r *SimulationRepo) Finish(req *m.SimulationFinishReq, finalScore, xpEarned
 func (r *SimulationRepo) GetById(req *m.ById) (*m.SimulationSessionRes, error) {
 	row := r.db.QueryRow(context.Background(), `
 		SELECT s.id, s.user_id, s.case_id, c.title ->> 'uz', s.status, s.health_percent,
-			s.final_score, s.xp_earned, s.coins_earned, s.started_at::text, s.ended_at::text
+			s.final_score, s.xp_earned, s.coins_earned, s.started_at::text, s.ended_at::text,
+			c.max_attempts,
+			(SELECT COUNT(*) FROM simulation_events e WHERE e.session_id = s.id AND e.type = 'question')
 		FROM simulation_sessions s
 		JOIN cases c ON c.id = s.case_id
 		WHERE s.id = $1
@@ -149,7 +161,7 @@ func (r *SimulationRepo) GetById(req *m.ById) (*m.SimulationSessionRes, error) {
 	s := m.SimulationSessionRes{}
 	err := row.Scan(
 		&s.Id, &s.UserId, &s.CaseId, &s.CaseTitle, &s.Status, &s.HealthPercent,
-		&s.FinalScore, &s.XPEarned, &s.CoinsEarned, &s.StartedAt, &s.EndedAt,
+		&s.FinalScore, &s.XPEarned, &s.CoinsEarned, &s.StartedAt, &s.EndedAt, &s.MaxAttempts, &s.AttemptsUsed,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("simulation session not found: %s", req.Id)
@@ -194,7 +206,9 @@ func (r *SimulationRepo) GetCompleted(req *m.ById) (*m.PaginationResponse, *m.Si
 func (r *SimulationRepo) listByStatus(userId, status string) (*m.PaginationResponse, *m.SimulationSessionList, error) {
 	rows, err := r.db.Query(context.Background(), `
 		SELECT s.id, s.user_id, s.case_id, c.title ->> 'uz', s.status, s.health_percent,
-			s.final_score, s.xp_earned, s.coins_earned, s.started_at::text, s.ended_at::text
+			s.final_score, s.xp_earned, s.coins_earned, s.started_at::text, s.ended_at::text,
+			c.max_attempts,
+			(SELECT COUNT(*) FROM simulation_events e WHERE e.session_id = s.id AND e.type = 'question')
 		FROM simulation_sessions s
 		JOIN cases c ON c.id = s.case_id
 		WHERE s.user_id = $1 AND s.status = $2
@@ -210,7 +224,7 @@ func (r *SimulationRepo) listByStatus(userId, status string) (*m.PaginationRespo
 		s := &m.SimulationSessionRes{}
 		if err := rows.Scan(
 			&s.Id, &s.UserId, &s.CaseId, &s.CaseTitle, &s.Status, &s.HealthPercent,
-			&s.FinalScore, &s.XPEarned, &s.CoinsEarned, &s.StartedAt, &s.EndedAt,
+			&s.FinalScore, &s.XPEarned, &s.CoinsEarned, &s.StartedAt, &s.EndedAt, &s.MaxAttempts, &s.AttemptsUsed,
 		); err != nil {
 			return nil, nil, fmt.Errorf("error while scanning simulation session: %w", err)
 		}

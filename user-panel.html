@@ -1130,6 +1130,7 @@ async function renderCatalog(){
       '<div><span class="k">Bemor</span>'+esc(cs.patient_age)+' yosh, '+esc(cs.patient_gender)+'</div>'+
       '<div><span class="k">Shikoyat</span>'+esc(cs.chief_complaint)+'</div>'+
       '<div><span class="k">Kutilgan davomiylik</span>'+esc(cs.expected_duration_minutes)+' min</div>'+
+      '<div><span class="k">Urinishlar (xabarlar limiti)</span>'+esc(cs.max_attempts||10)+'</div>'+
       '<div><span class="k">Status</span>'+esc(cs.status)+'</div></div>';
     const footer = document.createElement('div'); footer.className='modalFooter';
     const favBtn = document.createElement('button'); favBtn.textContent = cs.is_favorite ? '⭐ Sevimlida' : '☆ Sevimliga qo\'shish';
@@ -1397,13 +1398,14 @@ function closeSimView(){
   localStorage.removeItem('tu_active_session');
 }
 
-// openSimulation - startRes ({session_id,case_id,time_limit_seconds,initial_vitals,visual_state,ws_url,case_title?})
+// openSimulation - startRes ({session_id,case_id,time_limit_seconds,max_attempts,initial_vitals,visual_state,ws_url,case_title?})
 // yoki oddiy {session_id} (Tarix/Davom ettirish orqali qayta ochilganda) bilan chaqiriladi.
 async function openSimulation(startRes){
   sim = {
     sessionId: startRes.session_id,
     caseId: startRes.case_id || null,
     timeLimitSec: startRes.time_limit_seconds || null,
+    maxAttempts: startRes.max_attempts || null, attemptsUsed: 0,
     elapsedSec: 0,
     ws: null, timerInt: null, beepInt: null, audioCtx: null,
     muted: true, voiceGlobalEnabled: false,
@@ -1458,6 +1460,7 @@ async function openSimulation(startRes){
     '</div>'+
     '<div class="barRow"><div class="lbl"><span>Bemor holati</span><b id="simHealthLbl">100%</b></div><div class="miniBar"><div class="fill" id="simHealthFill" style="width:100%"></div></div></div>'+
     '<div class="barRow"><div class="lbl"><span>Vaqt</span><b id="simTimeLbl">—</b></div><div class="miniBar"><div class="fill" id="simTimeFill" style="width:0%;background:linear-gradient(90deg,var(--doc2),var(--doc1))"></div></div></div>'+
+    '<div class="barRow"><div class="lbl"><span>Urinishlar</span><b id="simAttemptsLbl">—</b></div></div>'+
     '<div class="vitalsGrid">'+
       '<div class="vitalCard"><span class="ic">❤️</span><div><div class="v" id="vHr">—</div><div class="l">Yurak urishi (bpm)</div></div></div>'+
       '<div class="vitalCard"><span class="ic">🩸</span><div><div class="v" id="vBp">—</div><div class="l">Qon bosimi</div></div></div>'+
@@ -1465,6 +1468,20 @@ async function openSimulation(startRes){
       '<div class="vitalCard"><span class="ic">💨</span><div><div class="v" id="vRr">—</div><div class="l">Nafas olish</div></div></div>'+
     '</div>'+
     '<div class="chatLog" id="simChatLog"></div>';
+
+  // Urinishlar hisoblagichi: start javobida max_attempts bor; qayta ochilganda
+  // (Davom ettirish/Tarix) GET /mobile/simulation/{id} dan max_attempts+attempts_used olinadi.
+  const renderAttempts = ()=>{
+    const el = document.getElementById('simAttemptsLbl');
+    if(el) el.textContent = sim.maxAttempts ? (Math.max(0, sim.maxAttempts - sim.attemptsUsed)+' / '+sim.maxAttempts+' qoldi') : '—';
+  };
+  if(!sim.maxAttempts){
+    try{
+      const ss = await api('/mobile/simulation/'+sim.sessionId, {silent:true});
+      if(ss && ss.max_attempts){ sim.maxAttempts = ss.max_attempts; sim.attemptsUsed = ss.attempts_used || 0; }
+    }catch(e){}
+  }
+  renderAttempts();
 
   const chatLog = document.getElementById('simChatLog');
   const sysMsg = document.createElement('div'); sysMsg.className='msg sys';
@@ -1569,6 +1586,9 @@ async function openSimulation(startRes){
       }
       chatLog.scrollTop = chatLog.scrollHeight;
       applyHealth(res.health_percent);
+      // Xabarlar limiti (case.max_attempts): faqat 'question' hisoblanadi.
+      // attempts_left=0 bo'lsa backend sessiyani o'zi yakunlaydi (session_ended).
+      if(res.max_attempts){ sim.maxAttempts = res.max_attempts; sim.attemptsUsed = res.attempts_used; renderAttempts(); }
       // Backend health_percent 0'ga tushganda sessiyani O'ZI avtomatik
       // yakunlaydi (session_ended/finish_result) - shu natijadan foydalanamiz,
       // qayta PUT /finish chaqirmaymiz (allaqachon yakunlangan sessiyaga
