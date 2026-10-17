@@ -186,6 +186,7 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 		{
 			caseGrp.POST("", h.CreateCase)
 			caseGrp.POST("/ai-generate", h.GenerateCaseWithAI)
+			caseGrp.POST("/ai-generate-batch", h.GenerateCaseBatch)
 			caseGrp.POST("/import", h.ImportCases)
 			caseGrp.GET("/import/template", h.CaseImportTemplate)
 			caseGrp.GET("", h.GetAllCases)
@@ -193,6 +194,15 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			caseGrp.PUT("/:id/update", h.UpdateCase)
 			caseGrp.PUT("/:id/publish", h.PublishCase)
 			caseGrp.DELETE("/:id/delete", h.DeleteCase)
+		}
+
+		caseSource := web.Group("/case-source").Use(mid.NewAuth(enforcer, rdb))
+		{
+			caseSource.POST("", h.CreateCaseSource)
+			caseSource.GET("", h.GetAllCaseSources)
+			caseSource.GET("/:id", h.GetByIdCaseSource)
+			caseSource.PUT("/:id/update", h.UpdateCaseSource)
+			caseSource.DELETE("/:id/delete", h.DeleteCaseSource)
 		}
 
 		partner := web.Group("/partner").Use(mid.NewAuth(enforcer, rdb))

@@ -219,7 +219,7 @@ func BotAuth(config *config.Config) {
 			// Bosqich 4: Kodingni bot orqali foydalanuvchiga yuborish
 			text := fmt.Sprintf(`👋 Salom %s
 
-			Siz *MedicAI.uz* akkauntingizga kirish uchun so‘rov yubordingiz.
+			Siz *TibStation* akkauntingizga kirish uchun so‘rov yubordingiz.
 			
 			🔐 *Tasdiqlash kodingiz:*
 			

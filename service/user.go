@@ -58,15 +58,15 @@ func (s *UserService) SendConfirmationCode(ctx context.Context, req *m.SendConfi
 		  <div style="height:6px;background:#e11d48;"></div>
 		  <div style="padding:22px 24px 24px 24px;">
 			<div style="display:flex;align-items:center;gap:12px;">
-			  <img src="%s" alt="MedicAI" height="38" style="display:block;border:0;outline:none;text-decoration:none;" />
+			  <img src="%s" alt="TibStation" height="38" style="display:block;border:0;outline:none;text-decoration:none;" />
 			  <div>
-				<div style="font-size:18px;font-weight:800;color:#111827;line-height:1.2;">MedicAI</div>
+				<div style="font-size:18px;font-weight:800;color:#111827;line-height:1.2;">TibStation</div>
 				<div style="font-size:13px;color:#6b7280;margin-top:2px;">Kirish uchun tasdiqlash kodi</div>
 			  </div>
 			</div>
 			<div style="margin-top:18px;font-size:14px;line-height:1.6;color:#111827;">
 			  Assalomu alaykum!<br><br>
-			  Siz <b>MedicAI</b> platformasiga kirish uchun so‘rov yubordingiz.
+			  Siz <b>TibStation</b> platformasiga kirish uchun so‘rov yubordingiz.
 			</div>
 			<div style="margin:20px 0;padding:16px;border-radius:12px;background:#fff1f2;border:1px solid #fecdd3;text-align:center;">
 			  <div style="font-size:12px;color:#9f1239;margin-bottom:8px;font-weight:700;">Tasdiqlash kodingiz</div>
@@ -83,15 +83,15 @@ func (s *UserService) SendConfirmationCode(ctx context.Context, req *m.SendConfi
 			  Agar bu so‘rovni siz yubormagan bo‘lsangiz, ushbu xabarni e’tiborsiz qoldiring.
 			</div>
 			<hr style="border:none;border-top:1px solid #eef0f6;margin:18px 0;">
-			<div style="font-size:12px;color:#6b7280;">Hurmat bilan,<br>MedicAI</div>
+			<div style="font-size:12px;color:#6b7280;">Hurmat bilan,<br>TibStation</div>
 		  </div>
 		</div>
-		<div style="text-align:center;color:#9ca3af;font-size:12px;margin-top:12px;">© MedicAI</div>
+		<div style="text-align:center;color:#9ca3af;font-size:12px;margin-top:12px;">© TibStation</div>
 	  </div>
 	</body>
 	</html>`, logoURL, otp)
 
-		subject := "MedicAI — Kirish uchun tasdiqlash kodi"
+		subject := "TibStation — Kirish uchun tasdiqlash kodi"
 		message := fmt.Sprintf("Tasdiqlash kodingiz: %s\nKod 5 daqiqa davomida amal qiladi.", otp)
 
 		err := helper.SendVerificationCode(m.Params{

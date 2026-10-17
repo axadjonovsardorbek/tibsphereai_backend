@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -211,6 +213,10 @@ func (c geminiCaseGen) Generate(ctx context.Context, genReq *models.CaseGenReq) 
 		prompt = fmt.Sprintf("%s\n\nKutilgan to'g'ri javob/tashxis (albatta shu bo'lishi kerak): %s", prompt, genReq.ExpectedAnswer)
 	}
 
+	if src := g.buildSourcesBlock(ctx, genReq.Sources); src != "" {
+		prompt = fmt.Sprintf("%s\n\nQuyidagi ishonchli manbalarga tayanib case tuz (klinik ma'lumotlar, dozalar, tashxis mezonlari shu manbalarga mos bo'lsin, ulardan chetga chiqma):\n%s", prompt, src)
+	}
+
 	// Admin shabloni boshqa JSON tuzilmasini so'rashi mumkin (masalan patient_info,
 	// case_id) - backend esa aynan CaseCreateReq maydonlarini kutadi, shu sabab
 	// chiqish formatini har doim oxirida majburan qayta belgilaymiz.
@@ -245,6 +251,71 @@ func (c geminiCaseGen) Generate(ctx context.Context, genReq *models.CaseGenReq) 
 	out := req.CaseCreateReq
 	out.ExpectedAnswer = flattenExpectedAnswer(req.ExpectedAnswer)
 	return finishCaseGen(&out, difficulty, genReq.ExpectedAnswer), usage, nil
+}
+
+const (
+	maxSourceChars  = 12000 // bitta manbadan olinadigan maksimal belgi soni
+	maxSourceBytes  = 2 << 20
+	maxSourcesTotal = 60000 // barcha manbalar uchun umumiy belgi chegarasi
+)
+
+var (
+	reHTMLScriptStyle = regexp.MustCompile(`(?is)<(script|style|noscript)[^>]*>.*?</(script|style|noscript)>`)
+	reHTMLTag         = regexp.MustCompile(`(?s)<[^>]+>`)
+	reSpaces          = regexp.MustCompile(`\s+`)
+)
+
+// buildSourcesBlock - admin kiritgan manbalarni prompt uchun matnga aylantiradi:
+// http(s) havolalar yuklab olinib HTML'dan tozalanadi, qolgani matn sifatida
+// olinadi. Yuklab bo'lmagan havola jim o'tkazib yuboriladi (case baribir yaratiladi).
+func (g *geminiClient) buildSourcesBlock(ctx context.Context, sources []string) string {
+	var b strings.Builder
+	n := 0
+	for _, raw := range sources {
+		src := strings.TrimSpace(raw)
+		if src == "" {
+			continue
+		}
+		text := src
+		if strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") {
+			t, err := g.fetchSourceURL(ctx, src)
+			if err != nil || t == "" {
+				fmt.Println("case source fetch failed:", src, err)
+				continue
+			}
+			text = t
+		}
+		if b.Len() >= maxSourcesTotal {
+			break
+		}
+		n++
+		fmt.Fprintf(&b, "\n--- Manba %d (%s) ---\n%s\n", n, truncate(src, 120), truncate(text, maxSourceChars))
+	}
+	return b.String()
+}
+
+func (g *geminiClient) fetchSourceURL(ctx context.Context, u string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; TibStationBot/1.0)")
+	resp, err := g.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("status %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxSourceBytes))
+	if err != nil {
+		return "", err
+	}
+	text := reHTMLScriptStyle.ReplaceAllString(string(body), " ")
+	text = reHTMLTag.ReplaceAllString(text, " ")
+	text = html.UnescapeString(text)
+	return strings.TrimSpace(reSpaces.ReplaceAllString(text, " ")), nil
 }
 
 // flattenExpectedAnswer string yoki {"uz","ru","en"} obyektdan bitta matn chiqaradi

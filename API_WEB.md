@@ -442,9 +442,30 @@ BACKEND_STRUCTURE.md 2-bo'lim: tibbiy yo'nalishlar (Kardiologiya, Terapiya va h.
   - `chief_complaint`: string
   - `difficulty`: string
   - `expected_answer`: string
+  - `topic_id`: string — ixtiyoriy; berilsa case shu mavzuga biriktiriladi va `topic` bo'sh bo'lsa mavzu nomi olinadi
+  - `source_ids`: string[] — ixtiyoriy; `/web/case-source` dagi manbalar. Bo'sh bo'lsa BARCHA manbalar ishlatiladi
   - `topic`: string
 **Javob (200):**
 `string`
+
+### `POST /web/case/ai-generate-batch`
+**AI yordamida ommaviy keys yaratish (bo'lim yoki bir nechta mavzu bo'yicha)**
+- Auth: kerak (Bearer token)
+**Body** (CaseBatchGenReq):
+  - `category_id`: string — bo'lim (ichidagi barcha mavzular); yoki `topic_ids`
+  - `topic_ids`: string[] — aniq mavzular (berilsa category_id e'tiborga olinmaydi)
+  - `difficulty`: string — easy|medium|hard
+  - `count_per_topic`: integer — har bir mavzuga nechta (default 1); jami 20 tadan oshmasligi kerak
+  - `source_ids`: string[] — ixtiyoriy; bo'sh bo'lsa barcha manbalar ishlatiladi
+**Javob (200):** `created`, `failed`, `items[]` (`topic_id`, `case_id` yoki `error`). Case'lar draft holatida yaratiladi.
+
+### `/web/case-source` — ishonchli manbalar (CRUD)
+AI generatsiya uchun manbalar. `content` — veb-havola (http/https) yoki matn parchasi.
+- `POST /web/case-source` — body: `name`, `content` (ikkalasi majburiy)
+- `GET /web/case-source` — query: `name`, `limit`, `page`; javob: `sources[]`
+- `GET /web/case-source/{id}`
+- `PUT /web/case-source/{id}/update` — body: `name`, `content`
+- `DELETE /web/case-source/{id}/delete`
 
 ### `GET /web/case/{id}`
 **Get case by ID (admin)**

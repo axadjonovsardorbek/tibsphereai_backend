@@ -81,6 +81,7 @@ p, admin, /web/topic/:id/update, PUT
 p, admin, /web/topic/:id/delete, DELETE
 p, admin, /web/case, POST
 p, admin, /web/case/ai-generate, POST
+p, admin, /web/case/ai-generate-batch, POST
 p, admin, /web/case/import, POST
 p, admin, /web/case/import/template, GET
 p, admin, /web/case, GET
@@ -88,6 +89,11 @@ p, admin, /web/case/:id, GET
 p, admin, /web/case/:id/update, PUT
 p, admin, /web/case/:id/publish, PUT
 p, admin, /web/case/:id/delete, DELETE
+p, admin, /web/case-source, POST
+p, admin, /web/case-source, GET
+p, admin, /web/case-source/:id, GET
+p, admin, /web/case-source/:id/update, PUT
+p, admin, /web/case-source/:id/delete, DELETE
 p, admin, /web/partner, POST
 p, admin, /web/partner, GET
 p, admin, /web/partner/:id, GET

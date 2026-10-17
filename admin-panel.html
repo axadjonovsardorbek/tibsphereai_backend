@@ -422,6 +422,21 @@ function buildFormField(container, f, values, refData, onChange){
     sel.value = getPath(values, f.name) ?? (opts[0] ? opts[0].value : '');
     wrap.appendChild(sel);
     wrap._getValue = () => sel.value;
+  } else if(f.type === 'checklist'){
+    // Bir nechta variantni belgilab tanlash (hech biri belgilanmasa bo'sh ro'yxat).
+    const box = document.createElement('div');
+    box.style.cssText = 'max-height:170px;overflow:auto;border:1px solid var(--border,#2a3350);border-radius:8px;padding:6px 10px';
+    const checks = [];
+    (f.options || []).forEach(o=>{
+      const row = document.createElement('label');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer';
+      const cb = document.createElement('input'); cb.type='checkbox'; cb.value=o.value;
+      row.appendChild(cb); row.appendChild(document.createTextNode(o.label));
+      box.appendChild(row); checks.push(cb);
+    });
+    if(!checks.length) box.textContent = f.emptyText || 'Variantlar yo\'q';
+    wrap.appendChild(box);
+    wrap._getValue = () => checks.filter(c=>c.checked).map(c=>c.value);
   } else if(f.type === 'userpicker'){
     // Foydalanuvchini ID yozmasdan, qidirib tanlash (multi=true bo'lsa bir nechtasi).
     const picked = new Map(); // id -> label
@@ -652,6 +667,9 @@ async function loadRefOptions(kind){
     } else if(kind === 'partner'){
       const r = await api('/web/partner', {query:{limit:100,page:1}});
       items = extractList(r).items.map(x => ({value:x.id, label: x.name || x.id}));
+    } else if(kind === 'case_source'){
+      const r = await api('/web/case-source', {query:{limit:200,page:1}});
+      items = extractList(r).items.map(x => ({value:x.id, label: x.name || x.id}));
     } else if(kind === 'role'){
       const r = await api('/web/role', {query:{limit:100,page:1}});
       items = extractList(r).items.map(x => ({value:x.id, label: x.name || x.id}));
@@ -845,28 +863,68 @@ const MODULES = {
       return actions;
     },
     extraToolbar:(refresh)=>{
+      const diffOpts = [{value:'easy',label:'Easy'},{value:'medium',label:'Medium'},{value:'hard',label:'Hard'}];
+      const srcField = {name:'source_ids', label:'Ishonchli manbalar (hech biri tanlanmasa — barcha manbalar ishlatiladi)', type:'checklist', asyncOptions:'case_source', emptyText:'Manbalar yo\'q — "📚 Ishonchli manbalar" bo\'limidan qo\'shing', full:true};
+      const withRefs = async fields => Promise.all(fields.map(async f=>{
+        if(!f.asyncOptions) return f;
+        const nf = Object.assign({}, f); nf.options = await resolveOptions(f); return nf;
+      }));
       const b = document.createElement('button'); b.className='primary'; b.textContent='🤖 AI bilan yaratish';
-      b.onclick = ()=>{
+      b.onclick = async ()=>{
         openModal({
           title:'AI yordamida case generatsiyasi',
-          fields:[
-            {name:'topic', label:'Mavzu (matn)', type:'text', required:true},
-            {name:'difficulty', label:'Qiyinlik', type:'select', options:[{value:'easy',label:'Easy'},{value:'medium',label:'Medium'},{value:'hard',label:'Hard'}]},
+          fields: await withRefs([
+            {name:'topic_id', label:'Mavzu (tanlang yoki pastda matn yozing)', type:'select', asyncOptions:'topic', includeEmpty:true, emptyLabel:'— tanlanmagan (matn yozaman) —'},
+            {name:'topic', label:'Mavzu matni (ro\'yxatdan tanlanmagan bo\'lsa)', type:'text'},
+            {name:'difficulty', label:'Qiyinlik', type:'select', options:diffOpts},
+            srcField,
             {name:'chief_complaint', label:'Bemor shikoyati (ixtiyoriy - AI shu asosda quradi)', type:'textarea'},
             {name:'expected_answer', label:'To\'g\'ri javob/tashxis (ixtiyoriy - aynan shu saqlanadi)', type:'textarea'},
-          ],
+          ]),
           values:{},
           onSubmit: async (body)=>{
+            if(!body.topic_id && !String(body.topic||'').trim()) throw new Error('Mavzuni tanlang yoki matn yozing');
             await api('/web/case/ai-generate', {method:'POST', body});
             toast('AI case qoralamasi yaratildi (draft) — ro\'yxatdan ko\'rib chiqing', 'ok');
             refresh();
           }
         });
       };
+      const batch = document.createElement('button'); batch.className='primary'; batch.textContent='🤖 Ommaviy AI generatsiya';
+      batch.title = 'Butun bo\'lim (yoki bitta mavzu) bo\'yicha bir martada ko\'p case yaratish';
+      batch.onclick = async ()=>{
+        openModal({
+          title:'Ommaviy AI generatsiya (bo\'lim bo\'yicha)',
+          fields: await withRefs([
+            {name:'category_id', label:'Bo\'lim (ichidagi barcha mavzular uchun case yaratiladi)', type:'select', asyncOptions:'category', required:true},
+            {name:'difficulty', label:'Qiyinlik', type:'select', options:diffOpts},
+            {name:'count_per_topic', label:'Har bir mavzuga nechta case (jami 20 tadan oshmasin)', type:'number'},
+            srcField,
+          ]),
+          values:{count_per_topic:1},
+          onSubmit: async (body)=>{
+            body.count_per_topic = Number(body.count_per_topic)||1;
+            const res = await api('/web/case/ai-generate-batch', {method:'POST', body});
+            toast('Yaratildi: '+res.created+', xato: '+res.failed, res.failed ? 'err' : 'ok');
+            refresh();
+          }
+        });
+      };
       const imp = document.createElement('button'); imp.className='primary'; imp.textContent='📥 Excel/CSV yuklash';
       imp.onclick = ()=>openCaseImport(refresh);
-      return [b, imp];
+      return [b, batch, imp];
     }
+  },
+  case_source: {
+    label:'Ishonchli manbalar', base:'/web/case-source', listKey:'sources',
+    search:[{name:'name', label:'Nomi (qidiruv)', type:'text'}],
+    columns:['id','name','content','created_at'],
+    fields:[
+      {name:'name', label:'Nomi (masalan: AHA 2020 yo\'riqnomasi)', type:'text', required:true},
+      {name:'content', label:'Havola (http/https) yoki matn parchasi', type:'textarea', rows:6, full:true, required:true},
+    ],
+    canCreate:true, canUpdate:true, canDelete:true,
+    onSaved:()=>invalidateRef('case_source'),
   },
   partner: {
     label:'Hamkorlar', base:'/web/partner', listKey:'partners',
@@ -969,7 +1027,7 @@ const MODULES = {
 async function resolveOptions(f){
   let opts = f.options ? f.options.slice() : [];
   if(f.asyncOptions) opts = (await loadRefOptions(f.asyncOptions)).slice();
-  if(f.includeEmpty) opts = [{value:'', label:'— hammasi —'}].concat(opts);
+  if(f.includeEmpty) opts = [{value:'', label:f.emptyLabel || '— hammasi —'}].concat(opts);
   return opts;
 }
 
@@ -1873,6 +1931,7 @@ const NAV = [
     {key:'about', label:'ℹ️ Biz haqimizda', render: ()=>renderGenericModule('about')},
     {key:'faq', label:'❓ FAQ', render: ()=>renderGenericModule('faq')},
     {key:'contact', label:'☎️ Kontaktlar', render: ()=>renderGenericModule('contact')},
+    {key:'case_source', label:'📚 Ishonchli manbalar', render: ()=>renderGenericModule('case_source')},
     {key:'partner', label:'🤝 Hamkorlar', render: ()=>renderGenericModule('partner')},
     {key:'app_route', label:'🔗 App Route', render: renderAppRoute},
   ]},

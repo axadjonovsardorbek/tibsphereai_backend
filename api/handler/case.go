@@ -61,6 +61,29 @@ func (h *Handler) GenerateCaseWithAI(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "case draft generated, review and publish", "id": res.Id})
 }
 
+// GenerateCaseBatch godoc
+// @Summary AI yordamida ommaviy keys yaratish (bo'lim yoki bir nechta mavzu bo'yicha)
+// @Tags case
+// @Accept json
+// @Produce json
+// @Param body body models.CaseBatchGenReq true "category_id yoki topic_ids, difficulty, count_per_topic, sources"
+// @Success 200 {object} models.CaseBatchGenRes
+// @Security BearerAuth
+// @Router /web/case/ai-generate-batch [post]
+func (h *Handler) GenerateCaseBatch(c *gin.Context) {
+	var body m.CaseBatchGenReq
+	if err := c.BindJSON(&body); err != nil {
+		errs.Bad(c, err)
+		return
+	}
+	res, err := h.Clients.Case.GenerateBatch(c.Request.Context(), &body)
+	if err != nil {
+		errs.Bad(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
 // PublishCase godoc
 // @Summary Publish case (admin ko'rib chiqib tasdiqlaydi)
 // @Tags case

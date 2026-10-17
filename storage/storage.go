@@ -203,6 +203,16 @@ type PartnerI interface {
 	GetAllMobile() (*m.PartnerMobileList, error)
 }
 
+type CaseSourceI interface {
+	Create(req *m.CaseSourceCreateReq) (*m.ById, error)
+	GetById(req *m.ById) (*m.CaseSourceRes, error)
+	GetAll(req *m.CaseSourceGetListReq) (*m.PaginationResponse, *m.CaseSourceList, error)
+	Update(req *m.CaseSourceUpdateReq) (*m.Void, error)
+	Delete(req *m.ById) (*m.Void, error)
+	// GetContents - AI generatsiya uchun manba matnlari (ids bo'sh = hammasi).
+	GetContents(ids []string) ([]string, error)
+}
+
 type DashBoardI interface {
 	GetDashboard(req *m.GetDashboardReq) (*m.DashboardRes, error)
 }

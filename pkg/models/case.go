@@ -14,6 +14,37 @@ type CaseGenReq struct {
 	Difficulty     string `json:"difficulty"`
 	ChiefComplaint string `json:"chief_complaint"`
 	ExpectedAnswer string `json:"expected_answer"`
+	// SourceIds - case_sources dan tanlangan manbalar. Bo'sh bo'lsa bazadagi
+	// BARCHA manbalar ishlatiladi.
+	SourceIds []string `json:"source_ids"`
+	// Sources - service qatlami SourceIds'dan to'ldiradigan manba matnlari
+	// (havola yoki matn); mijozdan qabul qilinmaydi.
+	Sources []string `json:"-"`
+	// TopicId - ixtiyoriy: berilsa case shu mavzuga biriktiriladi va Topic bo'sh
+	// bo'lsa mavzu nomi (topics.name) avtomatik olinadi.
+	TopicId string `json:"topic_id"`
+}
+
+// CaseBatchGenReq - bir nechta mavzu bo'yicha ommaviy AI generatsiya.
+// TopicIds yoki CategoryId (bo'lim - ichidagi barcha mavzular) dan biri majburiy.
+type CaseBatchGenReq struct {
+	CategoryId    string   `json:"category_id"`
+	TopicIds      []string `json:"topic_ids"`
+	Difficulty    string   `json:"difficulty"`
+	CountPerTopic int      `json:"count_per_topic"` // default 1
+	SourceIds     []string `json:"source_ids"`      // bo'sh = barcha manbalar
+}
+
+type CaseBatchGenItem struct {
+	TopicId string `json:"topic_id"`
+	CaseId  string `json:"case_id,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
+type CaseBatchGenRes struct {
+	Created int                `json:"created"`
+	Failed  int                `json:"failed"`
+	Items   []CaseBatchGenItem `json:"items"`
 }
 
 // DefaultCaseMaxAttempts - case.max_attempts ko'rsatilmagan (0) bo'lsa ishlatiladigan

@@ -25,6 +25,7 @@ type Clients struct {
 	Tariff           *service.TariffService
 	PromoCode        *service.PromoCodeService
 	Partner          *service.PartnerService
+	CaseSource       *service.CaseSourceService
 	Dashboard        *service.DashboardService
 	User             *service.UserService
 	UserDevice       *service.UserDeviceService
@@ -62,6 +63,7 @@ func NewClients(cfg *config.Config, conn *postgres.Storage, rdb *redis.Client, p
 		Tariff:           service.NewTariffService(conn, rdb),
 		PromoCode:        service.NewPromoCodeService(conn, rdb, userSvc),
 		Partner:          service.NewPartnerService(conn),
+		CaseSource:       service.NewCaseSourceService(conn),
 		Dashboard:        service.NewDashboardService(conn, rdb),
 		User:             userSvc,
 		UserDevice:       service.NewUserDeviceService(conn, pushClient),

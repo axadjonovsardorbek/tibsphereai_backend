@@ -165,7 +165,7 @@ func SendVerificationCode(params models.Params, cfg config.Config) error {
 	smtpPort := cfg.BREVO_PORT
 
 	message := fmt.Sprintf(
-		"From: iMedTeam <%s>\r\n"+
+		"From: TibStation <%s>\r\n"+
 			"To: %s\r\n"+
 			"Subject: %s\r\n"+
 			"MIME-Version: 1.0\r\n"+
