@@ -786,6 +786,17 @@ const MODULES = {
       {name:'search', label:'Qidiruv', type:'text'},
     ],
     columns:['id','title','topic_id','difficulty','status','patient_age','max_attempts','created_at'],
+    // Yangi case: bitta qisqa shablon (AI qolgan maydonlarni — sarlavha, vitals, scenario — o'zi to'ldiradi,
+    // admin kiritganlarni o'zgartirmaydi). To'liq maydonlar faqat tahrirlashda.
+    createFields:[
+      {name:'topic_id', label:'Mavzu', type:'select', asyncOptions:'topic', required:true},
+      {name:'difficulty', label:'Qiyinlik', type:'select', options:[{value:'easy',label:'Easy'},{value:'medium',label:'Medium'},{value:'hard',label:'Hard'}]},
+      {name:'cover_image_url', label:'Muqova rasm', type:'file'},
+      {name:'chief_complaint', label:'Bemor shikoyati', type:'textarea', required:true, full:true},
+      {name:'expected_answer', label:'To\'g\'ri javob', type:'textarea', required:true, full:true},
+    ],
+    createValues:{difficulty:'medium'},
+    beforeCreate:(b)=>{ b.chief_complaint = {uz: String(b.chief_complaint||'').trim()}; return b; },
     fields:[
       {name:'topic_id', label:'Mavzu', type:'select', asyncOptions:'topic', required:true},
       {name:'title', label:'Sarlavha', type:'ml', required:true},
@@ -877,9 +888,10 @@ const MODULES = {
             {name:'topic_id', label:'Mavzu (tanlang yoki pastda matn yozing)', type:'select', asyncOptions:'topic', includeEmpty:true, emptyLabel:'— tanlanmagan (matn yozaman) —'},
             {name:'topic', label:'Mavzu matni (ro\'yxatdan tanlanmagan bo\'lsa)', type:'text'},
             {name:'difficulty', label:'Qiyinlik', type:'select', options:diffOpts},
+            {name:'cover_image_url', label:'Muqova rasm', type:'file'},
+            {name:'chief_complaint', label:'Bemor shikoyati (aynan shu saqlanadi)', type:'textarea', full:true},
+            {name:'expected_answer', label:'To\'g\'ri javob (aynan shu saqlanadi)', type:'textarea', full:true},
             srcField,
-            {name:'chief_complaint', label:'Bemor shikoyati (ixtiyoriy - AI shu asosda quradi)', type:'textarea'},
-            {name:'expected_answer', label:'To\'g\'ri javob/tashxis (ixtiyoriy - aynan shu saqlanadi)', type:'textarea'},
           ]),
           values:{},
           onSubmit: async (body)=>{
@@ -1086,7 +1098,7 @@ async function renderGenericModule(key){
   }
 
   async function openCreate(){
-    const refFields = await Promise.all(cfg.fields.map(async f=>{
+    const refFields = await Promise.all((cfg.createFields || cfg.fields).map(async f=>{
       if(f.asyncOptions){ const nf = Object.assign({}, f); nf.options = await resolveOptions(f); nf.type='select'; return nf; }
       return f;
     }));
@@ -1095,6 +1107,7 @@ async function renderGenericModule(key){
       fields: refFields,
       values: cfg.createValues || {},
       onSubmit: async (body)=>{
+        if(cfg.beforeCreate) body = cfg.beforeCreate(body);
         await api(cfg.base, {method:'POST', body});
         toast('Yaratildi', 'ok');
         if(cfg.onSaved) cfg.onSaved();

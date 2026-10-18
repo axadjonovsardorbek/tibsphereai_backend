@@ -207,7 +207,7 @@ func (c geminiCaseGen) Generate(ctx context.Context, genReq *models.CaseGenReq) 
 	// Admin qo'lda shikoyat/javob kiritgan bo'lsa - AI ularni MAJBURIY asos qilib olishi
 	// kerak (o'zidan o'ylab topmaydi, faqat shu ikkisi atrofida case quradi).
 	if genReq.ChiefComplaint != "" {
-		prompt = fmt.Sprintf("%s\n\nBemorning asosiy shikoyati (albatta shu asosda case tuz, chief_complaint maydonini shu ma'noda barcha tillarga tarjima qil): %s", prompt, genReq.ChiefComplaint)
+		prompt = fmt.Sprintf("%s\n\nBemorning asosiy shikoyati (albatta shu asosda case tuz; uni O'ZGARTIRMA, chief_complaint maydonini shu ma'noda barcha tillarga tarjima qil; vitals, yosh, jins va scenario shu shikoyatga klinik mos bo'lsin): %s", prompt, genReq.ChiefComplaint)
 	}
 	if genReq.ExpectedAnswer != "" {
 		prompt = fmt.Sprintf("%s\n\nKutilgan to'g'ri javob/tashxis (albatta shu bo'lishi kerak): %s", prompt, genReq.ExpectedAnswer)
@@ -250,7 +250,7 @@ func (c geminiCaseGen) Generate(ctx context.Context, genReq *models.CaseGenReq) 
 	}
 	out := req.CaseCreateReq
 	out.ExpectedAnswer = flattenExpectedAnswer(req.ExpectedAnswer)
-	return finishCaseGen(&out, difficulty, genReq.ExpectedAnswer), usage, nil
+	return finishCaseGen(&out, difficulty, genReq), usage, nil
 }
 
 const (
@@ -344,7 +344,8 @@ func flattenExpectedAnswer(raw json.RawMessage) string {
 	return ""
 }
 
-func finishCaseGen(req *models.CaseCreateReq, difficulty, adminExpected string) *models.CaseCreateReq {
+func finishCaseGen(req *models.CaseCreateReq, difficulty string, gen *models.CaseGenReq) *models.CaseCreateReq {
+	adminExpected := gen.ExpectedAnswer
 	if req.Difficulty == "" {
 		req.Difficulty = difficulty
 	}
@@ -355,6 +356,17 @@ func finishCaseGen(req *models.CaseCreateReq, difficulty, adminExpected string) 
 	// qat'iy nazar aynan shuni saqlaymiz (aniqlik uchun, AI qayta yozib qo'ymasin).
 	if adminExpected != "" {
 		req.ExpectedAnswer = adminExpected
+	}
+	// Admin kiritgan shikoyat va rasm AI tomonidan o'zgartirilmaydi: shikoyat
+	// aynan "uz" ostida saqlanadi (AI faqat ru/en tarjimalarini to'ldiradi).
+	if gen.ChiefComplaint != "" {
+		if req.ChiefComplaint == nil {
+			req.ChiefComplaint = map[string]string{}
+		}
+		req.ChiefComplaint["uz"] = gen.ChiefComplaint
+	}
+	if gen.CoverImageUrl != "" {
+		req.CoverImageUrl = gen.CoverImageUrl
 	}
 	return req
 }

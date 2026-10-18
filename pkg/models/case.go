@@ -14,6 +14,8 @@ type CaseGenReq struct {
 	Difficulty     string `json:"difficulty"`
 	ChiefComplaint string `json:"chief_complaint"`
 	ExpectedAnswer string `json:"expected_answer"`
+	// CoverImageUrl - admin yuklagan rasm; AI uni o'zgartirmaydi, aynan shu saqlanadi.
+	CoverImageUrl string `json:"cover_image_url"`
 	// SourceIds - case_sources dan tanlangan manbalar. Bo'sh bo'lsa bazadagi
 	// BARCHA manbalar ishlatiladi.
 	SourceIds []string `json:"source_ids"`
