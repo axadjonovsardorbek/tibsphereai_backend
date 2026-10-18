@@ -54,7 +54,9 @@ type CaseBatchGenRes struct {
 const DefaultCaseMaxAttempts = 1
 
 type CaseCreateReq struct {
-	TopicId                 string            `json:"topic_id"`
+	TopicId string `json:"topic_id"`
+	// Topic - ixtiyoriy: ro'yxatdan tanlanmagan mavzu matni (faqat AI uchun yo'l-yo'riq, saqlanmaydi).
+	Topic                   string            `json:"topic"`
 	Title                   map[string]string `json:"title"`
 	Subtitle                map[string]string `json:"subtitle"`
 	ExpectedAnswer          string            `json:"expected_answer"`

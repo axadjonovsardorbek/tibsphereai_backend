@@ -789,14 +789,20 @@ const MODULES = {
     // Yangi case: bitta qisqa shablon (AI qolgan maydonlarni — sarlavha, vitals, scenario — o'zi to'ldiradi,
     // admin kiritganlarni o'zgartirmaydi). To'liq maydonlar faqat tahrirlashda.
     createFields:[
-      {name:'topic_id', label:'Mavzu', type:'select', asyncOptions:'topic', required:true},
+      {name:'topic_id', label:'Mavzu (tanlang yoki pastda matn yozing)', type:'select', asyncOptions:'topic', includeEmpty:true, emptyLabel:'— tanlanmagan (matn yozaman) —'},
+      {name:'topic', label:'Mavzu matni (ro\'yxatdan tanlanmagan bo\'lsa)', type:'text'},
       {name:'difficulty', label:'Qiyinlik', type:'select', options:[{value:'easy',label:'Easy'},{value:'medium',label:'Medium'},{value:'hard',label:'Hard'}]},
-      {name:'cover_image_url', label:'Muqova rasm', type:'file', full:true},
-      {name:'chief_complaint', label:'Bemor shikoyati', type:'textarea', required:true, full:true},
-      {name:'expected_answer', label:'To\'g\'ri javob', type:'textarea', required:true, full:true},
+      {name:'cover_image_url', label:'Muqova rasm', type:'file'},
+      {name:'chief_complaint', label:'Bemor shikoyati (aynan shu saqlanadi)', type:'textarea', full:true},
+      {name:'expected_answer', label:'To\'g\'ri javob (aynan shu saqlanadi)', type:'textarea', full:true},
     ],
     createValues:{difficulty:'medium'},
-    beforeCreate:(b)=>{ b.chief_complaint = {uz: String(b.chief_complaint||'').trim()}; return b; },
+    beforeCreate:(b)=>{
+      if(!b.topic_id && !String(b.topic||'').trim()) throw new Error('Mavzuni tanlang yoki matn yozing');
+      const c = String(b.chief_complaint||'').trim();
+      b.chief_complaint = c ? {uz: c} : {};
+      return b;
+    },
     fields:[
       {name:'topic_id', label:'Mavzu', type:'select', asyncOptions:'topic', required:true},
       {name:'title', label:'Sarlavha', type:'ml', required:true},
@@ -880,28 +886,6 @@ const MODULES = {
         if(!f.asyncOptions) return f;
         const nf = Object.assign({}, f); nf.options = await resolveOptions(f); return nf;
       }));
-      const b = document.createElement('button'); b.className='primary'; b.textContent='🤖 AI bilan yaratish';
-      b.onclick = async ()=>{
-        openModal({
-          title:'AI yordamida case generatsiyasi',
-          fields: await withRefs([
-            {name:'topic_id', label:'Mavzu (tanlang yoki pastda matn yozing)', type:'select', asyncOptions:'topic', includeEmpty:true, emptyLabel:'— tanlanmagan (matn yozaman) —'},
-            {name:'topic', label:'Mavzu matni (ro\'yxatdan tanlanmagan bo\'lsa)', type:'text'},
-            {name:'difficulty', label:'Qiyinlik', type:'select', options:diffOpts},
-            {name:'cover_image_url', label:'Muqova rasm', type:'file', full:true},
-            {name:'chief_complaint', label:'Bemor shikoyati (aynan shu saqlanadi)', type:'textarea', full:true},
-            {name:'expected_answer', label:'To\'g\'ri javob (aynan shu saqlanadi)', type:'textarea', full:true},
-            srcField,
-          ]),
-          values:{difficulty:'medium'},
-          onSubmit: async (body)=>{
-            if(!body.topic_id && !String(body.topic||'').trim()) throw new Error('Mavzuni tanlang yoki matn yozing');
-            await api('/web/case/ai-generate', {method:'POST', body});
-            toast('AI case qoralamasi yaratildi (draft) — ro\'yxatdan ko\'rib chiqing', 'ok');
-            refresh();
-          }
-        });
-      };
       const batch = document.createElement('button'); batch.className='primary'; batch.textContent='🤖 Ommaviy AI generatsiya';
       batch.title = 'Butun bo\'lim (yoki bitta mavzu) bo\'yicha bir martada ko\'p case yaratish';
       batch.onclick = async ()=>{
@@ -924,7 +908,7 @@ const MODULES = {
       };
       const imp = document.createElement('button'); imp.className='primary'; imp.textContent='📥 Excel/CSV yuklash';
       imp.onclick = ()=>openCaseImport(refresh);
-      return [b, batch, imp];
+      return [batch, imp];
     }
   },
   case_source: {

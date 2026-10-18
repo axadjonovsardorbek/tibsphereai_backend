@@ -49,12 +49,13 @@ func (s *CaseService) Create(ctx context.Context, req *m.CaseCreateReq) (*m.ById
 func (s *CaseService) enrichWithAI(ctx context.Context, req *m.CaseCreateReq) {
 	gen := &m.CaseGenReq{
 		TopicId:        req.TopicId,
+		Topic:          req.Topic,
 		Difficulty:     req.Difficulty,
 		ChiefComplaint: pickTopicName(req.ChiefComplaint),
 		ExpectedAnswer: req.ExpectedAnswer,
 		CoverImageUrl:  req.CoverImageUrl,
 	}
-	if gen.ChiefComplaint == "" && gen.ExpectedAnswer == "" {
+	if gen.ChiefComplaint == "" && gen.ExpectedAnswer == "" && gen.TopicId == "" && gen.Topic == "" {
 		return
 	}
 	if err := s.prepareGen(gen); err != nil {
