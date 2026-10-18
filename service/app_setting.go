@@ -38,17 +38,19 @@ func (s *AppSettingService) DailyFreeLimit(ctx context.Context) int {
 	return s.defaultLim
 }
 
-// CaseCoinCost - limit tugaganda 1 ta case'ni boshlash narxi (tanga). Sozlanmagan yoki
-// manfiy bo'lsa 0 (tanga bilan ochish o'chiq).
-func (s *AppSettingService) CaseCoinCost(ctx context.Context) int {
-	setting, err := s.storage.AppSettingS.Get(m.AppSettingCaseCoinCost)
-	if err != nil || setting == nil {
-		return 0
-	}
-	if v, err := strconv.Atoi(setting.Value); err == nil && v > 0 {
+// CoinsPer1kTokens - admin belgilagan tarif: 1 000 AI token necha tanga. Sozlanmagan yoki
+// manfiy bo'lsa 0 (tanga yechilmaydi).
+func (s *AppSettingService) CoinsPer1kTokens(ctx context.Context) float64 {
+	if v := s.getFloatSetting(m.AppSettingCoinsPer1kTokens, 0); v > 0 {
 		return v
 	}
 	return 0
+}
+
+// SetCoinsPer1kTokens - tarifni saqlaydi; keyingi barcha hisob-kitoblar yangi qiymatni ishlatadi.
+func (s *AppSettingService) SetCoinsPer1kTokens(ctx context.Context, v float64) error {
+	_, err := s.storage.AppSettingS.Set(&m.AppSettingSetReq{Key: m.AppSettingCoinsPer1kTokens, Value: strconv.FormatFloat(v, 'f', -1, 64)})
+	return err
 }
 
 // HasFreeAttemptLeft - kunlik limit tekshiruvi (Premium bo'lmagan foydalanuvchilar uchun).
@@ -156,5 +158,5 @@ func (s *AppSettingService) GetLimitStatus(ctx context.Context, userId string) (
 	if remaining < 0 {
 		remaining = 0
 	}
-	return &m.UserLimitStatusRes{Used: used, Total: total, Remaining: remaining, CaseCoinCost: s.CaseCoinCost(ctx)}, nil
+	return &m.UserLimitStatusRes{Used: used, Total: total, Remaining: remaining, CoinsPer1kTokens: s.CoinsPer1kTokens(ctx)}, nil
 }

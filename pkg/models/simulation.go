@@ -8,8 +8,9 @@ type SimulationStartReq struct {
 	// DurationMinutes - home ekranda tanlangan davomiylik (masalan 5/10/15),
 	// berilsa case'ning o'z expected_duration_minutes'ini bosib o'tadi.
 	DurationMinutes int `json:"duration_minutes"`
-	// UseCoins - bepul limit tugagan bo'lsa case'ni tanga evaziga boshlashga rozilik
-	// (narx app_settings.case_coin_cost). false bo'lsa tanga hech qachon yechilmaydi.
+	// UseCoins - bepul limit tugagan bo'lsa sessiyani tanga hisobidan boshlashga rozilik:
+	// AI sarflagan tokenlar app_settings.coins_per_1k_tokens tarifi bo'yicha balansdan
+	// yechiladi (balans > 0 bo'lishi kerak). false bo'lsa tanga hech qachon yechilmaydi.
 	UseCoins bool `json:"use_coins"`
 }
 
@@ -47,6 +48,10 @@ type SimulationEventRes struct {
 	// server tomonidan avtomatik yakunlangan bo'lsa true (bemor "o'ldi").
 	// Frontend shu bayroqni ko'rsa, keyingi buyruq/xabar yuborishni to'xtatib,
 	// FinishResult'dagi debrief/XP/coin natijasini ko'rsatishi kerak.
+	// TokensUsed/CoinsSpent - sessiyada shu paytgacha AI sarflagan tokenlar va ulardan
+	// balansdan yechilgan tangalar (faqat tanga hisobidan boshlangan sessiyada CoinsSpent > 0).
+	TokensUsed   int                  `json:"tokens_used"`
+	CoinsSpent   int                  `json:"coins_spent"`
 	SessionEnded bool                 `json:"session_ended"`
 	FinishResult *SimulationFinishRes `json:"finish_result,omitempty"`
 }
@@ -62,6 +67,8 @@ type SimulationFinishRes struct {
 	XPEarned     int    `json:"xp_earned"`
 	CoinsEarned  int    `json:"coins_earned"`
 	DebriefReady bool   `json:"debrief_ready"`
+	TokensUsed   int    `json:"tokens_used"`
+	CoinsSpent   int    `json:"coins_spent"`
 }
 
 type SimulationSessionRes struct {

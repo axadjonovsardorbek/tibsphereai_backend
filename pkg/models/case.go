@@ -49,7 +49,7 @@ type CaseBatchGenRes struct {
 
 // DefaultCaseMaxAttempts - case.max_attempts ko'rsatilmagan (0) bo'lsa ishlatiladigan
 // default: bitta sessiyada foydalanuvchi yubora oladigan xabarlar soni.
-const DefaultCaseMaxAttempts = 10
+const DefaultCaseMaxAttempts = 1
 
 type CaseCreateReq struct {
 	TopicId                 string            `json:"topic_id"`
@@ -180,6 +180,8 @@ type CaseRandomReq struct {
 	UserId     string `json:"user_id"`
 	Language   string `json:"language"`
 	CategoryId string `json:"category_id"` // bo'sh - filtersiz (istalgan bo'lim)
+	TopicId    string `json:"topic_id"`    // bo'sh - filtersiz; berilsa shu mavzudan (endless practice)
+	ExcludeId  string `json:"exclude_id"`  // oldingi case (Keyingi bosilganda takrorlanmasin)
 	Difficulty string `json:"difficulty"`  // easy|medium|hard, bo'sh - filtersiz
 }
 

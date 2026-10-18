@@ -261,7 +261,11 @@ func (h *Handler) GetAllMobileCases(c *gin.Context) {
 // @Summary "Try your luck" - tasodifiy keys (BACKEND_STRUCTURE.md 3-bo'lim)
 // @Tags case
 // @Produce json
+// @Description topic_id berilsa shu mavzudan tasodifiy case (yechilmaganlari birinchi o'rinda);
+// @Description "Keyingi" tugmasi uchun exclude_id = hozirgi case id.
 // @Param Accept-Language header string false "Language (uz|ru|en)" default(uz)
+// @Param topic_id query string false "Mavzu"
+// @Param exclude_id query string false "Qaytarilmasligi kerak bo'lgan case id"
 // @Success 200 {object} models.CaseMobileRes
 // @Security BearerAuth
 // @Router /mobile/case/random [get]
@@ -275,6 +279,8 @@ func (h *Handler) GetRandomCase(c *gin.Context) {
 		Language:   getLanguage(c),
 		CategoryId: c.Query("category_id"),
 		Difficulty: c.Query("difficulty"),
+		TopicId:    c.Query("topic_id"),
+		ExcludeId:  c.Query("exclude_id"),
 	})
 	if err != nil {
 		errs.Bad(c, err)

@@ -403,16 +403,23 @@ func (r *CaseRepo) GetRandom(req *m.CaseRandomReq) (*m.CaseMobileRes, error) {
 	query := `SELECT ` + mobileCaseColumns + `
 	FROM cases c ` + mobileCaseJoins + `
 	WHERE c.deleted_at = 0 AND c.status = 'published'
-	  AND NOT EXISTS (
+	  AND (NULLIF($5, '') IS NOT NULL OR NOT EXISTS (
 		SELECT 1 FROM simulation_sessions s
 		WHERE s.case_id = c.id AND s.user_id = $2 AND s.status = 'completed'
-	  )
+	  ))
 	  AND (NULLIF($3, '') IS NULL OR cat.id::text = $3)
 	  AND (NULLIF($4, '') IS NULL OR c.difficulty = $4)
-	ORDER BY random() LIMIT 1
+	  AND (NULLIF($5, '') IS NULL OR c.topic_id::text = $5)
+	  AND (NULLIF($6, '') IS NULL OR c.id::text <> $6)
+	ORDER BY EXISTS (
+		SELECT 1 FROM simulation_sessions s
+		WHERE s.case_id = c.id AND s.user_id = $2 AND s.status = 'completed'
+	), random() LIMIT 1
 	`
 
-	row := r.db.QueryRow(context.Background(), query, req.Language, req.UserId, req.CategoryId, req.Difficulty)
+	// Mavzu tanlanganda (endless practice) yechilgan case'lar ham qaytishi mumkin,
+	// lekin yechilmaganlari birinchi o'rinda; oldingi case (exclude_id) takrorlanmaydi.
+	row := r.db.QueryRow(context.Background(), query, req.Language, req.UserId, req.CategoryId, req.Difficulty, req.TopicId, req.ExcludeId)
 
 	c, err := scanCaseMobile(row)
 	if err == pgx.ErrNoRows {

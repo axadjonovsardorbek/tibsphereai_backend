@@ -16,9 +16,15 @@ type AppSettingRes struct {
 
 const AppSettingDailyFreeLimit = "daily_free_limit"
 
-// AppSettingCaseCoinCost - kunlik bepul limit tugaganda 1 ta case'ni boshlash narxi (tanga).
-// 0 - tanga bilan ochish o'chiq.
-const AppSettingCaseCoinCost = "case_coin_cost"
+// AppSettingCoinsPer1kTokens - token-to-coin tarifi: 1 000 AI token (prompt+completion)
+// necha tangaga teng (kasr son mumkin, masalan 0.5). Admin o'zgartiradi, keyingi
+// hisob-kitoblarda darhol kuchga kiradi. 0 - tanga yechilmaydi.
+const AppSettingCoinsPer1kTokens = "coins_per_1k_tokens"
+
+// CoinRateRes - admin panelning "Token narxi" formasi uchun.
+type CoinRateRes struct {
+	CoinsPer1kTokens float64 `json:"coins_per_1k_tokens"`
+}
 
 // AppSettingVoiceEnabled - "true"/"false", platforma ovozli funksiyasi (shikoyat/chat
 // matnini frontend TTS orqali o'qib berish) global yoqilgan/o'chirilganini bildiradi.
@@ -36,9 +42,9 @@ type UserLimitStatusRes struct {
 	Total           int  `json:"total"`
 	Remaining       int  `json:"remaining"`
 	HasSubscription bool `json:"has_subscription"` // true - limit cheksiz (Premium)
-	// CaseCoinCost - limit tugagach 1 ta case necha tanga turishi (0 - o'chiq). Frontend
-	// shu bilan "N tanga evaziga boshlash" tugmasini ko'rsatadi.
-	CaseCoinCost int `json:"case_coin_cost"`
+	// CoinsPer1kTokens - limit tugagach case tanga hisobidan boshlanadi: har 1 000 AI token
+	// shu miqdor tangaga teng (haqiqiy sarf sessiya davomida yechiladi).
+	CoinsPer1kTokens float64 `json:"coins_per_1k_tokens"`
 }
 
 // --- Case qiyinlik darajasi (difficulty) koeffitsienti (admin sozlaydi) ---

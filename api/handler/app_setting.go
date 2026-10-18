@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"tibsphereai/pkg/errs"
 
@@ -95,4 +96,43 @@ func (h *Handler) SetDifficultyRewards(c *gin.Context) {
 // @Router /mobile/setting/voice [get]
 func (h *Handler) GetVoiceSetting(c *gin.Context) {
 	c.JSON(http.StatusOK, m.VoiceSettingRes{Enabled: h.Clients.AppSetting.VoiceEnabled(context.Background())})
+}
+
+// GetCoinRate godoc
+// @Summary Token narxi: 1 000 token = X tanga
+// @Tags setting
+// @Produce json
+// @Success 200 {object} models.CoinRateRes
+// @Security BearerAuth
+// @Router /web/setting/coin-rate [get]
+func (h *Handler) GetCoinRate(c *gin.Context) {
+	c.JSON(http.StatusOK, m.CoinRateRes{CoinsPer1kTokens: h.Clients.AppSetting.CoinsPer1kTokens(context.Background())})
+}
+
+// SetCoinRate godoc
+// @Summary Token narxini o'zgartirish (1 000 token = X tanga)
+// @Description AI provayder tannarxi + platforma xarajatlari + marja yig'indisi koeffitsient sifatida
+// @Description kiritiladi. Keyingi barcha so'rovlar yangi tarif bo'yicha hisoblanadi.
+// @Tags setting
+// @Accept json
+// @Produce json
+// @Param body body models.CoinRateRes true "coins_per_1k_tokens"
+// @Success 200 {object} string
+// @Security BearerAuth
+// @Router /web/setting/coin-rate [put]
+func (h *Handler) SetCoinRate(c *gin.Context) {
+	var req m.CoinRateRes
+	if err := c.BindJSON(&req); err != nil {
+		errs.Bad(c, err)
+		return
+	}
+	if req.CoinsPer1kTokens < 0 {
+		errs.Bad(c, fmt.Errorf("coins_per_1k_tokens must be >= 0"))
+		return
+	}
+	if err := h.Clients.AppSetting.SetCoinsPer1kTokens(context.Background(), req.CoinsPer1kTokens); err != nil {
+		errs.Bad(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "setting saved"})
 }

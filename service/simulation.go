@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"math"
 	"tibsphereai/internal/ai"
 	"tibsphereai/pkg/errs"
 	m "tibsphereai/pkg/models"
@@ -30,42 +31,42 @@ func (s *SimulationService) hasActiveSubscription(userId string) bool {
 	return active
 }
 
-// Start - kirish huquqi 2 bosqichda tekshiriladi: 1) faol Premium obuna (cheksiz),
-// 2) kunlik bepul urinish (appSettings), 3) limit tugagan bo'lsa va foydalanuvchi use_coins
-// bilan rozi bo'lsa - case_coin_cost tanga evaziga. Hech biri bo'lmasa ErrDailyLimitReached.
+// Start - kirish huquqi: 1) faol Premium obuna (cheksiz), 2) kunlik bepul urinish,
+// 3) limit tugagan bo'lsa va foydalanuvchi use_coins bilan rozi bo'lsa - sessiya tanga
+// hisobidan boshlanadi: oldindan qat'iy narx yechilmaydi, sessiya davomida AI sarflagan
+// tokenlar coins_per_1k_tokens tarifi bo'yicha balansdan yechiladi (settleTokens).
+// Balans 0 bo'lsa ErrInsufficientCoins, rozilik bo'lmasa ErrDailyLimitReached.
 func (s *SimulationService) Start(ctx context.Context, req *m.SimulationStartReq) (*m.SimulationStartRes, error) {
 	hasSub := s.hasActiveSubscription(req.UserId)
 
-	spentCoins := 0
+	coinBilled := false
 	if !hasSub {
 		ok, err := s.appSettings.HasFreeAttemptLeft(ctx, req.UserId)
 		if err != nil {
 			return nil, err
 		}
 		if !ok {
-			// Bepul limit tugadi: foydalanuvchi aniq rozi bo'lsa (use_coins) va narx
-			// sozlangan bo'lsa, case tanga evaziga boshlanadi.
-			cost := s.appSettings.CaseCoinCost(ctx)
-			if !req.UseCoins || cost <= 0 {
+			if !req.UseCoins || s.appSettings.CoinsPer1kTokens(ctx) <= 0 {
 				return nil, errs.ErrDailyLimitReached
 			}
-			if err := s.spendCoins(ctx, req.UserId, cost); err != nil {
-				return nil, err
+			var balance int
+			_ = s.storage.Db.QueryRow(ctx, `SELECT coins FROM users WHERE id = $1 AND deleted_at = 0`, req.UserId).Scan(&balance)
+			if balance <= 0 {
+				return nil, errs.ErrInsufficientCoins
 			}
-			spentCoins = cost
+			coinBilled = true
 		}
 	}
 
 	res, err := s.storage.SimulationS.Start(req)
 	if err != nil {
-		if spentCoins > 0 {
-			s.refundCoins(ctx, req.UserId, spentCoins)
-		}
 		return nil, err
 	}
 
-	if spentCoins > 0 {
-		s.logCoinSpend(ctx, req.UserId, spentCoins, res.SessionId)
+	if coinBilled {
+		if _, err := s.storage.Db.Exec(ctx, `UPDATE simulation_sessions SET coin_billed = TRUE WHERE id = $1`, res.SessionId); err != nil {
+			fmt.Println("failed to mark session coin_billed:", err)
+		}
 	} else if !hasSub {
 		if err := s.appSettings.ConsumeFreeAttempt(ctx, req.UserId); err != nil {
 			fmt.Println("failed to consume free attempt:", err)
@@ -75,34 +76,79 @@ func (s *SimulationService) Start(ctx context.Context, req *m.SimulationStartReq
 	return res, nil
 }
 
-// spendCoins - balansdan atomik yechadi (yetarli bo'lmasa ErrInsufficientCoins).
-func (s *SimulationService) spendCoins(ctx context.Context, userId string, cost int) error {
-	tag, err := s.storage.Db.Exec(ctx, `
-		UPDATE users SET coins = coins - $1, updated_at = now()
-		WHERE id = $2 AND deleted_at = 0 AND coins >= $1
-	`, cost, userId)
+// addSessionTokens - AI chaqiruvi sarflagan prompt/completion tokenlarini sessiyaga qo'shadi.
+func (s *SimulationService) addSessionTokens(ctx context.Context, sessionId string, usage *ai.Usage) {
+	if usage == nil || sessionId == "" || (usage.PromptTokens == 0 && usage.OutputTokens == 0) {
+		return
+	}
+	if _, err := s.storage.Db.Exec(ctx, `
+		UPDATE simulation_sessions SET prompt_tokens = prompt_tokens + $1, completion_tokens = completion_tokens + $2 WHERE id = $3
+	`, usage.PromptTokens, usage.OutputTokens, sessionId); err != nil {
+		fmt.Println("failed to add session tokens:", err)
+	}
+}
+
+// settleTokens - sessiyada shu paytgacha sarflangan tokenlarning tangadagi qiymatini
+// (ceil(tokens/1000 * tarif)) hisoblab, hali yechilmagan farqni balansdan yechadi
+// (balansdan ortiq yechilmaydi - qolgani keyingi chaqiruvda urinib ko'riladi). Faqat
+// coin_billed sessiyalar uchun. Qaytaradi: jami tokenlar, jami yechilgan tangalar.
+func (s *SimulationService) settleTokens(ctx context.Context, sessionId string) (tokens, charged int) {
+	var userId string
+	var billed bool
+	var prompt, completion int
+	err := s.storage.Db.QueryRow(ctx, `
+		SELECT user_id::text, coin_billed, prompt_tokens, completion_tokens, coins_charged
+		FROM simulation_sessions WHERE id = $1
+	`, sessionId).Scan(&userId, &billed, &prompt, &completion, &charged)
 	if err != nil {
-		return err
+		return 0, 0
 	}
-	if tag.RowsAffected() == 0 {
-		return errs.ErrInsufficientCoins
+	tokens = prompt + completion
+	if !billed {
+		return tokens, charged
 	}
-	return nil
-}
 
-func (s *SimulationService) refundCoins(ctx context.Context, userId string, cost int) {
-	if _, err := s.storage.Db.Exec(ctx, `UPDATE users SET coins = coins + $1, updated_at = now() WHERE id = $2`, cost, userId); err != nil {
-		fmt.Println("failed to refund coins after failed start:", err)
+	rate := s.appSettings.CoinsPer1kTokens(ctx)
+	target := int(math.Ceil(float64(tokens) / 1000 * rate))
+	delta := target - charged
+	if delta <= 0 {
+		return tokens, charged
 	}
-}
 
-func (s *SimulationService) logCoinSpend(ctx context.Context, userId string, cost int, sessionId string) {
+	var deducted int
+	err = s.storage.Db.QueryRow(ctx, `
+		WITH cur AS (SELECT id, coins FROM users WHERE id = $2 AND deleted_at = 0 FOR UPDATE),
+		upd AS (
+			UPDATE users u SET coins = u.coins - LEAST(u.coins, $1), updated_at = now()
+			FROM cur WHERE u.id = cur.id RETURNING LEAST(cur.coins, $1) AS taken
+		)
+		SELECT COALESCE((SELECT taken FROM upd), 0)
+	`, delta, userId).Scan(&deducted)
+	if err != nil || deducted <= 0 {
+		return tokens, charged
+	}
+
+	if _, err := s.storage.Db.Exec(ctx, `UPDATE simulation_sessions SET coins_charged = coins_charged + $1 WHERE id = $2`, deducted, sessionId); err != nil {
+		fmt.Println("failed to update coins_charged:", err)
+	}
 	if _, err := s.storage.Db.Exec(ctx, `
 		INSERT INTO point_transactions (id, user_id, kind, delta, reason, reference_type, reference_id)
-		VALUES (gen_random_uuid(), $1, 'coin', $2, 'case_unlock', 'simulation', $3)
-	`, userId, -cost, sessionId); err != nil {
-		fmt.Println("failed to log case_unlock coin spend:", err)
+		VALUES (gen_random_uuid(), $1, 'coin', $2, 'ai_usage', 'simulation', $3)
+	`, userId, -deducted, sessionId); err != nil {
+		fmt.Println("failed to log ai_usage coin spend:", err)
 	}
+	return tokens, charged + deducted
+}
+
+// sessionBalanceExhausted - tanga hisobidan ishlayotgan sessiyada foydalanuvchi balansi
+// tugagan bo'lsa true (yangi AI chaqiruvi bepul bo'lib qolmasligi uchun).
+func (s *SimulationService) sessionBalanceExhausted(ctx context.Context, sessionId string) bool {
+	var exhausted bool
+	_ = s.storage.Db.QueryRow(ctx, `
+		SELECT ss.coin_billed AND u.coins <= 0
+		FROM simulation_sessions ss JOIN users u ON u.id = ss.user_id WHERE ss.id = $1
+	`, sessionId).Scan(&exhausted)
+	return exhausted
 }
 
 // friendlyAIError - AI provayder (Gemini) xatosining xom texnik matni
@@ -138,6 +184,9 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 	if session.Status != nil && *session.Status != "active" {
 		return nil, errs.ErrSessionNotActive
 	}
+	if s.sessionBalanceExhausted(ctx, req.SessionId) {
+		return nil, errs.ErrInsufficientCoins
+	}
 
 	var caseRes *m.CaseRes
 	if session.CaseId != nil {
@@ -168,6 +217,7 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 		mimeType, _ := req.Payload["audio_mime"].(string)
 		transcript, usage, tErr := s.ai.Voice.Transcribe(ctx, audioB64, mimeType)
 		logAIUsage(&s.storage, "voice_transcribe", usage, userId, caseId)
+		s.addSessionTokens(ctx, req.SessionId, usage)
 		if tErr != nil {
 			transcribeFailed = true
 			responseExtra["transcribe_error"] = friendlyAIError(tErr)
@@ -187,6 +237,7 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 			question, _ := req.Payload["question"].(string)
 			reply, usage, aiErr := s.ai.Patient.Reply(ctx, caseRes.Scenario, expectedAnswer, question)
 			logAIUsage(&s.storage, "chat", usage, userId, caseId)
+			s.addSessionTokens(ctx, req.SessionId, usage)
 			if aiErr != nil {
 				responseExtra["patient_reply_error"] = friendlyAIError(aiErr)
 			} else if reply.IsAction {
@@ -210,6 +261,7 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 		} else {
 			eval, usage, aiErr := s.ai.Action.Evaluate(ctx, caseRes.Scenario, expectedAnswer, req.Type, req.Payload)
 			logAIUsage(&s.storage, "action_eval", usage, userId, caseId)
+			s.addSessionTokens(ctx, req.SessionId, usage)
 			if aiErr == nil && eval != nil {
 				isCorrect, healthDelta = eval.IsCorrect, eval.HealthDelta
 				responseExtra["feedback"] = eval.Feedback
@@ -234,6 +286,7 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 		if toSpeak != "" {
 			audioB64, usage, sErr := s.ai.Voice.Synthesize(ctx, toSpeak)
 			logAIUsage(&s.storage, "voice_synthesize", usage, userId, caseId)
+			s.addSessionTokens(ctx, req.SessionId, usage)
 			if sErr != nil {
 				fmt.Println("voice synthesize failed:", sErr)
 			} else {
@@ -247,6 +300,7 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 	if err != nil {
 		return nil, err
 	}
+	res.TokensUsed, res.CoinsSpent = s.settleTokens(ctx, req.SessionId)
 	res.MaxAttempts = m.DefaultCaseMaxAttempts
 	if caseRes != nil && caseRes.MaxAttempts != nil && *caseRes.MaxAttempts > 0 {
 		res.MaxAttempts = *caseRes.MaxAttempts
@@ -459,6 +513,7 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 	}
 
 	res.DebriefReady = debriefReady
+	res.TokensUsed, res.CoinsSpent = s.settleTokens(ctx, req.SessionId)
 	return res, nil
 }
 
