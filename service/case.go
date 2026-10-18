@@ -26,6 +26,21 @@ func (s *CaseService) Create(ctx context.Context, req *m.CaseCreateReq) (*m.ById
 	if len(req.Title) == 0 && s.ai != nil && s.ai.Enabled {
 		s.enrichWithAI(ctx, req)
 	}
+	// title ustuni NOT NULL: AI ishlamagan/o'chiq bo'lsa shikoyatdan vaqtinchalik
+	// sarlavha olamiz (admin keyin tahrirlaydi).
+	if len(req.Title) == 0 {
+		t := []rune(pickTopicName(req.ChiefComplaint))
+		if len(t) > 60 {
+			t = t[:60]
+		}
+		if len(t) == 0 {
+			t = []rune("Yangi case")
+		}
+		req.Title = map[string]string{"uz": string(t)}
+	}
+	if req.Difficulty == "" {
+		req.Difficulty = "medium"
+	}
 	return s.storage.CaseS.Create(req)
 }
 

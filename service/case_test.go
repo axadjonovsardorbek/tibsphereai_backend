@@ -171,3 +171,51 @@ func TestCaseService_GetRandom(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
 }
+
+// Create - title bo'sh bo'lsa AI bo'sh maydonlarni to'ldiradi, admin kiritgan
+// shikoyat/javob/rasm esa o'zgarmaydi.
+func TestCaseService_Create_EnrichesWithAI_KeepsAdminFields(t *testing.T) {
+	cm := mocks.NewCaseMock()
+	aiOut := &m.CaseCreateReq{
+		Title:          map[string]string{"uz": "AI sarlavha"},
+		ChiefComplaint: map[string]string{"uz": "AI shikoyat", "ru": "RU shikoyat"},
+		ExpectedAnswer: "AI javob",
+		CoverImageUrl:  "ai.png",
+		PatientAge:     40,
+		InitialVitals:  m.CaseVitals{HR: 90, BP: "120/80"},
+		Scenario:       map[string]any{"history": "x"},
+		PatientGender:  "male",
+	}
+	svc := NewCaseService(&st.Storage{CaseS: cm}, &ai.Client{CaseGen: fakeCaseGen{res: aiOut}, Enabled: true})
+
+	req := &m.CaseCreateReq{
+		ChiefComplaint: map[string]string{"uz": "Qorin og'rig'i"},
+		ExpectedAnswer: "Appenditsit",
+		CoverImageUrl:  "admin.png",
+		Difficulty:     "medium",
+	}
+	cm.On("Create", req).Return(&m.ById{Id: "c1"}, nil)
+
+	_, err := svc.Create(context.Background(), req)
+	require.NoError(t, err)
+	assert.Equal(t, "AI sarlavha", req.Title["uz"])
+	assert.Equal(t, "Qorin og'rig'i", req.ChiefComplaint["uz"])
+	assert.Equal(t, "RU shikoyat", req.ChiefComplaint["ru"])
+	assert.Equal(t, "Appenditsit", req.ExpectedAnswer)
+	assert.Equal(t, "admin.png", req.CoverImageUrl)
+	assert.Equal(t, 90, req.InitialVitals.HR)
+	assert.Equal(t, 40, req.PatientAge)
+	assert.NotEmpty(t, req.Scenario)
+}
+
+// AI xato bersa ham case saqlanadi (minimal ko'rinishda).
+func TestCaseService_Create_AIFails_StillSaves(t *testing.T) {
+	cm := mocks.NewCaseMock()
+	svc := NewCaseService(&st.Storage{CaseS: cm}, &ai.Client{CaseGen: fakeCaseGen{err: errors.New("boom")}, Enabled: true})
+	req := &m.CaseCreateReq{ChiefComplaint: map[string]string{"uz": "x"}, ExpectedAnswer: "y"}
+	cm.On("Create", req).Return(&m.ById{Id: "c2"}, nil)
+	got, err := svc.Create(context.Background(), req)
+	require.NoError(t, err)
+	assert.Equal(t, "c2", got.Id)
+	assert.Equal(t, "x", req.Title["uz"]) // AI ishlamasa shikoyatdan fallback sarlavha
+}

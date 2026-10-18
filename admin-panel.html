@@ -791,7 +791,7 @@ const MODULES = {
     createFields:[
       {name:'topic_id', label:'Mavzu', type:'select', asyncOptions:'topic', required:true},
       {name:'difficulty', label:'Qiyinlik', type:'select', options:[{value:'easy',label:'Easy'},{value:'medium',label:'Medium'},{value:'hard',label:'Hard'}]},
-      {name:'cover_image_url', label:'Muqova rasm', type:'file'},
+      {name:'cover_image_url', label:'Muqova rasm', type:'file', full:true},
       {name:'chief_complaint', label:'Bemor shikoyati', type:'textarea', required:true, full:true},
       {name:'expected_answer', label:'To\'g\'ri javob', type:'textarea', required:true, full:true},
     ],
@@ -888,12 +888,12 @@ const MODULES = {
             {name:'topic_id', label:'Mavzu (tanlang yoki pastda matn yozing)', type:'select', asyncOptions:'topic', includeEmpty:true, emptyLabel:'— tanlanmagan (matn yozaman) —'},
             {name:'topic', label:'Mavzu matni (ro\'yxatdan tanlanmagan bo\'lsa)', type:'text'},
             {name:'difficulty', label:'Qiyinlik', type:'select', options:diffOpts},
-            {name:'cover_image_url', label:'Muqova rasm', type:'file'},
+            {name:'cover_image_url', label:'Muqova rasm', type:'file', full:true},
             {name:'chief_complaint', label:'Bemor shikoyati (aynan shu saqlanadi)', type:'textarea', full:true},
             {name:'expected_answer', label:'To\'g\'ri javob (aynan shu saqlanadi)', type:'textarea', full:true},
             srcField,
           ]),
-          values:{},
+          values:{difficulty:'medium'},
           onSubmit: async (body)=>{
             if(!body.topic_id && !String(body.topic||'').trim()) throw new Error('Mavzuni tanlang yoki matn yozing');
             await api('/web/case/ai-generate', {method:'POST', body});
