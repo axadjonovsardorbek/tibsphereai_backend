@@ -360,7 +360,7 @@ func (r *CaseRepo) GetAllMobile(req *m.CaseGetListMobileReq) (*m.PaginationRespo
 		sub.expected_duration_minutes, sub.max_attempts, sub.is_favorite, sub.user_status
 	FROM (` + inner + `) AS sub(
 		id, topic_id, topic_name, category_id, category_name, title, subtitle, cover_image_url, difficulty,
-		chief_complaint, patient_age, patient_gender, expected_duration_minutes, is_favorite, user_status, order_num
+		chief_complaint, patient_age, patient_gender, expected_duration_minutes, max_attempts, is_favorite, user_status, order_num
 	) WHERE 1 = 1`
 
 	if req.Status != "" && req.Status != "string" {
