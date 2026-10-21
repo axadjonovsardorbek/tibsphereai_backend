@@ -190,11 +190,15 @@ func (r *TariffRepo) Update(req *m.TariffUpdateReq) (*m.Void, error) {
 		args = append(args, req.Kind)
 	}
 
-	conditions = append(conditions, " duration = $"+strconv.Itoa(len(args)+1))
-	args = append(args, req.Duration)
-
-	conditions = append(conditions, " coins = $"+strconv.Itoa(len(args)+1))
-	args = append(args, req.Coins)
+	// Faqat kind'ga tegishli maydon yoziladi: subscription - duration, coin_package - coins.
+	// Ikkinchisi o'zgarmaydi (0 bilan ustiga yozilmaydi).
+	if req.Kind == "coin_package" {
+		conditions = append(conditions, " coins = $"+strconv.Itoa(len(args)+1))
+		args = append(args, req.Coins)
+	} else {
+		conditions = append(conditions, " duration = $"+strconv.Itoa(len(args)+1))
+		args = append(args, req.Duration)
+	}
 
 	conditions = append(conditions, " price = $"+strconv.Itoa(len(args)+1))
 	args = append(args, req.Price)

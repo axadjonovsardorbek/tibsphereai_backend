@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	m "tibsphereai/pkg/models"
 	st "tibsphereai/storage/postgres"
@@ -20,7 +21,32 @@ func NewTariffService(storage *st.Storage, rdb *redis.Client) *TariffService {
 	return &TariffService{storage: *storage, rdb: rdb}
 }
 
+// validateTariffKind - kind'ga qarab faqat tegishli maydon tekshiriladi:
+// subscription uchun duration (> 0), coin_package uchun coins (> 0).
+// Ikkinchisi e'tiborga olinmaydi.
+func validateTariffKind(kind string, duration, coins int) error {
+	switch kind {
+	case "subscription":
+		if duration <= 0 {
+			return errors.New("duration must be greater than 0 for subscription")
+		}
+	case "coin_package":
+		if coins <= 0 {
+			return errors.New("coins must be greater than 0 for coin_package")
+		}
+	default:
+		return fmt.Errorf("invalid kind %q (subscription|coin_package)", kind)
+	}
+	return nil
+}
+
 func (s *TariffService) Create(ctx context.Context, req *m.TariffCreateReq) (*m.ById, error) {
+	if req.Kind == "" {
+		req.Kind = "subscription"
+	}
+	if err := validateTariffKind(req.Kind, req.Duration, req.Coins); err != nil {
+		return nil, err
+	}
 	return s.storage.TariffS.Create(req)
 }
 
@@ -59,6 +85,21 @@ func (s *TariffService) GetAll(ctx context.Context, req *m.TariffGetListReq) (*m
 }
 
 func (s *TariffService) Update(ctx context.Context, req *m.TariffUpdateReq) (*m.Void, error) {
+	kind := req.Kind
+	if kind == "" {
+		cur, err := s.storage.TariffS.GetById(&m.ById{Id: req.Id})
+		if err != nil {
+			return nil, err
+		}
+		kind = "subscription"
+		if cur != nil && cur.Kind != nil {
+			kind = *cur.Kind
+		}
+		req.Kind = kind
+	}
+	if err := validateTariffKind(kind, req.Duration, req.Coins); err != nil {
+		return nil, err
+	}
 	return s.storage.TariffS.Update(req)
 }
 

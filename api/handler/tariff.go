@@ -149,7 +149,9 @@ func (h *Handler) UpdateTariff(c *gin.Context) {
 	}
 
 	req.Id = id
+	req.Kind = body.Kind
 	req.Duration = body.Duration
+	req.Coins = body.Coins
 	req.Price = body.Price
 	req.Name = body.Name
 	req.Description = body.Description
