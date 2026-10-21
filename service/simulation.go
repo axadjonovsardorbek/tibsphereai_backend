@@ -386,7 +386,11 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 		return nil, err
 	}
 	if session == nil || session.HealthPercent == nil {
-		return nil, fmt.Errorf("active session not found: %s", req.SessionId)
+		return nil, errs.ErrSessionNotFound
+	}
+	// Sessiya allaqachon yopilgan (masalan auto-finish) - AI/billing'ni qayta ishga tushirmaymiz.
+	if session.Status != nil && *session.Status != "active" {
+		return nil, errs.ErrSessionNotActive
 	}
 	healthPercent := *session.HealthPercent
 
@@ -444,7 +448,9 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 	// yo'q) yoki xato bersa, jarimasiz (finalScore=healthPercent) davom etadi.
 	var debrief *m.DebriefReportCreateReq
 	noActions := eErr == nil && actionCount == 0
-	if !noActions && s.ai != nil && s.ai.Debrief != nil && caseRes != nil && eErr == nil {
+	// Debrief klinik harakat bo'lmasa ham (faqat chat savol/javob) yoziladi - faqat hodisa
+	// umuman bo'lmasa (foydalanuvchi hech narsa yubormagan) o'tkazib yuboriladi.
+	if len(events) > 0 && s.ai != nil && s.ai.Debrief != nil && caseRes != nil && eErr == nil {
 		d, usage, dErr := s.ai.Debrief.Generate(ctx, caseRes.Scenario, events)
 		if dErr != nil {
 			fmt.Println("debrief AI generation failed:", dErr)

@@ -74,7 +74,7 @@ func NewClients(cfg *config.Config, conn *postgres.Storage, rdb *redis.Client, p
 		Case:            service.NewCaseService(conn, aiClient),
 		Favorite:        service.NewFavoriteService(conn),
 		Simulation:      service.NewSimulationService(conn, aiClient, appSettingSvc),
-		Debrief:         service.NewDebriefService(conn),
+		Debrief:         service.NewDebriefService(conn, aiClient),
 		Level:           service.NewLevelService(conn),
 		AppSetting:      appSettingSvc,
 		AIPrompt:        service.NewAIPromptService(conn, aiClient),

@@ -123,6 +123,19 @@ var (
 		Ru: "Сессия симуляции уже завершена",
 		En: "Simulation session already finished",
 	})
+	// ErrDebriefNotReady - sessiya hali faol: debrief sessiya yopilgach yoziladi.
+	ErrDebriefNotReady = New(http.StatusNotFound, "debrief_not_ready", Text{
+		Uz: "AI tahlil hali tayyor emas",
+		Ru: "AI-разбор ещё не готов",
+		En: "AI debrief is not ready yet",
+	})
+	// ErrDebriefFailed - sessiya yopilgan, lekin AI tahlil yaratilmadi (Gemini xatosi va h.k.);
+	// poll qilishning foydasi yo'q.
+	ErrDebriefFailed = New(http.StatusNotFound, "debrief_failed", Text{
+		Uz: "AI tahlilni yaratib bo'lmadi",
+		Ru: "Не удалось создать AI-разбор",
+		En: "AI debrief could not be generated",
+	})
 )
 
 // ============ Obuna, Promokod, To'lov (5-bo'lim) ============

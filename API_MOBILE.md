@@ -408,6 +408,13 @@ O'z referral_code'i, taklif qilganlar soni va ular evaziga olingan tangalar
 - `weak_topics`: string[]
 - `xp_earned`: integer
 
+**Xatolar (poll qilish qoidasi):**
+- `404 debrief_not_ready` — sessiya hali faol, hisobot sessiya yopilgach yoziladi. Poll davom ettiriladi.
+- `404 debrief_failed` — sessiya yopilgan, lekin AI hisobotni yarata olmadi (qayta generatsiya ham xato bergan). **Poll to'xtatiladi**, "AI tahlili mavjud emas" ko'rsatiladi.
+- `404 session_not_found` — bunday sessiya yo'q.
+- Sessiya yopilgan, hisobot yo'q bo'lsa, backend GET paytida bir marta qayta generatsiya qiladi (bu so'rov 5-15 soniya olishi mumkin). Hisobot chat'dagi savol/javoblar bo'yicha ham yoziladi (klinik harakat bo'lmasa ham); sessiyada hech qanday hodisa bo'lmasa — `debrief_failed`.
+- `PUT /mobile/simulation/{id}/finish` yopilgan (auto-finish bo'lgan) sessiyaga: `409 session_not_active`.
+
 ## Sozlamalar (limit, ovoz)
 
 ### `GET /mobile/setting/voice`

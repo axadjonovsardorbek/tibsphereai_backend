@@ -3,12 +3,16 @@ package postgres
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	m "tibsphereai/pkg/models"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// ErrDebriefNotFound - sessiya uchun debrief qatori yo'q.
+var ErrDebriefNotFound = errors.New("debrief report not found")
 
 type DebriefRepo struct {
 	db *pgxpool.Pool
@@ -55,7 +59,7 @@ func (r *DebriefRepo) GetBySessionId(sessionId string) (*m.DebriefReportRes, err
 		&d.CoinsEarned, &d.GuidelineNotes, &weakJSON, &d.CreatedAt,
 	)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("debrief report not found for session: %s", sessionId)
+		return nil, fmt.Errorf("%w for session: %s", ErrDebriefNotFound, sessionId)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("error while getting debrief report: %w", err)

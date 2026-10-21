@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"tibsphereai/pkg/errs"
 	m "tibsphereai/pkg/models"
 
 	"github.com/google/uuid"
@@ -132,7 +133,7 @@ func (r *SimulationRepo) Finish(req *m.SimulationFinishReq, finalScore, xpEarned
 		RETURNING final_score
 	`, status, finalScore, xpEarned, coinsEarned, req.SessionId).Scan(&scoreOut)
 	if err == pgx.ErrNoRows {
-		return nil, fmt.Errorf("active session not found: %s", req.SessionId)
+		return nil, errs.ErrSessionNotActive
 	}
 	if err != nil {
 		return nil, fmt.Errorf("error while finishing simulation: %w", err)
