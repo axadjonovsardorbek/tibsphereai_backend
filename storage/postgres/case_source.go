@@ -123,7 +123,7 @@ func (r *CaseSourceRepo) Delete(req *m.ById) (*m.Void, error) {
 // GetContents - generatsiya uchun manba matnlari: ids bo'sh bo'lsa barcha
 // manbalar, aks holda faqat tanlanganlari.
 func (r *CaseSourceRepo) GetContents(ids []string) ([]string, error) {
-	query := `SELECT content FROM case_sources WHERE deleted_at = 0`
+	query := `SELECT content FROM case_sources WHERE deleted_at = 0 AND is_active AND status = 'ready'`
 	var args []interface{}
 	if len(ids) > 0 {
 		query += ` AND id = ANY($1::uuid[])`

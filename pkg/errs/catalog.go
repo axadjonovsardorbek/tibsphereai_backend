@@ -123,6 +123,21 @@ var (
 		Ru: "Сессия симуляции уже завершена",
 		En: "Simulation session already finished",
 	})
+	ErrPracticeLimitReached = New(http.StatusConflict, "practice_limit_reached", Text{
+		Uz: "Bu sessiyada savollar limiti tugadi, sessiyani yakunlang",
+		Ru: "Лимит заданий в этой сессии исчерпан, завершите сессию",
+		En: "Item limit for this session reached, finish the session",
+	})
+	ErrPracticeGenFailed = New(http.StatusBadGateway, "practice_generation_failed", Text{
+		Uz: "AI hozir case/savol tayyorlay olmadi, qayta urinib ko'ring",
+		Ru: "AI не смог подготовить задание, попробуйте ещё раз",
+		En: "AI could not generate the item, please retry",
+	})
+	ErrPracticeAnswered = New(http.StatusConflict, "item_already_answered", Text{
+		Uz: "Bu savolga allaqachon javob berilgan",
+		Ru: "На это задание уже дан ответ",
+		En: "This item has already been answered",
+	})
 	// ErrDebriefNotReady - sessiya hali faol: debrief sessiya yopilgach yoziladi.
 	ErrDebriefNotReady = New(http.StatusNotFound, "debrief_not_ready", Text{
 		Uz: "AI tahlil hali tayyor emas",

@@ -94,6 +94,13 @@ p, admin, /web/case-source, GET
 p, admin, /web/case-source/:id, GET
 p, admin, /web/case-source/:id/update, PUT
 p, admin, /web/case-source/:id/delete, DELETE
+p, admin, /web/source, POST
+p, admin, /web/source, GET
+p, admin, /web/source/:id, GET
+p, admin, /web/source/:id/update, PUT
+p, admin, /web/source/:id/reindex, POST
+p, admin, /web/source/:id/delete, DELETE
+p, admin, /web/practice/stats, GET
 p, admin, /web/partner, POST
 p, admin, /web/partner, GET
 p, admin, /web/partner/:id, GET
@@ -166,6 +173,13 @@ p, user, /mobile/simulation/:id, GET
 p, user, /mobile/simulation/:id/ws, GET
 p, user, /mobile/simulation/:id/event, POST
 p, user, /mobile/simulation/:id/finish, PUT
+p, user, /mobile/practice/sessions, POST
+p, user, /mobile/practice/sessions, GET
+p, user, /mobile/practice/sessions/:id, GET
+p, user, /mobile/practice/sessions/:id/next, POST
+p, user, /mobile/practice/sessions/:id/finish, POST
+p, user, /mobile/practice/items/:id/answer, POST
+p, user, /mobile/practice/items/:id/report, POST
 p, user, /mobile/debrief/:session_id, GET
 p, user, /mobile/notification/:id/read, PUT
 p, user, /mobile/notification/user, GET

@@ -213,6 +213,44 @@ type CaseSourceI interface {
 	GetContents(ids []string) ([]string, error)
 }
 
+// SourceI - AI practice bilimlar bazasi (new-feature.md 4.1.2): kengaytirilgan manbalar,
+// bog'lanishlar va chunklar (case_sources jadvali ustida).
+type SourceI interface {
+	Create(req *m.SourceCreateReq, content, status string) (*m.ById, error)
+	GetById(req *m.ById) (*m.SourceRes, error)
+	GetAll(req *m.SourceGetListReq) (*m.PaginationResponse, *m.SourceList, error)
+	Update(req *m.SourceUpdateReq) (*m.Void, error)
+	Delete(req *m.ById) (*m.Void, error)
+	// GetRaw - qayta indekslash uchun: tur, url, file_url, content.
+	GetRaw(id string) (typ, url, fileUrl, content string, err error)
+	SetStatus(id, status, errText string) error
+	SetContent(id, content string) error
+	// ReplaceChunks - eski chunklarni o'chirib yangilarini yozadi.
+	ReplaceChunks(sourceId string, chunks []m.SourceChunk) error
+	// SearchChunks - bo'lim/mavzu doirasidagi faol, tayyor manbalar chunklaridan eng mosini
+	// qaytaradi (queryEmb bo'sh bo'lsa - tasodifiy). Embeddingsiz chunklar ham qatnashadi.
+	SearchChunks(categoryId string, topicIds []string, queryEmb []float32, limit int) ([]m.SourceChunk, error)
+}
+
+type PracticeI interface {
+	CreateSession(s *m.PracticeSessionRow) (string, error)
+	GetSession(id string) (*m.PracticeSessionRow, error)
+	ListSessions(req *m.PracticeListReq) (*m.PaginationResponse, []*m.PracticeSessionRow, error)
+	// SessionCounts - elementlar soni, javob berilgani, to'g'ri javoblar.
+	SessionCounts(sessionId string) (generated, answered, correct int, err error)
+	AddItem(it *m.PracticeItemRow) (string, error)
+	GetItem(id string) (*m.PracticeItemRow, error)
+	GetItems(sessionId string) ([]*m.PracticeItemRow, error)
+	// PendingItem - javob berilmagan oxirgi element (takroriy "next" chaqiruvda yangisi yaratilmasin).
+	PendingItem(sessionId string) (*m.PracticeItemRow, error)
+	Summaries(sessionId string) ([]string, error)
+	SetAnswer(itemId string, answer, eval []byte, isCorrect bool, score int, tokens int) error
+	AddTokens(sessionId string, prompt, completion int) error
+	Finish(sessionId, status string, score, xp int) error
+	Report(itemId, reason string) error
+	Stats() (*m.PracticeStats, error)
+}
+
 type DashBoardI interface {
 	GetDashboard(req *m.GetDashboardReq) (*m.DashboardRes, error)
 }

@@ -67,6 +67,8 @@ type Config struct {
 	// alohida model, chunki oddiy chat modeli (GEMINI_MODEL) audio chiqarmaydi -
 	// faqat *-tts modellar responseModalities:["AUDIO"]'ni qo'llaydi.
 	GEMINI_TTS_MODEL string
+	// GEMINI_EMBEDDING_MODEL - manba chunklarini vektorlash (RAG) uchun.
+	GEMINI_EMBEDDING_MODEL string
 
 	// Google OAuth (mobile "1-bosqichli kirish")
 	GOOGLE_CLIENT_ID string
@@ -135,6 +137,7 @@ func Load() Config {
 	config.GEMINI_API_KEY = cast.ToString(coalesce("GEMINI_API_KEY", ""))
 	config.GEMINI_MODEL = cast.ToString(coalesce("GEMINI_MODEL", "gemini-2.0-flash"))
 	config.GEMINI_TTS_MODEL = cast.ToString(coalesce("GEMINI_TTS_MODEL", "gemini-3.8-flash-tts"))
+	config.GEMINI_EMBEDDING_MODEL = cast.ToString(coalesce("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001"))
 
 	config.GOOGLE_CLIENT_ID = cast.ToString(coalesce("GOOGLE_CLIENT_ID", ""))
 

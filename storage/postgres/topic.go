@@ -26,8 +26,8 @@ func NewTopicRepo(db *pgxpool.Pool) *TopicRepo {
 func (r *TopicRepo) Create(req *m.TopicCreateReq) (*m.ById, error) {
 	id := uuid.NewString()
 	_, err := r.db.Exec(context.Background(), `
-		INSERT INTO topics (id, category_id, name, order_num) VALUES ($1, $2, $3, $4)
-	`, id, req.CategoryId, req.Name, req.OrderNum)
+		INSERT INTO topics (id, category_id, name, order_num, ai_hint) VALUES ($1, $2, $3, $4, $5)
+	`, id, req.CategoryId, req.Name, req.OrderNum, req.AiHint)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating topic: %w", err)
 	}
@@ -36,13 +36,13 @@ func (r *TopicRepo) Create(req *m.TopicCreateReq) (*m.ById, error) {
 
 func (r *TopicRepo) GetById(req *m.ById) (*m.TopicRes, error) {
 	row := r.db.QueryRow(context.Background(), `
-		SELECT id, category_id, name, order_num, created_at::text, updated_at::text
+		SELECT id, category_id, name, order_num, ai_hint, created_at::text, updated_at::text
 		FROM topics WHERE id = $1 AND deleted_at = 0
 	`, req.Id)
 
 	var nameJSON []byte
 	t := m.TopicRes{}
-	err := row.Scan(&t.Id, &t.CategoryId, &nameJSON, &t.OrderNum, &t.CreatedAt, &t.UpdatedAt)
+	err := row.Scan(&t.Id, &t.CategoryId, &nameJSON, &t.OrderNum, &t.AiHint, &t.CreatedAt, &t.UpdatedAt)
 	if err == pgx.ErrNoRows {
 		return nil, errs.ErrNotFound
 	}
@@ -55,7 +55,7 @@ func (r *TopicRepo) GetById(req *m.ById) (*m.TopicRes, error) {
 
 func (r *TopicRepo) GetAll(req *m.TopicGetListReq) (*m.PaginationResponse, *m.TopicList, error) {
 	query := `
-	SELECT COUNT(id) OVER() AS total_count, id, category_id, name, order_num, created_at::text, updated_at::text
+	SELECT COUNT(id) OVER() AS total_count, id, category_id, name, order_num, ai_hint, created_at::text, updated_at::text
 	FROM topics WHERE deleted_at = 0
 	`
 	var args []interface{}
@@ -78,7 +78,7 @@ func (r *TopicRepo) GetAll(req *m.TopicGetListReq) (*m.PaginationResponse, *m.To
 		t := &m.TopicRes{}
 		var nameJSON []byte
 		var total int
-		if err := rows.Scan(&total, &t.Id, &t.CategoryId, &nameJSON, &t.OrderNum, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&total, &t.Id, &t.CategoryId, &nameJSON, &t.OrderNum, &t.AiHint, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, nil, fmt.Errorf("error while scanning topic: %w", err)
 		}
 		json.Unmarshal(nameJSON, &t.Name)
@@ -104,6 +104,10 @@ func (r *TopicRepo) Update(req *m.TopicUpdateReq) (*m.Void, error) {
 	}
 	conditions = append(conditions, "order_num = $"+strconv.Itoa(len(args)+1))
 	args = append(args, req.OrderNum)
+	if req.AiHint != nil {
+		conditions = append(conditions, "ai_hint = $"+strconv.Itoa(len(args)+1))
+		args = append(args, *req.AiHint)
+	}
 
 	conditions = append(conditions, "updated_at = now()")
 	query := "UPDATE topics SET " + strings.Join(conditions, ", ")

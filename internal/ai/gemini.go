@@ -25,6 +25,7 @@ type geminiClient struct {
 	apiKey     string
 	model      string
 	ttsModel   string
+	embedModel string
 	promptRepo storage.AIPromptI
 	httpClient *http.Client
 }
@@ -34,6 +35,7 @@ func newGeminiClient(cfg *config.Config, promptRepo storage.AIPromptI) *geminiCl
 		apiKey:     cfg.GEMINI_API_KEY,
 		model:      cfg.GEMINI_MODEL,
 		ttsModel:   cfg.GEMINI_TTS_MODEL,
+		embedModel: cfg.GEMINI_EMBEDDING_MODEL,
 		promptRepo: promptRepo,
 		httpClient: &http.Client{Timeout: 60 * time.Second},
 	}

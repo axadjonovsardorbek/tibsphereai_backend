@@ -6,6 +6,7 @@ type TopicCreateReq struct {
 	CategoryId string            `json:"category_id"`
 	Name       map[string]string `json:"name"`
 	OrderNum   int               `json:"order_num"`
+	AiHint     string            `json:"ai_hint"` // AI practice uchun yo'nalish (masalan "faqat pediatrik holatlar")
 }
 
 type TopicUpdateReq struct {
@@ -13,6 +14,7 @@ type TopicUpdateReq struct {
 	CategoryId string            `json:"category_id"`
 	Name       map[string]string `json:"name"`
 	OrderNum   int               `json:"order_num"`
+	AiHint     *string           `json:"ai_hint"` // nil = o'zgartirilmaydi
 }
 
 type TopicRes struct {
@@ -20,6 +22,7 @@ type TopicRes struct {
 	CategoryId *string           `json:"category_id"`
 	Name       map[string]string `json:"name"`
 	OrderNum   *int              `json:"order_num"`
+	AiHint     *string           `json:"ai_hint"`
 	CreatedAt  *string           `json:"created_at"`
 	UpdatedAt  *string           `json:"updated_at"`
 }

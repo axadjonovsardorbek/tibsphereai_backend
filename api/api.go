@@ -205,6 +205,21 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			caseSource.DELETE("/:id/delete", h.DeleteCaseSource)
 		}
 
+		source := web.Group("/source").Use(mid.NewAuth(enforcer, rdb))
+		{
+			source.POST("", h.CreateSource)
+			source.GET("", h.GetAllSources)
+			source.GET("/:id", h.GetByIdSource)
+			source.PUT("/:id/update", h.UpdateSource)
+			source.POST("/:id/reindex", h.ReindexSource)
+			source.DELETE("/:id/delete", h.DeleteSource)
+		}
+
+		webPractice := web.Group("/practice").Use(mid.NewAuth(enforcer, rdb))
+		{
+			webPractice.GET("/stats", h.GetPracticeStats)
+		}
+
 		partner := web.Group("/partner").Use(mid.NewAuth(enforcer, rdb))
 		{
 			partner.POST("", h.CreatePartner)
@@ -373,6 +388,17 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			simulation.GET("/:id/ws", h.SimulationWS)
 			simulation.POST("/:id/event", h.AddSimulationEvent)
 			simulation.PUT("/:id/finish", h.FinishSimulation)
+		}
+
+		practice := mobile.Group("/practice").Use(mid.NewAuth(enforcer, rdb))
+		{
+			practice.POST("/sessions", h.StartPractice)
+			practice.GET("/sessions", h.ListPracticeSessions)
+			practice.GET("/sessions/:id", h.GetPracticeSession)
+			practice.POST("/sessions/:id/next", h.NextPractice)
+			practice.POST("/sessions/:id/finish", h.FinishPractice)
+			practice.POST("/items/:id/answer", h.AnswerPractice)
+			practice.POST("/items/:id/report", h.ReportPracticeItem)
 		}
 
 		debrief := mobile.Group("/debrief").Use(mid.NewAuth(enforcer, rdb))

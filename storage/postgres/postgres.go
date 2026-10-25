@@ -28,6 +28,8 @@ type Storage struct {
 	PromoCodeS        storage.PromoCodeI
 	PartnerS          storage.PartnerI
 	CaseSourceS       storage.CaseSourceI
+	SourceS           storage.SourceI
+	PracticeS         storage.PracticeI
 	DashboardS        storage.DashBoardI
 	UserS             storage.UserI
 	UserDeviceS       storage.UserDeviceI
@@ -78,6 +80,8 @@ func NewPostgresStorage(cf config.Config, rdb *redis.Client) (*Storage, error) {
 		PromoCodeS:        NewPromoCodeRepo(pool),
 		PartnerS:          NewPartnerRepo(pool),
 		CaseSourceS:       NewCaseSourceRepo(pool),
+		SourceS:           NewSourceRepo(pool),
+		PracticeS:         NewPracticeRepo(pool),
 		DashboardS:        NewDashboardRepo(pool),
 		UserS:             NewUserRepo(pool, rdb),
 		UserDeviceS:       NewUserDeviceRepo(pool),
