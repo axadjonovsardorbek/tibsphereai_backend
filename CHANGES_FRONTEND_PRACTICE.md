@@ -69,6 +69,17 @@ Eslatma: bo'lim/mavzuga bog'langan manba faqat shu doirada ishlatiladi; mavzu ta
 ### 2.3 Statistika: `GET /web/practice/stats`
 `sessions, active_sessions, items, answered, correct_rate (0..1), tokens, reports, by_category[], by_topic[] ({id, name, sessions, items}), recent_reports[] ({item_id, session_id, kind, reason, created_at})`.
 
+### 2.4 `admin-panel.html` (tayyor namuna) — nima qo'shildi
+
+Admin panel HTML'i yangilandi; alohida admin frontend (React/Next) qilayotgan jamoa uchun namuna sifatida ham ishlatsa bo'ladi.
+
+- **Sidebar:** "📚 Manbalar (AI bazasi)" (eski "Ishonchli manbalar" o'rniga; eski `/web/case-source` backendda saqlangan, AI batch-generatsiya modali manbalarni shu endpoint'dan o'qiydi) va "📈 AI Practice" (statistika).
+- **Manbalar jadvali:** ustunlar `title, type, status, chunk_count, language, author, is_active, error`; filtr: nom, tur, holat, bo'lim, mavzu. `processing` holatidagi qator bo'lsa jadval **har 3 soniyada o'zi yangilanadi** (poll) — `ready`/`failed` bo'lguncha. Qator amallari: Tahrir, **🔄 Qayta indekslash**, O'chirish.
+- **Manba yaratish formasi:** turi bo'yicha maydonlar o'zgaradi — `book`: fayl; `article`: fayl yoki matn; `website`: URL; `text`: matn. Bo'lim va mavzular — checkbox ro'yxat (hech biri belgilanmasa umumiy manba). `multipart/form-data` bilan yuboriladi (`file`, takroriy `category_ids`/`topic_ids`).
+- **Tahrirlash formasi:** nomi, til, muallif, URL, `is_active`, bo'lim/mavzu bog'lanishlari (oldindan belgilangan). Hech biri belgilanmasa bog'lanishlar tozalanadi (`[]` yuboriladi), maydon umuman yuborilmasa o'zgarmaydi.
+- **Mavzu formasi:** yangi "AI yo'nalishi" (`ai_hint`) maydoni.
+- **AI Practice sahifasi:** `/web/practice/stats` kartalari (sessiyalar, javoblar, to'g'ri javoblar ulushi, tokenlar, shikoyatlar) + bo'lim/mavzu bo'yicha va so'nggi shikoyatlar jadvallari.
+
 ## 3. User-app (`/mobile/practice`, Bearer, `Accept-Language: uz|ru|en`)
 
 | Metod | URL | Izoh |
@@ -177,6 +188,7 @@ Javob:
 - Case uchun tibbiy rasm generatsiyasi, SSE streaming, mavzu/bo'limda `is_active`/tavsif maydonlari.
 - Yuklangan fayllarni saqlash (MinIO) — hozir faqat matn saqlanadi.
 - Swagger (`api/docs`) qayta generatsiya qilinmagan; handler izohlari yozilgan (`swag init`).
+- `.env*.example` fayllari endi git'da yo'q (`.gitignore`): yangi dasturchi uchun kerakli o'zgaruvchilar ro'yxati README'da.
 
 ## 7. Test
 

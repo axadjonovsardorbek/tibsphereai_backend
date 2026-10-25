@@ -5,3 +5,6 @@
 internal/secrets
 bin/
 tools/
+.env.example
+.env.dev.example
+.env.prod.example

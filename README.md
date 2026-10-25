@@ -18,8 +18,20 @@ talablar `BACKEND_STRUCTURE.md` da.
 
 ## Ishga tushirish
 
+`.env*.example` fayllari xavfsizlik uchun git'da saqlanmaydi. `.env` faylini quyidagi o'zgaruvchilar bilan o'zingiz yarating
+(qiymatlarni jamoadan oling; hech qachon repoga qo'shmang):
+
+```
+AUTH_PORT POSTGRES_HOST POSTGRES_PORT POSTGRES_USER POSTGRES_PASSWORD POSTGRES_NAME REDIS_HOST REDIS_PORT
+BOT_TOKEN NEW_BOT_TOKEN GROUP_ID GROUP_FOR_INFO_ID BASE_URL WEBSITE_URL
+CLICK_MERCHANT_ID CLICK_SERVICE_ID CLICK_SECRET_KEY PAYME_MERCHANT_ID PAYME_SECRET_KEY
+INPAY_BASE_URL INPAY_MERCHANT_ID INPAY_MERCHANT_TOKEN FIREBASE_CREDENTIALS
+MINIO_ENDPOINT MINIO_PORT MINIO_ACCESS_KEY MINIO_SECRET_KEY MINIO_BUCKET_NAME MINIO_DOMAIN
+CONFIRM_PAGE_URL EMAIL_NAME EMAIL_LOGO BREVO_SERVER BREVO_PORT BREVO_LOGIN BREVO_KEY
+GEMINI_API_KEY GEMINI_MODEL GEMINI_TTS_MODEL GEMINI_EMBEDDING_MODEL GOOGLE_CLIENT_ID DAILY_FREE_LIMIT JWT_SECRET
+```
+
 ```bash
-cp .env.example .env      # qiymatlarni to'ldiring
 task compose-up           # postgres + redis
 task migrate-up           # migratsiyalar
 task run                  # yoki: go run ./cmd/main.go

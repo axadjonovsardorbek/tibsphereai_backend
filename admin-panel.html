@@ -427,10 +427,11 @@ function buildFormField(container, f, values, refData, onChange){
     const box = document.createElement('div');
     box.style.cssText = 'max-height:170px;overflow:auto;border:1px solid var(--border,#2a3350);border-radius:8px;padding:6px 10px';
     const checks = [];
+    const preset = new Set((getPath(values, f.name) || []).map(String));
     (f.options || []).forEach(o=>{
       const row = document.createElement('label');
-      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer';
-      const cb = document.createElement('input'); cb.type='checkbox'; cb.value=o.value;
+      row.style.cssText = 'display:flex;flex-direction:row;justify-content:flex-start;align-items:center;gap:8px;padding:3px 0;margin:0;cursor:pointer';
+      const cb = document.createElement('input'); cb.type='checkbox'; cb.style.cssText='width:auto;margin:0;flex:none'; cb.value=o.value; cb.checked = preset.has(String(o.value));
       row.appendChild(cb); row.appendChild(document.createTextNode(o.label));
       box.appendChild(row); checks.push(cb);
     });
@@ -489,6 +490,12 @@ function buildFormField(container, f, values, refData, onChange){
     search.oninput = () => { clearTimeout(timer); timer = setTimeout(runSearch, 300); };
     wrap.appendChild(chips); wrap.appendChild(search); wrap.appendChild(results);
     wrap._getValue = () => f.multi ? Array.from(picked.keys()) : (Array.from(picked.keys())[0] || '');
+  } else if(f.type === 'rawfile'){
+    // Xom fayl tanlash (multipart yuborish uchun): qiymat - File yoki null.
+    const inp = document.createElement('input');
+    inp.type = 'file'; if(f.accept) inp.accept = f.accept;
+    wrap.appendChild(inp);
+    wrap._getValue = () => inp.files && inp.files[0] ? inp.files[0] : null;
   } else if(f.type === 'file'){
     const row = document.createElement('div'); row.className='rowInline';
     const inp = document.createElement('input');
@@ -772,6 +779,7 @@ const MODULES = {
       {name:'category_id', label:'Bo\'lim', type:'select', asyncOptions:'category', required:true},
       {name:'name', label:'Nomi', type:'ml', required:true},
       {name:'order_num', label:'Tartib raqami', type:'number'},
+      {name:'ai_hint', label:'AI yo\'nalishi (ixtiyoriy; masalan: "faqat pediatrik holatlar")', type:'textarea', full:true},
     ],
     canCreate:true, canUpdate:true, canDelete:true,
     onSaved:()=>invalidateRef('topic'),
@@ -911,6 +919,67 @@ const MODULES = {
       return [batch, imp];
     }
   },
+  source: {
+    label:'Manbalar (AI bilimlar bazasi)', base:'/web/source', listKey:'sources', fetchOne:true,
+    search:[
+      {name:'name', label:'Nomi (qidiruv)', type:'text'},
+      {name:'type', label:'Turi', type:'select', includeEmpty:true, options:[{value:'book',label:'📖 Kitob'},{value:'article',label:'📄 Maqola'},{value:'website',label:'🌐 Veb-sayt'},{value:'text',label:'Matn'}]},
+      {name:'status', label:'Holat', type:'select', includeEmpty:true, options:[{value:'uploaded',label:'uploaded'},{value:'processing',label:'processing'},{value:'ready',label:'ready'},{value:'failed',label:'failed'}]},
+      {name:'category_id', label:'Bo\'lim', type:'select', asyncOptions:'category', includeEmpty:true},
+      {name:'topic_id', label:'Mavzu', type:'select', asyncOptions:'topic', includeEmpty:true},
+    ],
+    columns:['title','type','status','chunk_count','language','author','is_active','error','created_at'],
+    autoRefresh: row => row.status === 'processing' || row.status === 'uploaded',
+    createFields:[
+      {name:'title', label:'Nomi', type:'text', required:true},
+      {name:'type', label:'Turi', type:'select', options:[{value:'book',label:'📖 Kitob (fayl)'},{value:'article',label:'📄 Maqola (fayl yoki matn)'},{value:'website',label:'🌐 Veb-sayt (URL)'},{value:'text',label:'Matn'}]},
+      {name:'language', label:'Til', type:'select', options:[{value:'',label:'— ko\'rsatilmagan —'},{value:'uz',label:'uz'},{value:'ru',label:'ru'},{value:'en',label:'en'}]},
+      {name:'author', label:'Muallif (ixtiyoriy)', type:'text'},
+      {name:'url', label:'Sayt manzili (https://...)', type:'text', full:true, showIf: v => v.type === 'website'},
+      {name:'file', label:'Fayl (PDF, EPUB, DOCX, TXT; max 50 MB)', type:'rawfile', accept:'.pdf,.epub,.docx,.txt,.md', full:true, showIf: v => v.type === 'book' || v.type === 'article'},
+      {name:'content', label:'Matn', type:'textarea', rows:8, full:true, showIf: v => v.type === 'text' || v.type === 'article'},
+      {name:'category_ids', label:'Bo\'limlar (hech biri belgilanmasa — umumiy manba, hamma bo\'limga mos)', type:'checklist', asyncOptions:'category', emptyText:'Bo\'limlar yo\'q', full:true},
+      {name:'topic_ids', label:'Mavzular (ixtiyoriy, aniq mavzuga bog\'lash)', type:'checklist', asyncOptions:'topic', emptyText:'Mavzular yo\'q', full:true},
+    ],
+    createValues:{type:'book', language:''},
+    // Fayl bo'lgani uchun multipart yuboriladi; qayta ishlash fonda (processing -> ready|failed).
+    submitCreate: async (b)=>{
+      const type = b.type;
+      if(!String(b.title||'').trim()) throw (toast('Nomini kiriting','err'), new Error('validation'));
+      if((type==='book') && !b.file) throw (toast('Fayl tanlang','err'), new Error('validation'));
+      if(type==='website' && !String(b.url||'').trim()) throw (toast('Sayt manzilini kiriting','err'), new Error('validation'));
+      if(type==='text' && !String(b.content||'').trim()) throw (toast('Matnni kiriting','err'), new Error('validation'));
+      if(type==='article' && !b.file && !String(b.content||'').trim()) throw (toast('Fayl yoki matn kiriting','err'), new Error('validation'));
+      const fd = new FormData();
+      ['title','type','language','author'].forEach(k=>fd.append(k, b[k]||''));
+      if(type==='website') fd.append('url', b.url);
+      if(type==='text' || type==='article') fd.append('content', b.content||'');
+      if(b.file && (type==='book' || type==='article')) fd.append('file', b.file);
+      (b.category_ids||[]).forEach(id=>fd.append('category_ids', id));
+      (b.topic_ids||[]).forEach(id=>fd.append('topic_ids', id));
+      await api('/web/source', {method:'POST', body:fd, isForm:true});
+      toast('Yuklandi — qayta ishlanmoqda (holat ro\'yxatda yangilanadi)', 'ok');
+    },
+    fields:[
+      {name:'title', label:'Nomi', type:'text', required:true},
+      {name:'language', label:'Til', type:'select', options:[{value:'',label:'— ko\'rsatilmagan —'},{value:'uz',label:'uz'},{value:'ru',label:'ru'},{value:'en',label:'en'}]},
+      {name:'author', label:'Muallif', type:'text'},
+      {name:'url', label:'Sayt manzili (website uchun)', type:'text', full:true},
+      {name:'is_active', label:'Faol (o\'chirilsa AI ishlatmaydi)', type:'checkbox'},
+      {name:'category_ids', label:'Bo\'limlar (hech biri — umumiy manba)', type:'checklist', asyncOptions:'category', emptyText:'Bo\'limlar yo\'q', full:true},
+      {name:'topic_ids', label:'Mavzular', type:'checklist', asyncOptions:'topic', emptyText:'Mavzular yo\'q', full:true},
+    ],
+    canCreate:true, canUpdate:true, canDelete:true,
+    onSaved:()=>invalidateRef('case_source'),
+    rowActions:(row, refresh)=>{
+      const b = document.createElement('button'); b.className='sm'; b.textContent='🔄 Qayta indekslash';
+      b.title = 'Sayt qayta yuklanadi; boshqalar saqlangan matndan qayta chunklanadi (embedding xato bo\'lgan bo\'lsa ham shu yordam beradi)';
+      b.onclick = async ()=>{
+        try{ await api('/web/source/'+row.id+'/reindex', {method:'POST'}); toast('Qayta indekslash boshlandi','ok'); refresh(); }catch(e){}
+      };
+      return [b];
+    },
+  },
   case_source: {
     label:'Ishonchli manbalar', base:'/web/case-source', listKey:'sources',
     search:[{name:'name', label:'Nomi (qidiruv)', type:'text'}],
@@ -1047,6 +1116,7 @@ async function renderGenericModule(key){
   main.appendChild(pager);
 
   let page = 1, limit = 10;
+  let refreshTimer = null;
   const filters = {};
 
   // search fields
@@ -1083,7 +1153,7 @@ async function renderGenericModule(key){
 
   async function openCreate(){
     const refFields = await Promise.all((cfg.createFields || cfg.fields).map(async f=>{
-      if(f.asyncOptions){ const nf = Object.assign({}, f); nf.options = await resolveOptions(f); nf.type='select'; return nf; }
+      if(f.asyncOptions){ const nf = Object.assign({}, f); nf.options = await resolveOptions(f); if(f.type !== 'checklist') nf.type='select'; return nf; }
       return f;
     }));
     openModal({
@@ -1092,7 +1162,8 @@ async function renderGenericModule(key){
       values: cfg.createValues || {},
       onSubmit: async (body)=>{
         if(cfg.beforeCreate) body = cfg.beforeCreate(body);
-        await api(cfg.base, {method:'POST', body});
+        if(cfg.submitCreate) await cfg.submitCreate(body);
+        else await api(cfg.base, {method:'POST', body});
         toast('Yaratildi', 'ok');
         if(cfg.onSaved) cfg.onSaved();
         load();
@@ -1103,7 +1174,7 @@ async function renderGenericModule(key){
   async function openEdit(row){
     const editFields = cfg.updateFields || cfg.fields;
     const refFields = await Promise.all(editFields.map(async f=>{
-      if(f.asyncOptions){ const nf = Object.assign({}, f); nf.options = await resolveOptions(f); nf.type='select'; return nf; }
+      if(f.asyncOptions){ const nf = Object.assign({}, f); nf.options = await resolveOptions(f); if(f.type !== 'checklist') nf.type='select'; return nf; }
       return f;
     }));
     let values = row;
@@ -1146,6 +1217,11 @@ async function renderGenericModule(key){
     }
     const {items, count} = extractList(json);
     renderTable(items);
+    // Fon jarayoni (masalan manba indekslanishi) tugaguncha ro'yxatni o'zi yangilab turadi.
+    clearTimeout(refreshTimer);
+    if(cfg.autoRefresh && items.some(cfg.autoRefresh)){
+      refreshTimer = setTimeout(()=>{ if(document.body.contains(tableWrap)) load(); }, 3000);
+    }
     pager.innerHTML = '';
     if(!cfg.noPagination){
       const info = document.createElement('span');
@@ -1260,6 +1336,43 @@ async function renderDashboard(){
     });
   }
   load();
+}
+
+/* ============================================================
+   AI PRACTICE STATISTIKASI (/web/practice/stats)
+   ============================================================ */
+async function renderPracticeStats(){
+  const main = document.getElementById('main');
+  main.innerHTML = '<h2 class="pageTitle">AI Practice statistikasi</h2><p class="pageDesc">/web/practice/stats — foydalanuvchilar o\'zi yaratgan AI case/test sessiyalari</p>';
+  let d;
+  try{ d = await api('/web/practice/stats'); }catch(e){ return; }
+  const pct = v => (Number(v||0)*100).toFixed(1)+'%';
+  const cards = document.createElement('div'); cards.className='cards';
+  [
+    ['Sessiyalar', d.sessions], ['Faol sessiyalar', d.active_sessions], ['Generatsiya qilingan elementlar', d.items],
+    ['Javob berilgan', d.answered], ['To\'g\'ri javoblar ulushi', pct(d.correct_rate)], ['Sarflangan tokenlar', d.tokens],
+    ['Shikoyatlar', d.reports],
+  ].forEach(([l,v])=>{
+    const c = document.createElement('div'); c.className='card';
+    c.innerHTML = '<div class="v">'+esc(v ?? '—')+'</div><div class="l">'+esc(l)+'</div>';
+    cards.appendChild(c);
+  });
+  main.appendChild(cards);
+
+  function table(title, headers, rows){
+    const h = document.createElement('h3'); h.textContent = title; h.style.margin = '18px 0 8px';
+    main.appendChild(h);
+    if(!rows.length){ const p=document.createElement('p'); p.className='muted'; p.textContent='Ma\'lumot yo\'q.'; main.appendChild(p); return; }
+    const t = document.createElement('table');
+    t.innerHTML = '<thead><tr>'+headers.map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr></thead>';
+    const tb = document.createElement('tbody');
+    rows.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML = r.map(c=>'<td>'+c+'</td>').join(''); tb.appendChild(tr); });
+    t.appendChild(tb); main.appendChild(t);
+  }
+  table('Bo\'limlar bo\'yicha', ['Bo\'lim','Sessiyalar','Elementlar'], (d.by_category||[]).map(g=>[fmtCell(g.name), esc(g.sessions), esc(g.items)]));
+  table('Mavzular bo\'yicha', ['Mavzu','Sessiyalar','Elementlar'], (d.by_topic||[]).map(g=>[fmtCell(g.name), esc(g.sessions), esc(g.items)]));
+  table('So\'nggi shikoyatlar (noto\'g\'ri case/savol)', ['Sana','Turi','Sabab','Sessiya','Element'],
+    (d.recent_reports||[]).map(r=>[esc(r.created_at), esc(r.kind), esc(r.reason||'—'), '<code class="small">'+esc(r.session_id)+'</code>', '<code class="small">'+esc(r.item_id)+'</code>']));
 }
 
 /* ============================================================
@@ -1928,7 +2041,7 @@ const NAV = [
     {key:'about', label:'ℹ️ Biz haqimizda', render: ()=>renderGenericModule('about')},
     {key:'faq', label:'❓ FAQ', render: ()=>renderGenericModule('faq')},
     {key:'contact', label:'☎️ Kontaktlar', render: ()=>renderGenericModule('contact')},
-    {key:'case_source', label:'📚 Ishonchli manbalar', render: ()=>renderGenericModule('case_source')},
+    {key:'source', label:'📚 Manbalar (AI bazasi)', render: ()=>renderGenericModule('source')},
     {key:'partner', label:'🤝 Hamkorlar', render: ()=>renderGenericModule('partner')},
     {key:'app_route', label:'🔗 App Route', render: renderAppRoute},
   ]},
@@ -1936,6 +2049,7 @@ const NAV = [
     {key:'category', label:'📁 Bo\'limlar', render: ()=>renderGenericModule('category')},
     {key:'topic', label:'📑 Mavzular', render: ()=>renderGenericModule('topic')},
     {key:'case', label:'🧠 Case\'lar', render: ()=>renderGenericModule('case')},
+    {key:'practice_stats', label:'📈 AI Practice', render: renderPracticeStats},
     {key:'level', label:'🏅 Levellar', render: ()=>renderGenericModule('level')},
     {key:'ai_prompt', label:'🤖 AI Promptlar', render: renderAIPrompt},
   ]},
