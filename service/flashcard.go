@@ -8,6 +8,7 @@ import (
 	"tibsphereai/internal/ai"
 	"tibsphereai/pkg/errs"
 	m "tibsphereai/pkg/models"
+	models "tibsphereai/pkg/models"
 	st "tibsphereai/storage/postgres"
 	"time"
 )
@@ -210,10 +211,10 @@ func (s *FlashcardService) DeleteCard(ctx context.Context, userId, id string) er
 
 // DeckCreateRes - deck buyurtmasi natijasi: yaratilgan deck, kartalar soni va narxi.
 type DeckCreateRes struct {
-	Deck       *m.FlashcardDeckRes `json:"deck"`
-	Created    int                 `json:"created"`
-	TokensUsed int                 `json:"tokens_used"`
-	CoinsSpent int                 `json:"coins_spent"`
+	Deck       *models.FlashcardDeckRes `json:"deck"`
+	Created    int                      `json:"created"`
+	TokensUsed int                      `json:"tokens_used"`
+	CoinsSpent int                      `json:"coins_spent"`
 }
 
 // CreateDeck - mavzu bo'yicha mustaqil fleshkarta to'plami (TZ_MVP: AI token sarfi hisobidan tanga yechiladi).

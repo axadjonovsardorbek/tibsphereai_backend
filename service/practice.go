@@ -13,6 +13,7 @@ import (
 	"tibsphereai/internal/ai"
 	"tibsphereai/pkg/errs"
 	m "tibsphereai/pkg/models"
+	models "tibsphereai/pkg/models"
 	st "tibsphereai/storage/postgres"
 	"time"
 )
@@ -568,9 +569,9 @@ func (s *PracticeService) settle(ctx context.Context, sessionId string) {
 
 // PracticeAnswerRes - javob natijasi; test rejimida oxirgi savol javoblangach sessiya avtomatik yakunlanadi.
 type PracticeAnswerRes struct {
-	Item            *m.PracticeItemRes    `json:"item"`
-	SessionFinished bool                  `json:"session_finished"`
-	Session         *m.PracticeSessionRes `json:"session"`
+	Item            *models.PracticeItemRes    `json:"item"`
+	SessionFinished bool                       `json:"session_finished"`
+	Session         *models.PracticeSessionRes `json:"session"`
 }
 
 func (s *PracticeService) Answer(ctx context.Context, req *m.PracticeAnswerReq) (*PracticeAnswerRes, error) {

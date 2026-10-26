@@ -10,6 +10,7 @@ import (
 	"net/mail"
 	"strings"
 	"sync"
+	models "tibsphereai/pkg/models"
 	"time"
 
 	"tibsphereai/internal/helper"
@@ -30,8 +31,8 @@ type TelegramLinkStartRes struct {
 }
 
 type TelegramLinkCheckRes struct {
-	Status string      `json:"status"` // pending | confirmed
-	Auth   *m.TokenRes `json:"auth,omitempty"`
+	Status string           `json:"status"` // pending | confirmed
+	Auth   *models.TokenRes `json:"auth,omitempty"`
 }
 
 var (

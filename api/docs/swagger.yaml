@@ -423,6 +423,50 @@ definitions:
           type: string
         type: object
     type: object
+  models.ById:
+    properties:
+      id:
+        type: string
+    type: object
+  models.CaseBatchGenItem:
+    properties:
+      case_id:
+        type: string
+      error:
+        type: string
+      topic_id:
+        type: string
+    type: object
+  models.CaseBatchGenReq:
+    properties:
+      category_id:
+        type: string
+      count_per_topic:
+        description: default 1
+        type: integer
+      difficulty:
+        type: string
+      source_ids:
+        description: bo'sh = barcha manbalar
+        items:
+          type: string
+        type: array
+      topic_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  models.CaseBatchGenRes:
+    properties:
+      created:
+        type: integer
+      failed:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/models.CaseBatchGenItem'
+        type: array
+    type: object
   models.CaseCreateReq:
     properties:
       chief_complaint:
@@ -462,6 +506,10 @@ definitions:
         additionalProperties:
           type: string
         type: object
+      topic:
+        description: 'Topic - ixtiyoriy: ro''yxatdan tanlanmagan mavzu matni (faqat
+          AI uchun yo''l-yo''riq, saqlanmaydi).'
+        type: string
       topic_id:
         type: string
       visual_state:
@@ -471,11 +519,27 @@ definitions:
     properties:
       chief_complaint:
         type: string
+      cover_image_url:
+        description: CoverImageUrl - admin yuklagan rasm; AI uni o'zgartirmaydi, aynan
+          shu saqlanadi.
+        type: string
       difficulty:
         type: string
       expected_answer:
         type: string
+      source_ids:
+        description: |-
+          SourceIds - case_sources dan tanlangan manbalar. Bo'sh bo'lsa bazadagi
+          BARCHA manbalar ishlatiladi.
+        items:
+          type: string
+        type: array
       topic:
+        type: string
+      topic_id:
+        description: |-
+          TopicId - ixtiyoriy: berilsa case shu mavzuga biriktiriladi va Topic bo'sh
+          bo'lsa mavzu nomi (topics.name) avtomatik olinadi.
         type: string
     type: object
   models.CaseImportRes:
@@ -620,6 +684,44 @@ definitions:
       visual_state:
         type: string
     type: object
+  models.CaseSourceCreateReq:
+    properties:
+      content:
+        type: string
+      name:
+        type: string
+    type: object
+  models.CaseSourceList:
+    properties:
+      count:
+        type: integer
+      sources:
+        items:
+          $ref: '#/definitions/models.CaseSourceRes'
+        type: array
+    type: object
+  models.CaseSourceRes:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.CaseSourceUpdateReq:
+    properties:
+      content:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   models.CaseUpdateReq:
     properties:
       chief_complaint:
@@ -683,8 +785,15 @@ definitions:
       audience:
         description: doctor|citizen, bo'sh - doctor
         type: string
+      description:
+        additionalProperties:
+          type: string
+        type: object
       icon_url:
         type: string
+      is_active:
+        description: nil = faol
+        type: boolean
       name:
         additionalProperties:
           type: string
@@ -731,10 +840,16 @@ definitions:
         type: string
       created_at:
         type: string
+      description:
+        additionalProperties:
+          type: string
+        type: object
       icon_url:
         type: string
       id:
         type: string
+      is_active:
+        type: boolean
       name:
         additionalProperties:
           type: string
@@ -748,10 +863,18 @@ definitions:
     properties:
       audience:
         type: string
+      description:
+        additionalProperties:
+          type: string
+        description: nil = o'zgartirilmaydi
+        type: object
       icon_url:
         type: string
       id:
         type: string
+      is_active:
+        description: nil = o'zgartirilmaydi
+        type: boolean
       name:
         additionalProperties:
           type: string
@@ -783,6 +906,11 @@ definitions:
         description: category_unlock va h.k. (manfiy tranzaksiyalar, musbat songa
           aylantirilgan)
         type: integer
+    type: object
+  models.CoinRateRes:
+    properties:
+      coins_per_1k_tokens:
+        type: number
     type: object
   models.ConfirmationReq:
     properties:
@@ -889,6 +1017,11 @@ definitions:
         type: integer
       title:
         type: string
+    type: object
+  models.DailyFreeCoinsRes:
+    properties:
+      daily_free_coins:
+        type: integer
     type: object
   models.DashboardRes:
     properties:
@@ -1042,6 +1175,208 @@ definitions:
     properties:
       is_favorite:
         type: boolean
+    type: object
+  models.FeedbackCreateReq:
+    properties:
+      app_version:
+        type: string
+      context:
+        type: string
+      kind:
+        description: general | bug | idea | content | nps
+        type: string
+      message:
+        type: string
+      rating:
+        description: 1..5 (ixtiyoriy, 0 = ko'rsatilmagan)
+        type: integer
+    type: object
+  models.FlashcardAdminStats:
+    properties:
+      active_reviewers_today:
+        type: integer
+      generated_today:
+        type: integer
+      mastery_rate:
+        description: interval >= 21 kun bo'lgan kartalar ulushi
+        type: number
+      retention_30d:
+        type: number
+      reviews_today:
+        type: integer
+      total_cards:
+        type: integer
+      total_decks:
+        type: integer
+      users_with_cards:
+        type: integer
+      weak_topics:
+        items:
+          $ref: '#/definitions/models.FlashcardWeakTopic'
+        type: array
+    type: object
+  models.FlashcardCreateReq:
+    properties:
+      back:
+        type: string
+      deck_id:
+        type: string
+      front:
+        type: string
+    type: object
+  models.FlashcardDeckCreateReq:
+    properties:
+      category_id:
+        type: string
+      count:
+        description: 5..30, default 10
+        type: integer
+      title:
+        description: ixtiyoriy
+        type: string
+      topic_id:
+        type: string
+      topic_text:
+        description: erkin mavzu
+        type: string
+    type: object
+  models.FlashcardDeckRes:
+    properties:
+      card_count:
+        type: integer
+      category_id:
+        type: string
+      created_at:
+        type: string
+      due_count:
+        type: integer
+      free_topic:
+        type: string
+      id:
+        type: string
+      kind:
+        type: string
+      title:
+        type: string
+      topic_id:
+        type: string
+    type: object
+  models.FlashcardDueRes:
+    properties:
+      cards:
+        items:
+          $ref: '#/definitions/models.FlashcardRes'
+        type: array
+      due_total:
+        description: hozir takrorlashga tayyor jami kartalar
+        type: integer
+    type: object
+  models.FlashcardRes:
+    properties:
+      back:
+        type: string
+      created_at:
+        type: string
+      deck_id:
+        type: string
+      due_at:
+        type: string
+      front:
+        type: string
+      id:
+        type: string
+      interval_days:
+        type: integer
+      is_new:
+        description: hali takrorlanmagan
+        type: boolean
+      lapses:
+        type: integer
+      next_intervals:
+        additionalProperties:
+          type: integer
+        description: NextIntervals - har bir baho tugmasi uchun keyingi interval (kun);
+          again = 0 (~10 daqiqa).
+        type: object
+      repetitions:
+        type: integer
+      sources:
+        items:
+          $ref: '#/definitions/models.SourceRef'
+        type: array
+      status:
+        type: string
+    type: object
+  models.FlashcardReviewReq:
+    properties:
+      rating:
+        description: again | hard | good | easy
+        type: string
+    type: object
+  models.FlashcardReviewRes:
+    properties:
+      card:
+        $ref: '#/definitions/models.FlashcardRes'
+      due_at:
+        type: string
+      next_interval_days:
+        type: integer
+      streak_count:
+        type: integer
+    type: object
+  models.FlashcardStatsRes:
+    properties:
+      decks:
+        type: integer
+      due_now:
+        type: integer
+      due_today:
+        description: bugun (Toshkent) oxirigacha takrorlanishi kerak
+        type: integer
+      learned:
+        description: interval >= 21 kun
+        type: integer
+      longest_streak:
+        type: integer
+      new:
+        description: hali ko'rilmagan
+        type: integer
+      retention_30d:
+        description: '0..1: good+easy ulushi'
+        type: number
+      reviews_today:
+        type: integer
+      streak_count:
+        type: integer
+      total:
+        type: integer
+    type: object
+  models.FlashcardUpdateReq:
+    properties:
+      back:
+        type: string
+      front:
+        type: string
+      status:
+        description: active | suspended
+        type: string
+    type: object
+  models.FlashcardWeakTopic:
+    properties:
+      answered:
+        type: integer
+      card_count:
+        description: xatolardan yaratilgan kartalar
+        type: integer
+      name:
+        additionalProperties:
+          type: string
+        type: object
+      topic_id:
+        type: string
+      wrong_rate:
+        description: practice javoblaridagi xato ulushi (0..1)
+        type: number
     type: object
   models.GoogleLoginReq:
     properties:
@@ -1309,6 +1644,229 @@ definitions:
       name:
         type: string
     type: object
+  models.PracticeAnswerReq:
+    properties:
+      answer:
+        description: 'case: erkin matn; test: variant kaliti (A..D)'
+        type: string
+    type: object
+  models.PracticeImagesRes:
+    properties:
+      enabled:
+        type: boolean
+    type: object
+  models.PracticeItemRes:
+    properties:
+      answered:
+        type: boolean
+      chief_complaint:
+        description: case
+        type: string
+      correct_answer:
+        description: 'case: expected_answer; test: variant matni'
+        type: string
+      correct_key:
+        description: 'test: A..D'
+        type: string
+      explanation:
+        type: string
+      feedback:
+        type: string
+      id:
+        type: string
+      idx:
+        type: integer
+      image_note:
+        type: string
+      image_type:
+        type: string
+      image_url:
+        description: 'AI yaratgan tibbiy tasvir (EKG, rentgen...): case bilan birga
+          ko''rsatiladi.'
+        type: string
+      is_correct:
+        type: boolean
+      kind:
+        description: case | test
+        type: string
+      options:
+        items:
+          $ref: '#/definitions/models.PracticeOption'
+        type: array
+      patient:
+        additionalProperties: {}
+        description: yosh, jins, anamnez, ko'rik, analizlar
+        type: object
+      question:
+        description: test
+        type: string
+      reported:
+        type: boolean
+      score:
+        description: 0..100
+        type: integer
+      session_id:
+        type: string
+      sources:
+        items:
+          $ref: '#/definitions/models.SourceRef'
+        type: array
+      sources_note:
+        description: 'manba bo''lmasa: "Manba topilmadi ..."'
+        type: string
+      user_answer:
+        description: 'Javobdan keyin:'
+      verdict:
+        description: correct | partial | wrong
+        type: string
+    type: object
+  models.PracticeOption:
+    properties:
+      key:
+        description: A..D
+        type: string
+      text:
+        type: string
+    type: object
+  models.PracticeReportReq:
+    properties:
+      reason:
+        type: string
+    type: object
+  models.PracticeReportRow:
+    properties:
+      created_at:
+        type: string
+      item_id:
+        type: string
+      kind:
+        type: string
+      reason:
+        type: string
+      session_id:
+        type: string
+    type: object
+  models.PracticeSessionRes:
+    properties:
+      answered:
+        type: integer
+      category_id:
+        type: string
+      coins_spent:
+        type: integer
+      correct:
+        type: integer
+      difficulty:
+        type: string
+      finished_at:
+        type: string
+      flashcards_created:
+        type: integer
+      flashcards_status:
+        description: |-
+          Sessiya yakunida xatolar asosida fonda yaratiladigan fleshkartalar:
+          none (xato yo'q/hali yakunlanmagan) | pending | done | failed.
+        type: string
+      free_topic:
+        type: string
+      generated:
+        description: hozirgacha generatsiya qilingan elementlar
+        type: integer
+      id:
+        type: string
+      items:
+        description: faqat detal so'rovida
+        items:
+          $ref: '#/definitions/models.PracticeItemRes'
+        type: array
+      mode:
+        type: string
+      score:
+        type: integer
+      started_at:
+        type: string
+      status:
+        type: string
+      tokens_used:
+        description: 'Pay-as-you-go: sessiyada sarflangan AI tokenlar va ulardan yechilgan
+          tanga.'
+        type: integer
+      topic_ids:
+        items:
+          type: string
+        type: array
+      total_items:
+        type: integer
+      xp_earned:
+        type: integer
+    type: object
+  models.PracticeStartReq:
+    properties:
+      category_id:
+        description: majburiy (erkin mavzuda bo'sh)
+        type: string
+      count:
+        description: 'test: savollar soni (5..50), default 10'
+        type: integer
+      difficulty:
+        description: easy | medium | hard
+        type: string
+      mode:
+        description: case | test
+        type: string
+      topic_ids:
+        description: bo'sh = butun bo'lim (aralash)
+        items:
+          type: string
+        type: array
+      topic_text:
+        description: |-
+          TopicText - "Erkin mavzu": tayyor bo'lim/mavzusiz, foydalanuvchi yozgan istalgan tibbiy mavzu
+          (category_id va topic_ids bilan birga ishlatilmaydi).
+        type: string
+    type: object
+  models.PracticeStatByGroup:
+    properties:
+      id:
+        type: string
+      items:
+        type: integer
+      name:
+        additionalProperties:
+          type: string
+        type: object
+      sessions:
+        type: integer
+    type: object
+  models.PracticeStats:
+    properties:
+      active_sessions:
+        type: integer
+      answered:
+        type: integer
+      by_category:
+        items:
+          $ref: '#/definitions/models.PracticeStatByGroup'
+        type: array
+      by_topic:
+        items:
+          $ref: '#/definitions/models.PracticeStatByGroup'
+        type: array
+      correct_rate:
+        type: number
+      items:
+        type: integer
+      recent_reports:
+        items:
+          $ref: '#/definitions/models.PracticeReportRow'
+        type: array
+      reports:
+        type: integer
+      sessions:
+        type: integer
+      tokens:
+        type: integer
+    type: object
   models.PromoCodeCreateReq:
     properties:
       created_by:
@@ -1488,6 +2046,55 @@ definitions:
       refresh_token:
         type: string
     type: object
+  models.RoadmapRes:
+    properties:
+      coins_spent:
+        description: faqat refresh javobida
+        type: integer
+      generated_at:
+        description: AI versiyasi yaratilgan vaqt
+        type: string
+      is_ai:
+        description: qadam izohlari AI tomonidan yozilganmi
+        type: boolean
+      map:
+        items:
+          $ref: '#/definitions/models.TopicMastery'
+        type: array
+      path:
+        items:
+          $ref: '#/definitions/models.RoadmapStep'
+        type: array
+      strong_count:
+        type: integer
+      summary:
+        description: AI umumiy xulosa (bo'sh bo'lishi mumkin)
+        type: string
+      unexplored_count:
+        type: integer
+      weak_count:
+        type: integer
+    type: object
+  models.RoadmapStep:
+    properties:
+      action:
+        description: flashcard_review | test | case | deck
+        type: string
+      category_id:
+        type: string
+      count:
+        type: integer
+      difficulty:
+        type: string
+      order:
+        type: integer
+      reason:
+        type: string
+      topic_id:
+        type: string
+      topic_name:
+        type: string
+    type: object
   models.RoleAccessItem:
     properties:
       attributes:
@@ -1595,6 +2202,8 @@ definitions:
         type: integer
       attempts_used:
         type: integer
+      coins_spent:
+        type: integer
       finish_result:
         $ref: '#/definitions/models.SimulationFinishRes'
       health_delta:
@@ -1614,16 +2223,22 @@ definitions:
         description: AI javobi / lab natijasi va h.k.
         type: object
       session_ended:
+        type: boolean
+      tokens_used:
         description: |-
           SessionEnded - health_percent shu harakatdan keyin 0'ga tushib, sessiya
           server tomonidan avtomatik yakunlangan bo'lsa true (bemor "o'ldi").
           Frontend shu bayroqni ko'rsa, keyingi buyruq/xabar yuborishni to'xtatib,
           FinishResult'dagi debrief/XP/coin natijasini ko'rsatishi kerak.
-        type: boolean
+          TokensUsed/CoinsSpent - sessiyada shu paytgacha AI sarflagan tokenlar va ulardan
+          balansdan yechilgan tangalar (faqat tanga hisobidan boshlangan sessiyada CoinsSpent > 0).
+        type: integer
     type: object
   models.SimulationFinishRes:
     properties:
       coins_earned:
+        type: integer
+      coins_spent:
         type: integer
       debrief_ready:
         type: boolean
@@ -1631,6 +2246,8 @@ definitions:
         type: integer
       session_id:
         type: string
+      tokens_used:
+        type: integer
       xp_earned:
         type: integer
     type: object
@@ -1692,6 +2309,83 @@ definitions:
       visual_state:
         type: string
       ws_url:
+        type: string
+    type: object
+  models.SourceRef:
+    properties:
+      author:
+        type: string
+      locator:
+        type: string
+      source_id:
+        type: string
+      title:
+        type: string
+      type:
+        type: string
+      url:
+        description: faqat website uchun
+        type: string
+    type: object
+  models.SourceRes:
+    properties:
+      author:
+        type: string
+      category_ids:
+        items:
+          type: string
+        type: array
+      chunk_count:
+        type: integer
+      created_at:
+        type: string
+      error:
+        type: string
+      file_url:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      language:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      topic_ids:
+        items:
+          type: string
+        type: array
+      type:
+        type: string
+      updated_at:
+        type: string
+      url:
+        type: string
+    type: object
+  models.SourceUpdateReq:
+    properties:
+      author:
+        type: string
+      category_ids:
+        description: nil = o'zgartirilmaydi, [] = bog'lanishlar o'chiriladi
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      is_active:
+        type: boolean
+      language:
+        type: string
+      title:
+        type: string
+      topic_ids:
+        items:
+          type: string
+        type: array
+      url:
         type: string
     type: object
   models.StudyPlanRes:
@@ -1792,8 +2486,18 @@ definitions:
     type: object
   models.TopicCreateReq:
     properties:
+      ai_hint:
+        description: AI practice uchun yo'nalish (masalan "faqat pediatrik holatlar")
+        type: string
       category_id:
         type: string
+      description:
+        additionalProperties:
+          type: string
+        type: object
+      is_active:
+        description: nil = faol
+        type: boolean
       name:
         additionalProperties:
           type: string
@@ -1809,6 +2513,39 @@ definitions:
         items:
           $ref: '#/definitions/models.TopicRes'
         type: array
+    type: object
+  models.TopicMastery:
+    properties:
+      accuracy:
+        description: to'g'ri javoblar ulushi 0..1
+        type: number
+      answered:
+        type: integer
+      cards:
+        description: shu mavzudagi fleshkartalar
+        type: integer
+      cards_due:
+        description: hozir takrorlashga tayyor
+        type: integer
+      category_id:
+        type: string
+      category_name:
+        additionalProperties:
+          type: string
+        type: object
+      last_practiced:
+        type: string
+      level:
+        type: string
+      mastery:
+        description: 0..100 (so'nggi natijalar vaznliroq); unexplored bo'lsa 0
+        type: integer
+      topic_id:
+        type: string
+      topic_name:
+        additionalProperties:
+          type: string
+        type: object
     type: object
   models.TopicMobileList:
     properties:
@@ -1832,12 +2569,20 @@ definitions:
     type: object
   models.TopicRes:
     properties:
+      ai_hint:
+        type: string
       category_id:
         type: string
       created_at:
         type: string
+      description:
+        additionalProperties:
+          type: string
+        type: object
       id:
         type: string
+      is_active:
+        type: boolean
       name:
         additionalProperties:
           type: string
@@ -1849,10 +2594,21 @@ definitions:
     type: object
   models.TopicUpdateReq:
     properties:
+      ai_hint:
+        description: nil = o'zgartirilmaydi
+        type: string
       category_id:
         type: string
+      description:
+        additionalProperties:
+          type: string
+        description: nil = o'zgartirilmaydi
+        type: object
       id:
         type: string
+      is_active:
+        description: nil = o'zgartirilmaydi
+        type: boolean
       name:
         additionalProperties:
           type: string
@@ -1877,11 +2633,11 @@ definitions:
     type: object
   models.UserLimitStatusRes:
     properties:
-      case_coin_cost:
+      coins_per_1k_tokens:
         description: |-
-          CaseCoinCost - limit tugagach 1 ta case necha tanga turishi (0 - o'chiq). Frontend
-          shu bilan "N tanga evaziga boshlash" tugmasini ko'rsatadi.
-        type: integer
+          CoinsPer1kTokens - limit tugagach case tanga hisobidan boshlanadi: har 1 000 AI token
+          shu miqdor tangaga teng (haqiqiy sarf sessiya davomida yechiladi).
+        type: number
       has_subscription:
         description: true - limit cheksiz (Premium)
         type: boolean
@@ -1958,6 +2714,60 @@ definitions:
   models.VoiceSettingRes:
     properties:
       enabled:
+        type: boolean
+    type: object
+  service.DeckCreateRes:
+    properties:
+      coins_spent:
+        type: integer
+      created:
+        type: integer
+      deck:
+        $ref: '#/definitions/models.FlashcardDeckRes'
+      tokens_used:
+        type: integer
+    type: object
+  service.PracticeAnswerRes:
+    properties:
+      item:
+        $ref: '#/definitions/models.PracticeItemRes'
+      session:
+        $ref: '#/definitions/models.PracticeSessionRes'
+      session_finished:
+        type: boolean
+    type: object
+  service.TelegramLinkCheckRes:
+    properties:
+      auth:
+        $ref: '#/definitions/models.TokenRes'
+      status:
+        description: pending | confirmed
+        type: string
+    type: object
+  service.TelegramLinkStartRes:
+    properties:
+      bot_url:
+        type: string
+      expires_in:
+        description: soniya
+        type: integer
+      token:
+        type: string
+    type: object
+  service.Wallet:
+    properties:
+      coins:
+        description: sotib olingan/yig'ilgan balans
+        type: integer
+      coins_per_1k_tokens:
+        type: number
+      daily_free_coins:
+        description: bugun berilgan bepul tangalar
+        type: integer
+      free_coins_left:
+        description: bugungi qolgani
+        type: integer
+      has_subscription:
         type: boolean
     type: object
 info:
@@ -2158,6 +2968,45 @@ paths:
           schema:
             type: string
       summary: Google orqali kirish (1 bosqichli)
+      tags:
+      - auth
+  /mobile/auth/telegram/check:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        status=pending - kutish; status=confirmed - auth ichida access/refresh tokenlar (token bir martalik).
+        Token yo'q/muddati o'tgan bo'lsa 400 otp_expired.
+      parameters:
+      - description: '{token, referral_code?}'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.TelegramLinkCheckRes'
+      summary: Telegram orqali kirish natijasini tekshirish (poll)
+      tags:
+      - auth
+  /mobile/auth/telegram/start:
+    post:
+      description: |-
+        Ilova bot_url'ni ochadi; foydalanuvchi botda (bir marta raqamini yuborib) tasdiqlaydi.
+        Ilova /mobile/auth/telegram/check ni 2 soniyada bir poll qiladi. Captcha yoqilgan bo'lsa X-Captcha-Token header kerak.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.TelegramLinkStartRes'
+      summary: Telegram bot orqali OTP'siz kirishni boshlash (token + bot havolasi)
       tags:
       - auth
   /mobile/auth/user/check:
@@ -2391,11 +3240,22 @@ paths:
       - case
   /mobile/case/random:
     get:
+      description: |-
+        topic_id berilsa shu mavzudan tasodifiy case (yechilmaganlari birinchi o'rinda);
+        "Keyingi" tugmasi uchun exclude_id = hozirgi case id.
       parameters:
       - default: uz
         description: Language (uz|ru|en)
         in: header
         name: Accept-Language
+        type: string
+      - description: Mavzu
+        in: query
+        name: topic_id
+        type: string
+      - description: Qaytarilmasligi kerak bo'lgan case id
+        in: query
+        name: exclude_id
         type: string
       produces:
       - application/json
@@ -2669,6 +3529,257 @@ paths:
       summary: Sevimlilarga qo'shish/olib tashlash (BACKEND_STRUCTURE.md 3-bo'lim)
       tags:
       - favorite
+  /mobile/feedback:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: feedback
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.FeedbackCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Ilova haqida fikr/baho yuborish (rating 1-5 yoki xabar)
+      tags:
+      - feedback
+  /mobile/flashcard/cards:
+    get:
+      parameters:
+      - description: To'plam
+        in: query
+        name: deck_id
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PaginationResponse'
+      security:
+      - BearerAuth: []
+      summary: Kartalar ro'yxati
+      tags:
+      - flashcard
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: card
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.FlashcardCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.FlashcardRes'
+      security:
+      - BearerAuth: []
+      summary: Qo'lda karta qo'shish (bepul)
+      tags:
+      - flashcard
+  /mobile/flashcard/cards/{id}:
+    delete:
+      parameters:
+      - description: Card ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Kartani o'chirish
+      tags:
+      - flashcard
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Card ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: front/back/status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.FlashcardUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 'Kartani tahrirlash yoki to''xtatish (status: active|suspended)'
+      tags:
+      - flashcard
+  /mobile/flashcard/cards/{id}/review:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Card ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: rating
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.FlashcardReviewReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.FlashcardReviewRes'
+      security:
+      - BearerAuth: []
+      summary: 'Kartani baholash: again | hard | good | easy (BEPUL, streak''ni yangilaydi)'
+      tags:
+      - flashcard
+  /mobile/flashcard/decks:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.FlashcardDeckRes'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Fleshkarta to'plamlari ("Xatolarim" va mavzuli to'plamlar)
+      tags:
+      - flashcard
+    post:
+      consumes:
+      - application/json
+      description: category_id (+ixtiyoriy topic_id) yoki erkin mavzu topic_text;
+        count 5..30 (default 10).
+      parameters:
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      - description: deck
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.FlashcardDeckCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.DeckCreateRes'
+      security:
+      - BearerAuth: []
+      summary: Mavzu bo'yicha AI fleshkarta to'plami buyurtma qilish (AI token sarfi
+        hisobidan tanga yechiladi)
+      tags:
+      - flashcard
+  /mobile/flashcard/decks/{id}:
+    delete:
+      parameters:
+      - description: Deck ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: To'plamni (va undagi kartalarni) o'chirish
+      tags:
+      - flashcard
+  /mobile/flashcard/due:
+    get:
+      parameters:
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Faqat shu to'plamdan
+        in: query
+        name: deck_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.FlashcardDueRes'
+      security:
+      - BearerAuth: []
+      summary: Bugungi takrorlashga tayyor fleshkartalar (BEPUL)
+      tags:
+      - flashcard
+  /mobile/flashcard/stats:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.FlashcardStatsRes'
+      security:
+      - BearerAuth: []
+      summary: Fleshkarta statistikasi (bugungi takrorlashlar, yangi, o'zlashtirilgan,
+        streak)
+      tags:
+      - flashcard
   /mobile/notification/{id}/read:
     put:
       consumes:
@@ -2748,6 +3859,189 @@ paths:
       summary: Home ekranidagi "Hamkor kurslari" banneri (TZ 2.1-bo'lim)
       tags:
       - partner
+  /mobile/practice/items/{id}/answer:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: answer
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.PracticeAnswerReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.PracticeAnswerRes'
+      security:
+      - BearerAuth: []
+      summary: 'Javob yuborish: case - erkin matn (AI baholaydi), test - variant kaliti
+        (A-D)'
+      tags:
+      - practice
+  /mobile/practice/items/{id}/report:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: reason
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.PracticeReportReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Noto'g'ri case/savol haqida xabar berish
+      tags:
+      - practice
+  /mobile/practice/sessions:
+    get:
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PaginationResponse'
+      security:
+      - BearerAuth: []
+      summary: Practice tarixi
+      tags:
+      - practice
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      - description: mode, category_id, topic_ids, difficulty, count
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.PracticeStartReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PracticeSessionRes'
+      security:
+      - BearerAuth: []
+      summary: AI practice sessiyasini boshlash (bo'lim, mavzu, qiyinlik, rejim)
+      tags:
+      - practice
+  /mobile/practice/sessions/{id}:
+    get:
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PracticeSessionRes'
+      security:
+      - BearerAuth: []
+      summary: Sessiya tafsiloti (elementlar bilan)
+      tags:
+      - practice
+  /mobile/practice/sessions/{id}/finish:
+    post:
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PracticeSessionRes'
+      security:
+      - BearerAuth: []
+      summary: Sessiyani yakunlash (natija, XP)
+      tags:
+      - practice
+  /mobile/practice/sessions/{id}/next:
+    post:
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PracticeItemRes'
+      security:
+      - BearerAuth: []
+      summary: Keyingi case/savolni AI generatsiya qiladi (javob berilmagan element
+        bo'lsa o'shani qaytaradi)
+      tags:
+      - practice
+  /mobile/practice/wallet:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.Wallet'
+      security:
+      - BearerAuth: []
+      summary: 'Hamyon: bugungi bepul tangalar, balans va tarif (Pay-as-you-go "Limit"
+        belgisi uchun)'
+      tags:
+      - practice
   /mobile/promocode:
     get:
       parameters:
@@ -2813,6 +4107,50 @@ paths:
       summary: Referral ma'lumotlari (do'stlarni taklif qilish)
       tags:
       - user
+  /mobile/roadmap:
+    get:
+      description: |-
+        Xarita va qadamlar bepul, har so'rovda hisoblanadi. AI izohlari (is_ai=true) POST /mobile/roadmap/refresh
+        orqali yaratiladi va 24 soat keshlanadi. Har qadamdan to'g'ridan-to'g'ri mashq boshlash mumkin (action/topic_id/difficulty/count).
+      parameters:
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.RoadmapRes'
+      security:
+      - BearerAuth: []
+      summary: 'AI yo''l xaritasi: bilim xaritasi (kuchli/zaif mavzular) va shaxsiy
+        o''qish yo''li'
+      tags:
+      - roadmap
+  /mobile/roadmap/refresh:
+    post:
+      parameters:
+      - default: uz
+        description: Language (uz|ru|en)
+        in: header
+        name: Accept-Language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.RoadmapRes'
+      security:
+      - BearerAuth: []
+      summary: AI yo'l xaritasi izohlarini yangilash (AI token sarfiga tanga yechiladi)
+      tags:
+      - roadmap
   /mobile/setting/voice:
     get:
       description: |-
@@ -3279,6 +4617,66 @@ paths:
       summary: Push token ro'yxatdan o'tkazish (ko'p qurilma support)
       tags:
       - profile
+  /mobile/user/email:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Emailni hisobdan uzish (kamida bitta boshqa kirish usuli qolishi shart)
+      tags:
+      - user
+  /mobile/user/email/confirm:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: '{email, code}'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Email ulashni kod bilan tasdiqlash
+      tags:
+      - user
+  /mobile/user/email/send:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: '{email}'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 'Hisobga email ulash: tasdiqlash kodi yuboriladi'
+      tags:
+      - user
   /mobile/user/get/profile:
     get:
       consumes:
@@ -3318,6 +4716,61 @@ paths:
       summary: Kunlik bepul urinish limiti holati (home ekranidagi "35/50 Limit" belgisi)
       tags:
       - profile
+  /mobile/user/phone:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Telefon raqamni hisobdan uzish (kamida bitta boshqa kirish usuli qolishi
+        shart)
+      tags:
+      - user
+  /mobile/user/phone/confirm:
+    post:
+      consumes:
+      - application/json
+      description: status=pending - kutish; confirmed - raqam ulandi. Raqam boshqa
+        hisobda bo'lsa 409 identifier_taken.
+      parameters:
+      - description: '{token}'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.TelegramLinkCheckRes'
+      security:
+      - BearerAuth: []
+      summary: Telegramda tasdiqlangan raqamni hisobga yozish (poll)
+      tags:
+      - user
+  /mobile/user/phone/start:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.TelegramLinkStartRes'
+      security:
+      - BearerAuth: []
+      summary: Hisobga telefon raqam ulash/almashtirishni boshlash (Telegram orqali
+        tasdiqlanadi)
+      tags:
+      - user
   /mobile/user/rating:
     get:
       consumes:
@@ -4302,6 +5755,119 @@ paths:
       summary: Create clinical case
       tags:
       - case
+  /web/case-source:
+    get:
+      parameters:
+      - description: Name
+        in: query
+        name: name
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CaseSourceList'
+      security:
+      - BearerAuth: []
+      tags:
+      - case-source
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Source
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CaseSourceCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: AI case generatsiyasi uchun ishonchli manba qo'shish (havola yoki matn)
+      tags:
+      - case-source
+  /web/case-source/{id}:
+    get:
+      parameters:
+      - description: Source ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CaseSourceRes'
+      security:
+      - BearerAuth: []
+      tags:
+      - case-source
+  /web/case-source/{id}/delete:
+    delete:
+      parameters:
+      - description: Id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      tags:
+      - case-source
+  /web/case-source/{id}/update:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Source ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Source update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CaseSourceUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      tags:
+      - case-source
   /web/case/{id}:
     get:
       parameters:
@@ -4411,6 +5977,29 @@ paths:
       security:
       - BearerAuth: []
       summary: AI yordamida keys yaratish (BACKEND_STRUCTURE.md 7-bo'lim)
+      tags:
+      - case
+  /web/case/ai-generate-batch:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: category_id yoki topic_ids, difficulty, count_per_topic, sources
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CaseBatchGenReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CaseBatchGenRes'
+      security:
+      - BearerAuth: []
+      summary: AI yordamida ommaviy keys yaratish (bo'lim yoki bir nechta mavzu bo'yicha)
       tags:
       - case
   /web/case/import:
@@ -5176,6 +6765,65 @@ paths:
       summary: Update faq
       tags:
       - faq
+  /web/feedback:
+    get:
+      parameters:
+      - description: general|bug|idea|content|nps
+        in: query
+        name: kind
+        type: string
+      - description: new|seen|done
+        in: query
+        name: status
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PaginationResponse'
+      security:
+      - BearerAuth: []
+      summary: Foydalanuvchilar fikrlari (admin)
+      tags:
+      - feedback
+  /web/feedback/{id}/status:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Feedback ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: '{status}'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Fikr holatini belgilash (new|seen|done)
+      tags:
+      - feedback
   /web/file-upload:
     post:
       consumes:
@@ -5200,6 +6848,21 @@ paths:
       summary: File upload
       tags:
       - file-upload
+  /web/flashcard/stats:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.FlashcardAdminStats'
+      security:
+      - BearerAuth: []
+      summary: Fleshkartalar monitoringi (kartalar, takrorlashlar, eslab qolish va
+        o'zlashtirish foizi, eng ko'p xato mavzular)
+      tags:
+      - flashcard
   /web/level:
     get:
       produces:
@@ -5647,6 +7310,21 @@ paths:
       - BearerAuth: []
       tags:
       - partner
+  /web/practice/stats:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PracticeStats'
+      security:
+      - BearerAuth: []
+      summary: AI practice statistikasi (sessiyalar, bo'lim/mavzu bo'yicha, token,
+        shikoyatlar)
+      tags:
+      - practice
   /web/promocode:
     get:
       parameters:
@@ -5894,6 +7572,83 @@ paths:
       - BearerAuth: []
       tags:
       - setting
+  /web/setting/coin-rate:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CoinRateRes'
+      security:
+      - BearerAuth: []
+      summary: 'Token narxi: 1 000 token = X tanga'
+      tags:
+      - setting
+    put:
+      consumes:
+      - application/json
+      description: |-
+        AI provayder tannarxi + platforma xarajatlari + marja yig'indisi koeffitsient sifatida
+        kiritiladi. Keyingi barcha so'rovlar yangi tarif bo'yicha hisoblanadi.
+      parameters:
+      - description: coins_per_1k_tokens
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CoinRateRes'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Token narxini o'zgartirish (1 000 token = X tanga)
+      tags:
+      - setting
+  /web/setting/daily-free-coins:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.DailyFreeCoinsRes'
+      security:
+      - BearerAuth: []
+      summary: Kunlik bepul tangalar (har foydalanuvchiga har 24 soatda)
+      tags:
+      - setting
+    put:
+      consumes:
+      - application/json
+      description: Bugun allaqachon berilgan tangalarga ta'sir qilmaydi, ertadan kuchga
+        kiradi.
+      parameters:
+      - description: daily_free_coins
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.DailyFreeCoinsRes'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Kunlik bepul tangalarni o'zgartirish (0 - bepul tanga yo'q)
+      tags:
+      - setting
   /web/setting/difficulty-reward:
     get:
       description: |-
@@ -5935,6 +7690,236 @@ paths:
       summary: Case qiyinlik darajasi (medium/hard) mukofot koeffitsientini sozlash
       tags:
       - setting
+  /web/setting/practice-images:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PracticeImagesRes'
+      security:
+      - BearerAuth: []
+      summary: AI practice case'lariga tibbiy tasvir (EKG, rentgen...) generatsiyasi
+        yoqilganmi
+      tags:
+      - setting
+    put:
+      consumes:
+      - application/json
+      description: Yoqilsa case'larning bir qismiga AI tasvir (illyustrativ) qo'shiladi;
+        qo'shimcha token sarfi bor.
+      parameters:
+      - description: enabled
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.PracticeImagesRes'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: AI tasvir generatsiyasini yoqish/o'chirish
+      tags:
+      - setting
+  /web/source:
+    get:
+      parameters:
+      - description: book|article|website|text
+        in: query
+        name: type
+        type: string
+      - description: uploaded|processing|ready|failed
+        in: query
+        name: status
+        type: string
+      - description: Bo'lim
+        in: query
+        name: category_id
+        type: string
+      - description: Mavzu
+        in: query
+        name: topic_id
+        type: string
+      - description: Nomi bo'yicha qidiruv
+        in: query
+        name: name
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PaginationResponse'
+      security:
+      - BearerAuth: []
+      tags:
+      - source
+    post:
+      consumes:
+      - application/json
+      - multipart/form-data
+      description: 'multipart/form-data (fayl `file` maydonida; PDF, EPUB, DOCX, TXT,
+        max 50MB) yoki JSON. Fon rejimida qayta ishlanadi: status uploaded→processing→ready|failed.'
+      parameters:
+      - description: Nomi
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: book|article|website|text
+        in: formData
+        name: type
+        required: true
+        type: string
+      - description: uz|ru|en
+        in: formData
+        name: language
+        type: string
+      - description: Muallif
+        in: formData
+        name: author
+        type: string
+      - description: website uchun URL
+        in: formData
+        name: url
+        type: string
+      - description: text/article uchun matn
+        in: formData
+        name: content
+        type: string
+      - collectionFormat: csv
+        description: Bo'limlar (bo'sh=umumiy)
+        in: formData
+        items:
+          type: string
+        name: category_ids
+        type: array
+      - collectionFormat: csv
+        description: Mavzular
+        in: formData
+        items:
+          type: string
+        name: topic_ids
+        type: array
+      - description: Fayl
+        in: formData
+        name: file
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ById'
+      security:
+      - BearerAuth: []
+      summary: 'Manba yuklash (kitob/maqola: fayl, sayt: URL, matn) - AI practice
+        bilimlar bazasi'
+      tags:
+      - source
+  /web/source/{id}:
+    get:
+      parameters:
+      - description: Source ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SourceRes'
+      security:
+      - BearerAuth: []
+      tags:
+      - source
+  /web/source/{id}/delete:
+    delete:
+      parameters:
+      - description: Source ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      tags:
+      - source
+  /web/source/{id}/reindex:
+    post:
+      parameters:
+      - description: Source ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Manbani qayta indekslash (website qayta yuklanadi)
+      tags:
+      - source
+  /web/source/{id}/update:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Source ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Source update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.SourceUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      tags:
+      - source
   /web/tariff:
     get:
       consumes:

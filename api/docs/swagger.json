@@ -309,6 +309,60 @@
                 }
             }
         },
+        "/mobile/auth/telegram/check": {
+            "post": {
+                "description": "status=pending - kutish; status=confirmed - auth ichida access/refresh tokenlar (token bir martalik).\nToken yo'q/muddati o'tgan bo'lsa 400 otp_expired.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Telegram orqali kirish natijasini tekshirish (poll)",
+                "parameters": [
+                    {
+                        "description": "{token, referral_code?}",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.TelegramLinkCheckRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/auth/telegram/start": {
+            "post": {
+                "description": "Ilova bot_url'ni ochadi; foydalanuvchi botda (bir marta raqamini yuborib) tasdiqlaydi.\nIlova /mobile/auth/telegram/check ni 2 soniyada bir poll qiladi. Captcha yoqilgan bo'lsa X-Captcha-Token header kerak.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Telegram bot orqali OTP'siz kirishni boshlash (token + bot havolasi)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.TelegramLinkStartRes"
+                        }
+                    }
+                }
+            }
+        },
         "/mobile/auth/user/check": {
             "post": {
                 "description": "Check user",
@@ -633,6 +687,7 @@
                         "BearerAuth": []
                     }
                 ],
+                "description": "topic_id berilsa shu mavzudan tasodifiy case (yechilmaganlari birinchi o'rinda);\n\"Keyingi\" tugmasi uchun exclude_id = hozirgi case id.",
                 "produces": [
                     "application/json"
                 ],
@@ -647,6 +702,18 @@
                         "description": "Language (uz|ru|en)",
                         "name": "Accept-Language",
                         "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Mavzu",
+                        "name": "topic_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Qaytarilmasligi kerak bo'lgan case id",
+                        "name": "exclude_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1115,6 +1182,411 @@
                 }
             }
         },
+        "/mobile/feedback": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "feedback"
+                ],
+                "summary": "Ilova haqida fikr/baho yuborish (rating 1-5 yoki xabar)",
+                "parameters": [
+                    {
+                        "description": "feedback",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.FeedbackCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/flashcard/cards": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "flashcard"
+                ],
+                "summary": "Kartalar ro'yxati",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "To'plam",
+                        "name": "deck_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.PaginationResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "flashcard"
+                ],
+                "summary": "Qo'lda karta qo'shish (bepul)",
+                "parameters": [
+                    {
+                        "description": "card",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.FlashcardCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.FlashcardRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/flashcard/cards/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "flashcard"
+                ],
+                "summary": "Kartani tahrirlash yoki to'xtatish (status: active|suspended)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Card ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "front/back/status",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.FlashcardUpdateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "flashcard"
+                ],
+                "summary": "Kartani o'chirish",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Card ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/flashcard/cards/{id}/review": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "flashcard"
+                ],
+                "summary": "Kartani baholash: again | hard | good | easy (BEPUL, streak'ni yangilaydi)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Card ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "rating",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.FlashcardReviewReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.FlashcardReviewRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/flashcard/decks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "flashcard"
+                ],
+                "summary": "Fleshkarta to'plamlari (\"Xatolarim\" va mavzuli to'plamlar)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.FlashcardDeckRes"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "category_id (+ixtiyoriy topic_id) yoki erkin mavzu topic_text; count 5..30 (default 10).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "flashcard"
+                ],
+                "summary": "Mavzu bo'yicha AI fleshkarta to'plami buyurtma qilish (AI token sarfi hisobidan tanga yechiladi)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz|ru|en)",
+                        "name": "Accept-Language",
+                        "in": "header"
+                    },
+                    {
+                        "description": "deck",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.FlashcardDeckCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.DeckCreateRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/flashcard/decks/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "flashcard"
+                ],
+                "summary": "To'plamni (va undagi kartalarni) o'chirish",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deck ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/flashcard/due": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "flashcard"
+                ],
+                "summary": "Bugungi takrorlashga tayyor fleshkartalar (BEPUL)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Limit (default 20, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Faqat shu to'plamdan",
+                        "name": "deck_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.FlashcardDueRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/flashcard/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "flashcard"
+                ],
+                "summary": "Fleshkarta statistikasi (bugungi takrorlashlar, yangi, o'zlashtirilgan, streak)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.FlashcardStatsRes"
+                        }
+                    }
+                }
+            }
+        },
         "/mobile/notification/user": {
             "get": {
                 "security": [
@@ -1242,6 +1714,300 @@
                 }
             }
         },
+        "/mobile/practice/items/{id}/answer": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "practice"
+                ],
+                "summary": "Javob yuborish: case - erkin matn (AI baholaydi), test - variant kaliti (A-D)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Item ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "answer",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PracticeAnswerReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.PracticeAnswerRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/practice/items/{id}/report": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "practice"
+                ],
+                "summary": "Noto'g'ri case/savol haqida xabar berish",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Item ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "reason",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PracticeReportReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/practice/sessions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "practice"
+                ],
+                "summary": "Practice tarixi",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.PaginationResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "practice"
+                ],
+                "summary": "AI practice sessiyasini boshlash (bo'lim, mavzu, qiyinlik, rejim)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz|ru|en)",
+                        "name": "Accept-Language",
+                        "in": "header"
+                    },
+                    {
+                        "description": "mode, category_id, topic_ids, difficulty, count",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PracticeStartReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.PracticeSessionRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/practice/sessions/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "practice"
+                ],
+                "summary": "Sessiya tafsiloti (elementlar bilan)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.PracticeSessionRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/practice/sessions/{id}/finish": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "practice"
+                ],
+                "summary": "Sessiyani yakunlash (natija, XP)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.PracticeSessionRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/practice/sessions/{id}/next": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "practice"
+                ],
+                "summary": "Keyingi case/savolni AI generatsiya qiladi (javob berilmagan element bo'lsa o'shani qaytaradi)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.PracticeItemRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/practice/wallet": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "practice"
+                ],
+                "summary": "Hamyon: bugungi bepul tangalar, balans va tarif (Pay-as-you-go \"Limit\" belgisi uchun)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.Wallet"
+                        }
+                    }
+                }
+            }
+        },
         "/mobile/promocode": {
             "get": {
                 "security": [
@@ -1343,6 +2109,73 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/models.ReferralInfoRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/roadmap": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Xarita va qadamlar bepul, har so'rovda hisoblanadi. AI izohlari (is_ai=true) POST /mobile/roadmap/refresh\norqali yaratiladi va 24 soat keshlanadi. Har qadamdan to'g'ridan-to'g'ri mashq boshlash mumkin (action/topic_id/difficulty/count).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "roadmap"
+                ],
+                "summary": "AI yo'l xaritasi: bilim xaritasi (kuchli/zaif mavzular) va shaxsiy o'qish yo'li",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz|ru|en)",
+                        "name": "Accept-Language",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.RoadmapRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/roadmap/refresh": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "roadmap"
+                ],
+                "summary": "AI yo'l xaritasi izohlarini yangilash (AI token sarfiga tanga yechiladi)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "uz",
+                        "description": "Language (uz|ru|en)",
+                        "name": "Accept-Language",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.RoadmapRes"
                         }
                     }
                 }
@@ -2096,6 +2929,106 @@
                 }
             }
         },
+        "/mobile/user/email": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Emailni hisobdan uzish (kamida bitta boshqa kirish usuli qolishi shart)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/user/email/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Email ulashni kod bilan tasdiqlash",
+                "parameters": [
+                    {
+                        "description": "{email, code}",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/user/email/send": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Hisobga email ulash: tasdiqlash kodi yuboriladi",
+                "parameters": [
+                    {
+                        "description": "{email}",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/mobile/user/get/profile": {
             "get": {
                 "security": [
@@ -2155,6 +3088,93 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/models.UserLimitStatusRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/user/phone": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Telefon raqamni hisobdan uzish (kamida bitta boshqa kirish usuli qolishi shart)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/user/phone/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "status=pending - kutish; confirmed - raqam ulandi. Raqam boshqa hisobda bo'lsa 409 identifier_taken.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Telegramda tasdiqlangan raqamni hisobga yozish (poll)",
+                "parameters": [
+                    {
+                        "description": "{token}",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.TelegramLinkCheckRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/mobile/user/phone/start": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Hisobga telefon raqam ulash/almashtirishni boshlash (Telegram orqali tasdiqlanadi)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.TelegramLinkStartRes"
                         }
                     }
                 }
@@ -3722,6 +4742,193 @@
                 }
             }
         },
+        "/web/case-source": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "case-source"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.CaseSourceList"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "case-source"
+                ],
+                "summary": "AI case generatsiyasi uchun ishonchli manba qo'shish (havola yoki matn)",
+                "parameters": [
+                    {
+                        "description": "Source",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CaseSourceCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/case-source/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "case-source"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Source ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.CaseSourceRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/case-source/{id}/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "case-source"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/case-source/{id}/update": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "case-source"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Source ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Source update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CaseSourceUpdateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/web/case/ai-generate": {
             "post": {
                 "security": [
@@ -3755,6 +4962,44 @@
                         "description": "OK",
                         "schema": {
                             "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/case/ai-generate-batch": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "case"
+                ],
+                "summary": "AI yordamida ommaviy keys yaratish (bo'lim yoki bir nechta mavzu bo'yicha)",
+                "parameters": [
+                    {
+                        "description": "category_id yoki topic_ids, difficulty, count_per_topic, sources",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CaseBatchGenReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.CaseBatchGenRes"
                         }
                     }
                 }
@@ -5110,6 +6355,101 @@
                 }
             }
         },
+        "/web/feedback": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "feedback"
+                ],
+                "summary": "Foydalanuvchilar fikrlari (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "general|bug|idea|content|nps",
+                        "name": "kind",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "new|seen|done",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.PaginationResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/feedback/{id}/status": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "feedback"
+                ],
+                "summary": "Fikr holatini belgilash (new|seen|done)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Feedback ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "{status}",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/web/file-upload": {
             "post": {
                 "security": [
@@ -5145,6 +6485,30 @@
                         "description": "OK",
                         "schema": {
                             "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/flashcard/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "flashcard"
+                ],
+                "summary": "Fleshkartalar monitoringi (kartalar, takrorlashlar, eslab qolish va o'zlashtirish foizi, eng ko'p xato mavzular)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.FlashcardAdminStats"
                         }
                     }
                 }
@@ -5869,6 +7233,30 @@
                 }
             }
         },
+        "/web/practice/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "practice"
+                ],
+                "summary": "AI practice statistikasi (sessiyalar, bo'lim/mavzu bo'yicha, token, shikoyatlar)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.PracticeStats"
+                        }
+                    }
+                }
+            }
+        },
         "/web/promocode": {
             "get": {
                 "security": [
@@ -6273,6 +7661,128 @@
                 }
             }
         },
+        "/web/setting/coin-rate": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "setting"
+                ],
+                "summary": "Token narxi: 1 000 token = X tanga",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.CoinRateRes"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "AI provayder tannarxi + platforma xarajatlari + marja yig'indisi koeffitsient sifatida\nkiritiladi. Keyingi barcha so'rovlar yangi tarif bo'yicha hisoblanadi.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "setting"
+                ],
+                "summary": "Token narxini o'zgartirish (1 000 token = X tanga)",
+                "parameters": [
+                    {
+                        "description": "coins_per_1k_tokens",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CoinRateRes"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/setting/daily-free-coins": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "setting"
+                ],
+                "summary": "Kunlik bepul tangalar (har foydalanuvchiga har 24 soatda)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.DailyFreeCoinsRes"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Bugun allaqachon berilgan tangalarga ta'sir qilmaydi, ertadan kuchga kiradi.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "setting"
+                ],
+                "summary": "Kunlik bepul tangalarni o'zgartirish (0 - bepul tanga yo'q)",
+                "parameters": [
+                    {
+                        "description": "daily_free_coins",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.DailyFreeCoinsRes"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/web/setting/difficulty-reward": {
             "get": {
                 "security": [
@@ -6321,6 +7831,368 @@
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/models.DifficultyRewardRes"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/setting/practice-images": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "setting"
+                ],
+                "summary": "AI practice case'lariga tibbiy tasvir (EKG, rentgen...) generatsiyasi yoqilganmi",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.PracticeImagesRes"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Yoqilsa case'larning bir qismiga AI tasvir (illyustrativ) qo'shiladi; qo'shimcha token sarfi bor.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "setting"
+                ],
+                "summary": "AI tasvir generatsiyasini yoqish/o'chirish",
+                "parameters": [
+                    {
+                        "description": "enabled",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PracticeImagesRes"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/source": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "source"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "book|article|website|text",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "uploaded|processing|ready|failed",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bo'lim",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Mavzu",
+                        "name": "topic_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Nomi bo'yicha qidiruv",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.PaginationResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "multipart/form-data (fayl `file` maydonida; PDF, EPUB, DOCX, TXT, max 50MB) yoki JSON. Fon rejimida qayta ishlanadi: status uploaded→processing→ready|failed.",
+                "consumes": [
+                    "application/json",
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "source"
+                ],
+                "summary": "Manba yuklash (kitob/maqola: fayl, sayt: URL, matn) - AI practice bilimlar bazasi",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nomi",
+                        "name": "title",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "book|article|website|text",
+                        "name": "type",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "uz|ru|en",
+                        "name": "language",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Muallif",
+                        "name": "author",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "website uchun URL",
+                        "name": "url",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "text/article uchun matn",
+                        "name": "content",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Bo'limlar (bo'sh=umumiy)",
+                        "name": "category_ids",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Mavzular",
+                        "name": "topic_ids",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Fayl",
+                        "name": "file",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ById"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/source/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "source"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Source ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.SourceRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/source/{id}/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "source"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Source ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/source/{id}/reindex": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "source"
+                ],
+                "summary": "Manbani qayta indekslash (website qayta yuklanadi)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Source ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/source/{id}/update": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "source"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Source ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Source update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.SourceUpdateReq"
                         }
                     }
                 ],
@@ -7574,6 +9446,73 @@
                 }
             }
         },
+        "models.ById": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CaseBatchGenItem": {
+            "type": "object",
+            "properties": {
+                "case_id": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "topic_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CaseBatchGenReq": {
+            "type": "object",
+            "properties": {
+                "category_id": {
+                    "type": "string"
+                },
+                "count_per_topic": {
+                    "description": "default 1",
+                    "type": "integer"
+                },
+                "difficulty": {
+                    "type": "string"
+                },
+                "source_ids": {
+                    "description": "bo'sh = barcha manbalar",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "topic_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.CaseBatchGenRes": {
+            "type": "object",
+            "properties": {
+                "created": {
+                    "type": "integer"
+                },
+                "failed": {
+                    "type": "integer"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CaseBatchGenItem"
+                    }
+                }
+            }
+        },
         "models.CaseCreateReq": {
             "type": "object",
             "properties": {
@@ -7631,6 +9570,10 @@
                         "type": "string"
                     }
                 },
+                "topic": {
+                    "description": "Topic - ixtiyoriy: ro'yxatdan tanlanmagan mavzu matni (faqat AI uchun yo'l-yo'riq, saqlanmaydi).",
+                    "type": "string"
+                },
                 "topic_id": {
                     "type": "string"
                 },
@@ -7645,13 +9588,28 @@
                 "chief_complaint": {
                     "type": "string"
                 },
+                "cover_image_url": {
+                    "description": "CoverImageUrl - admin yuklagan rasm; AI uni o'zgartirmaydi, aynan shu saqlanadi.",
+                    "type": "string"
+                },
                 "difficulty": {
                     "type": "string"
                 },
                 "expected_answer": {
                     "type": "string"
                 },
+                "source_ids": {
+                    "description": "SourceIds - case_sources dan tanlangan manbalar. Bo'sh bo'lsa bazadagi\nBARCHA manbalar ishlatiladi.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "topic": {
+                    "type": "string"
+                },
+                "topic_id": {
+                    "description": "TopicId - ixtiyoriy: berilsa case shu mavzuga biriktiriladi va Topic bo'sh\nbo'lsa mavzu nomi (topics.name) avtomatik olinadi.",
                     "type": "string"
                 }
             }
@@ -7870,6 +9828,65 @@
                 }
             }
         },
+        "models.CaseSourceCreateReq": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CaseSourceList": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CaseSourceRes"
+                    }
+                }
+            }
+        },
+        "models.CaseSourceRes": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CaseSourceUpdateReq": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "models.CaseUpdateReq": {
             "type": "object",
             "properties": {
@@ -7964,8 +9981,18 @@
                     "description": "doctor|citizen, bo'sh - doctor",
                     "type": "string"
                 },
+                "description": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
                 "icon_url": {
                     "type": "string"
+                },
+                "is_active": {
+                    "description": "nil = faol",
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "object",
@@ -8038,11 +10065,20 @@
                 "created_at": {
                     "type": "string"
                 },
+                "description": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
                 "icon_url": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "object",
@@ -8064,11 +10100,22 @@
                 "audience": {
                     "type": "string"
                 },
+                "description": {
+                    "description": "nil = o'zgartirilmaydi",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
                 "icon_url": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
+                },
+                "is_active": {
+                    "description": "nil = o'zgartirilmaydi",
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "object",
@@ -8113,6 +10160,14 @@
                 "total_spent": {
                     "description": "category_unlock va h.k. (manfiy tranzaksiyalar, musbat songa aylantirilgan)",
                     "type": "integer"
+                }
+            }
+        },
+        "models.CoinRateRes": {
+            "type": "object",
+            "properties": {
+                "coins_per_1k_tokens": {
+                    "type": "number"
                 }
             }
         },
@@ -8274,6 +10329,14 @@
                 },
                 "title": {
                     "type": "string"
+                }
+            }
+        },
+        "models.DailyFreeCoinsRes": {
+            "type": "object",
+            "properties": {
+                "daily_free_coins": {
+                    "type": "integer"
                 }
             }
         },
@@ -8509,6 +10572,305 @@
             "properties": {
                 "is_favorite": {
                     "type": "boolean"
+                }
+            }
+        },
+        "models.FeedbackCreateReq": {
+            "type": "object",
+            "properties": {
+                "app_version": {
+                    "type": "string"
+                },
+                "context": {
+                    "type": "string"
+                },
+                "kind": {
+                    "description": "general | bug | idea | content | nps",
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "rating": {
+                    "description": "1..5 (ixtiyoriy, 0 = ko'rsatilmagan)",
+                    "type": "integer"
+                }
+            }
+        },
+        "models.FlashcardAdminStats": {
+            "type": "object",
+            "properties": {
+                "active_reviewers_today": {
+                    "type": "integer"
+                },
+                "generated_today": {
+                    "type": "integer"
+                },
+                "mastery_rate": {
+                    "description": "interval \u003e= 21 kun bo'lgan kartalar ulushi",
+                    "type": "number"
+                },
+                "retention_30d": {
+                    "type": "number"
+                },
+                "reviews_today": {
+                    "type": "integer"
+                },
+                "total_cards": {
+                    "type": "integer"
+                },
+                "total_decks": {
+                    "type": "integer"
+                },
+                "users_with_cards": {
+                    "type": "integer"
+                },
+                "weak_topics": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.FlashcardWeakTopic"
+                    }
+                }
+            }
+        },
+        "models.FlashcardCreateReq": {
+            "type": "object",
+            "properties": {
+                "back": {
+                    "type": "string"
+                },
+                "deck_id": {
+                    "type": "string"
+                },
+                "front": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.FlashcardDeckCreateReq": {
+            "type": "object",
+            "properties": {
+                "category_id": {
+                    "type": "string"
+                },
+                "count": {
+                    "description": "5..30, default 10",
+                    "type": "integer"
+                },
+                "title": {
+                    "description": "ixtiyoriy",
+                    "type": "string"
+                },
+                "topic_id": {
+                    "type": "string"
+                },
+                "topic_text": {
+                    "description": "erkin mavzu",
+                    "type": "string"
+                }
+            }
+        },
+        "models.FlashcardDeckRes": {
+            "type": "object",
+            "properties": {
+                "card_count": {
+                    "type": "integer"
+                },
+                "category_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "due_count": {
+                    "type": "integer"
+                },
+                "free_topic": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "topic_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.FlashcardDueRes": {
+            "type": "object",
+            "properties": {
+                "cards": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.FlashcardRes"
+                    }
+                },
+                "due_total": {
+                    "description": "hozir takrorlashga tayyor jami kartalar",
+                    "type": "integer"
+                }
+            }
+        },
+        "models.FlashcardRes": {
+            "type": "object",
+            "properties": {
+                "back": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deck_id": {
+                    "type": "string"
+                },
+                "due_at": {
+                    "type": "string"
+                },
+                "front": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "interval_days": {
+                    "type": "integer"
+                },
+                "is_new": {
+                    "description": "hali takrorlanmagan",
+                    "type": "boolean"
+                },
+                "lapses": {
+                    "type": "integer"
+                },
+                "next_intervals": {
+                    "description": "NextIntervals - har bir baho tugmasi uchun keyingi interval (kun); again = 0 (~10 daqiqa).",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "repetitions": {
+                    "type": "integer"
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.SourceRef"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.FlashcardReviewReq": {
+            "type": "object",
+            "properties": {
+                "rating": {
+                    "description": "again | hard | good | easy",
+                    "type": "string"
+                }
+            }
+        },
+        "models.FlashcardReviewRes": {
+            "type": "object",
+            "properties": {
+                "card": {
+                    "$ref": "#/definitions/models.FlashcardRes"
+                },
+                "due_at": {
+                    "type": "string"
+                },
+                "next_interval_days": {
+                    "type": "integer"
+                },
+                "streak_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.FlashcardStatsRes": {
+            "type": "object",
+            "properties": {
+                "decks": {
+                    "type": "integer"
+                },
+                "due_now": {
+                    "type": "integer"
+                },
+                "due_today": {
+                    "description": "bugun (Toshkent) oxirigacha takrorlanishi kerak",
+                    "type": "integer"
+                },
+                "learned": {
+                    "description": "interval \u003e= 21 kun",
+                    "type": "integer"
+                },
+                "longest_streak": {
+                    "type": "integer"
+                },
+                "new": {
+                    "description": "hali ko'rilmagan",
+                    "type": "integer"
+                },
+                "retention_30d": {
+                    "description": "0..1: good+easy ulushi",
+                    "type": "number"
+                },
+                "reviews_today": {
+                    "type": "integer"
+                },
+                "streak_count": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.FlashcardUpdateReq": {
+            "type": "object",
+            "properties": {
+                "back": {
+                    "type": "string"
+                },
+                "front": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "active | suspended",
+                    "type": "string"
+                }
+            }
+        },
+        "models.FlashcardWeakTopic": {
+            "type": "object",
+            "properties": {
+                "answered": {
+                    "type": "integer"
+                },
+                "card_count": {
+                    "description": "xatolardan yaratilgan kartalar",
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "topic_id": {
+                    "type": "string"
+                },
+                "wrong_rate": {
+                    "description": "practice javoblaridagi xato ulushi (0..1)",
+                    "type": "number"
                 }
             }
         },
@@ -8919,6 +11281,325 @@
                 }
             }
         },
+        "models.PracticeAnswerReq": {
+            "type": "object",
+            "properties": {
+                "answer": {
+                    "description": "case: erkin matn; test: variant kaliti (A..D)",
+                    "type": "string"
+                }
+            }
+        },
+        "models.PracticeImagesRes": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "models.PracticeItemRes": {
+            "type": "object",
+            "properties": {
+                "answered": {
+                    "type": "boolean"
+                },
+                "chief_complaint": {
+                    "description": "case",
+                    "type": "string"
+                },
+                "correct_answer": {
+                    "description": "case: expected_answer; test: variant matni",
+                    "type": "string"
+                },
+                "correct_key": {
+                    "description": "test: A..D",
+                    "type": "string"
+                },
+                "explanation": {
+                    "type": "string"
+                },
+                "feedback": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "idx": {
+                    "type": "integer"
+                },
+                "image_note": {
+                    "type": "string"
+                },
+                "image_type": {
+                    "type": "string"
+                },
+                "image_url": {
+                    "description": "AI yaratgan tibbiy tasvir (EKG, rentgen...): case bilan birga ko'rsatiladi.",
+                    "type": "string"
+                },
+                "is_correct": {
+                    "type": "boolean"
+                },
+                "kind": {
+                    "description": "case | test",
+                    "type": "string"
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.PracticeOption"
+                    }
+                },
+                "patient": {
+                    "description": "yosh, jins, anamnez, ko'rik, analizlar",
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "question": {
+                    "description": "test",
+                    "type": "string"
+                },
+                "reported": {
+                    "type": "boolean"
+                },
+                "score": {
+                    "description": "0..100",
+                    "type": "integer"
+                },
+                "session_id": {
+                    "type": "string"
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.SourceRef"
+                    }
+                },
+                "sources_note": {
+                    "description": "manba bo'lmasa: \"Manba topilmadi ...\"",
+                    "type": "string"
+                },
+                "user_answer": {
+                    "description": "Javobdan keyin:"
+                },
+                "verdict": {
+                    "description": "correct | partial | wrong",
+                    "type": "string"
+                }
+            }
+        },
+        "models.PracticeOption": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "description": "A..D",
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PracticeReportReq": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PracticeReportRow": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "item_id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "session_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PracticeSessionRes": {
+            "type": "object",
+            "properties": {
+                "answered": {
+                    "type": "integer"
+                },
+                "category_id": {
+                    "type": "string"
+                },
+                "coins_spent": {
+                    "type": "integer"
+                },
+                "correct": {
+                    "type": "integer"
+                },
+                "difficulty": {
+                    "type": "string"
+                },
+                "finished_at": {
+                    "type": "string"
+                },
+                "flashcards_created": {
+                    "type": "integer"
+                },
+                "flashcards_status": {
+                    "description": "Sessiya yakunida xatolar asosida fonda yaratiladigan fleshkartalar:\nnone (xato yo'q/hali yakunlanmagan) | pending | done | failed.",
+                    "type": "string"
+                },
+                "free_topic": {
+                    "type": "string"
+                },
+                "generated": {
+                    "description": "hozirgacha generatsiya qilingan elementlar",
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items": {
+                    "description": "faqat detal so'rovida",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.PracticeItemRes"
+                    }
+                },
+                "mode": {
+                    "type": "string"
+                },
+                "score": {
+                    "type": "integer"
+                },
+                "started_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tokens_used": {
+                    "description": "Pay-as-you-go: sessiyada sarflangan AI tokenlar va ulardan yechilgan tanga.",
+                    "type": "integer"
+                },
+                "topic_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "xp_earned": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.PracticeStartReq": {
+            "type": "object",
+            "properties": {
+                "category_id": {
+                    "description": "majburiy (erkin mavzuda bo'sh)",
+                    "type": "string"
+                },
+                "count": {
+                    "description": "test: savollar soni (5..50), default 10",
+                    "type": "integer"
+                },
+                "difficulty": {
+                    "description": "easy | medium | hard",
+                    "type": "string"
+                },
+                "mode": {
+                    "description": "case | test",
+                    "type": "string"
+                },
+                "topic_ids": {
+                    "description": "bo'sh = butun bo'lim (aralash)",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "topic_text": {
+                    "description": "TopicText - \"Erkin mavzu\": tayyor bo'lim/mavzusiz, foydalanuvchi yozgan istalgan tibbiy mavzu\n(category_id va topic_ids bilan birga ishlatilmaydi).",
+                    "type": "string"
+                }
+            }
+        },
+        "models.PracticeStatByGroup": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "sessions": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.PracticeStats": {
+            "type": "object",
+            "properties": {
+                "active_sessions": {
+                    "type": "integer"
+                },
+                "answered": {
+                    "type": "integer"
+                },
+                "by_category": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.PracticeStatByGroup"
+                    }
+                },
+                "by_topic": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.PracticeStatByGroup"
+                    }
+                },
+                "correct_rate": {
+                    "type": "number"
+                },
+                "items": {
+                    "type": "integer"
+                },
+                "recent_reports": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.PracticeReportRow"
+                    }
+                },
+                "reports": {
+                    "type": "integer"
+                },
+                "sessions": {
+                    "type": "integer"
+                },
+                "tokens": {
+                    "type": "integer"
+                }
+            }
+        },
         "models.PromoCodeCreateReq": {
             "type": "object",
             "properties": {
@@ -9174,6 +11855,78 @@
                 }
             }
         },
+        "models.RoadmapRes": {
+            "type": "object",
+            "properties": {
+                "coins_spent": {
+                    "description": "faqat refresh javobida",
+                    "type": "integer"
+                },
+                "generated_at": {
+                    "description": "AI versiyasi yaratilgan vaqt",
+                    "type": "string"
+                },
+                "is_ai": {
+                    "description": "qadam izohlari AI tomonidan yozilganmi",
+                    "type": "boolean"
+                },
+                "map": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.TopicMastery"
+                    }
+                },
+                "path": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.RoadmapStep"
+                    }
+                },
+                "strong_count": {
+                    "type": "integer"
+                },
+                "summary": {
+                    "description": "AI umumiy xulosa (bo'sh bo'lishi mumkin)",
+                    "type": "string"
+                },
+                "unexplored_count": {
+                    "type": "integer"
+                },
+                "weak_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.RoadmapStep": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "description": "flashcard_review | test | case | deck",
+                    "type": "string"
+                },
+                "category_id": {
+                    "type": "string"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "difficulty": {
+                    "type": "string"
+                },
+                "order": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "topic_id": {
+                    "type": "string"
+                },
+                "topic_name": {
+                    "type": "string"
+                }
+            }
+        },
         "models.RoleAccessItem": {
             "type": "object",
             "properties": {
@@ -9337,6 +12090,9 @@
                 "attempts_used": {
                     "type": "integer"
                 },
+                "coins_spent": {
+                    "type": "integer"
+                },
                 "finish_result": {
                     "$ref": "#/definitions/models.SimulationFinishRes"
                 },
@@ -9359,8 +12115,11 @@
                     "additionalProperties": {}
                 },
                 "session_ended": {
-                    "description": "SessionEnded - health_percent shu harakatdan keyin 0'ga tushib, sessiya\nserver tomonidan avtomatik yakunlangan bo'lsa true (bemor \"o'ldi\").\nFrontend shu bayroqni ko'rsa, keyingi buyruq/xabar yuborishni to'xtatib,\nFinishResult'dagi debrief/XP/coin natijasini ko'rsatishi kerak.",
                     "type": "boolean"
+                },
+                "tokens_used": {
+                    "description": "SessionEnded - health_percent shu harakatdan keyin 0'ga tushib, sessiya\nserver tomonidan avtomatik yakunlangan bo'lsa true (bemor \"o'ldi\").\nFrontend shu bayroqni ko'rsa, keyingi buyruq/xabar yuborishni to'xtatib,\nFinishResult'dagi debrief/XP/coin natijasini ko'rsatishi kerak.\nTokensUsed/CoinsSpent - sessiyada shu paytgacha AI sarflagan tokenlar va ulardan\nbalansdan yechilgan tangalar (faqat tanga hisobidan boshlangan sessiyada CoinsSpent \u003e 0).",
+                    "type": "integer"
                 }
             }
         },
@@ -9368,6 +12127,9 @@
             "type": "object",
             "properties": {
                 "coins_earned": {
+                    "type": "integer"
+                },
+                "coins_spent": {
                     "type": "integer"
                 },
                 "debrief_ready": {
@@ -9378,6 +12140,9 @@
                 },
                 "session_id": {
                     "type": "string"
+                },
+                "tokens_used": {
+                    "type": "integer"
                 },
                 "xp_earned": {
                     "type": "integer"
@@ -9470,6 +12235,122 @@
                     "type": "string"
                 },
                 "ws_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.SourceRef": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "locator": {
+                    "type": "string"
+                },
+                "source_id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "url": {
+                    "description": "faqat website uchun",
+                    "type": "string"
+                }
+            }
+        },
+        "models.SourceRes": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "category_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "chunk_count": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "file_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "language": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "topic_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.SourceUpdateReq": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "category_ids": {
+                    "description": "nil = o'zgartirilmaydi, [] = bog'lanishlar o'chiriladi",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "language": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "topic_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "url": {
                     "type": "string"
                 }
             }
@@ -9623,8 +12504,22 @@
         "models.TopicCreateReq": {
             "type": "object",
             "properties": {
+                "ai_hint": {
+                    "description": "AI practice uchun yo'nalish (masalan \"faqat pediatrik holatlar\")",
+                    "type": "string"
+                },
                 "category_id": {
                     "type": "string"
+                },
+                "description": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "is_active": {
+                    "description": "nil = faol",
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "object",
@@ -9647,6 +12542,54 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/models.TopicRes"
+                    }
+                }
+            }
+        },
+        "models.TopicMastery": {
+            "type": "object",
+            "properties": {
+                "accuracy": {
+                    "description": "to'g'ri javoblar ulushi 0..1",
+                    "type": "number"
+                },
+                "answered": {
+                    "type": "integer"
+                },
+                "cards": {
+                    "description": "shu mavzudagi fleshkartalar",
+                    "type": "integer"
+                },
+                "cards_due": {
+                    "description": "hozir takrorlashga tayyor",
+                    "type": "integer"
+                },
+                "category_id": {
+                    "type": "string"
+                },
+                "category_name": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "last_practiced": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "string"
+                },
+                "mastery": {
+                    "description": "0..100 (so'nggi natijalar vaznliroq); unexplored bo'lsa 0",
+                    "type": "integer"
+                },
+                "topic_id": {
+                    "type": "string"
+                },
+                "topic_name": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
                     }
                 }
             }
@@ -9685,14 +12628,26 @@
         "models.TopicRes": {
             "type": "object",
             "properties": {
+                "ai_hint": {
+                    "type": "string"
+                },
                 "category_id": {
                     "type": "string"
                 },
                 "created_at": {
                     "type": "string"
                 },
+                "description": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
                 "id": {
                     "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "object",
@@ -9711,11 +12666,26 @@
         "models.TopicUpdateReq": {
             "type": "object",
             "properties": {
+                "ai_hint": {
+                    "description": "nil = o'zgartirilmaydi",
+                    "type": "string"
+                },
                 "category_id": {
                     "type": "string"
                 },
+                "description": {
+                    "description": "nil = o'zgartirilmaydi",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
                 "id": {
                     "type": "string"
+                },
+                "is_active": {
+                    "description": "nil = o'zgartirilmaydi",
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "object",
@@ -9755,9 +12725,9 @@
         "models.UserLimitStatusRes": {
             "type": "object",
             "properties": {
-                "case_coin_cost": {
-                    "description": "CaseCoinCost - limit tugagach 1 ta case necha tanga turishi (0 - o'chiq). Frontend\nshu bilan \"N tanga evaziga boshlash\" tugmasini ko'rsatadi.",
-                    "type": "integer"
+                "coins_per_1k_tokens": {
+                    "description": "CoinsPer1kTokens - limit tugagach case tanga hisobidan boshlanadi: har 1 000 AI token\nshu miqdor tangaga teng (haqiqiy sarf sessiya davomida yechiladi).",
+                    "type": "number"
                 },
                 "has_subscription": {
                     "description": "true - limit cheksiz (Premium)",
@@ -9874,6 +12844,87 @@
             "type": "object",
             "properties": {
                 "enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "service.DeckCreateRes": {
+            "type": "object",
+            "properties": {
+                "coins_spent": {
+                    "type": "integer"
+                },
+                "created": {
+                    "type": "integer"
+                },
+                "deck": {
+                    "$ref": "#/definitions/models.FlashcardDeckRes"
+                },
+                "tokens_used": {
+                    "type": "integer"
+                }
+            }
+        },
+        "service.PracticeAnswerRes": {
+            "type": "object",
+            "properties": {
+                "item": {
+                    "$ref": "#/definitions/models.PracticeItemRes"
+                },
+                "session": {
+                    "$ref": "#/definitions/models.PracticeSessionRes"
+                },
+                "session_finished": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "service.TelegramLinkCheckRes": {
+            "type": "object",
+            "properties": {
+                "auth": {
+                    "$ref": "#/definitions/models.TokenRes"
+                },
+                "status": {
+                    "description": "pending | confirmed",
+                    "type": "string"
+                }
+            }
+        },
+        "service.TelegramLinkStartRes": {
+            "type": "object",
+            "properties": {
+                "bot_url": {
+                    "type": "string"
+                },
+                "expires_in": {
+                    "description": "soniya",
+                    "type": "integer"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.Wallet": {
+            "type": "object",
+            "properties": {
+                "coins": {
+                    "description": "sotib olingan/yig'ilgan balans",
+                    "type": "integer"
+                },
+                "coins_per_1k_tokens": {
+                    "type": "number"
+                },
+                "daily_free_coins": {
+                    "description": "bugun berilgan bepul tangalar",
+                    "type": "integer"
+                },
+                "free_coins_left": {
+                    "description": "bugungi qolgani",
+                    "type": "integer"
+                },
+                "has_subscription": {
                     "type": "boolean"
                 }
             }
