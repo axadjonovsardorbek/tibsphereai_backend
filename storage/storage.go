@@ -227,6 +227,8 @@ type SourceI interface {
 	SetContent(id, content string) error
 	// ReplaceChunks - eski chunklarni o'chirib yangilarini yozadi.
 	ReplaceChunks(sourceId string, chunks []m.SourceChunk) error
+	// GetChunks - id bo'yicha chunklar (manba ma'lumotlari bilan); o'chirilgan manbalarniki qaytmaydi.
+	GetChunks(ids []string) ([]m.SourceChunk, error)
 	// SearchChunks - bo'lim/mavzu doirasidagi faol, tayyor manbalar chunklaridan eng mosini
 	// qaytaradi (queryEmb bo'sh bo'lsa - tasodifiy). Embeddingsiz chunklar ham qatnashadi.
 	SearchChunks(categoryId string, topicIds []string, queryEmb []float32, limit int) ([]m.SourceChunk, error)
@@ -254,6 +256,28 @@ type PracticeI interface {
 	SetFlashcards(sessionId, status string, created int) error
 	Report(itemId, reason string) error
 	Stats() (*m.PracticeStats, error)
+}
+
+// FlashcardI - AI fleshkartalar (TZ_MVP).
+type FlashcardI interface {
+	CreateDeck(d *m.FlashcardDeckRow) (string, error)
+	GetDeck(id string) (*m.FlashcardDeckRow, error)
+	ListDecks(userId string) ([]*m.FlashcardDeckRow, error)
+	DeleteDeck(userId, id string) error
+	// AddCards - kartalarni qo'shadi (userId + front bo'yicha takrorlari o'tkazib yuboriladi); qo'shilganlar soni.
+	AddCards(cards []*m.FlashcardRow) (int, error)
+	GetCard(id string) (*m.FlashcardRow, error)
+	ListCards(userId, deckId string, limit, offset int) ([]*m.FlashcardRow, int, error)
+	UpdateCard(userId, id string, front, back, status *string) error
+	DeleteCard(userId, id string) error
+	// Due - takrorlashga tayyor (due_at <= now, faol) kartalar: avval muddati o'tganlar, keyin yangilar.
+	Due(userId, deckId string, limit int) ([]*m.FlashcardRow, int, error)
+	// SaveReview - karta holatini yangilaydi va review tarixiga yozadi.
+	SaveReview(c *m.FlashcardRow, rating string, intervalBefore int) error
+	Stats(userId string) (*m.FlashcardStatsRes, error)
+	// ExistingFronts - dublikat yaratmaslik uchun oxirgi old tomonlar.
+	ExistingFronts(userId string, limit int) ([]string, error)
+	AdminStats() (*m.FlashcardAdminStats, error)
 }
 
 type DashBoardI interface {

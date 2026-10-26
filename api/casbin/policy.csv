@@ -101,6 +101,7 @@ p, admin, /web/source/:id/update, PUT
 p, admin, /web/source/:id/reindex, POST
 p, admin, /web/source/:id/delete, DELETE
 p, admin, /web/practice/stats, GET
+p, admin, /web/flashcard/stats, GET
 p, admin, /web/partner, POST
 p, admin, /web/partner, GET
 p, admin, /web/partner/:id, GET
@@ -175,6 +176,16 @@ p, user, /mobile/simulation/:id, GET
 p, user, /mobile/simulation/:id/ws, GET
 p, user, /mobile/simulation/:id/event, POST
 p, user, /mobile/simulation/:id/finish, PUT
+p, user, /mobile/flashcard/due, GET
+p, user, /mobile/flashcard/stats, GET
+p, user, /mobile/flashcard/decks, GET
+p, user, /mobile/flashcard/decks, POST
+p, user, /mobile/flashcard/decks/:id, DELETE
+p, user, /mobile/flashcard/cards, GET
+p, user, /mobile/flashcard/cards, POST
+p, user, /mobile/flashcard/cards/:id, PUT
+p, user, /mobile/flashcard/cards/:id, DELETE
+p, user, /mobile/flashcard/cards/:id/review, POST
 p, user, /mobile/practice/wallet, GET
 p, user, /mobile/practice/sessions, POST
 p, user, /mobile/practice/sessions, GET

@@ -72,3 +72,29 @@ func TestPracticeReal_Embed(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, q[0], embedDim)
 }
+
+func TestPracticeReal_Flashcards(t *testing.T) {
+	p := realPractice(t)
+	cards, usage, err := p.GenerateFlashcards(context.Background(), &models.FlashcardGenInput{
+		Mode: "mistakes", Language: "uz", Count: 4, Chunks: practiceChunks,
+		Mistakes: []models.FlashcardMistake{{
+			Kind: "test", Prompt: "STEMI da birinchi navbatda nima qilinadi?", UserAnswer: "Faqat og'riq qoldiruvchi berish",
+			CorrectAnswer: "Aspirin 300 mg va shoshilinch PCI", Explanation: "Reperfuziya vaqt bilan bog'liq",
+		}},
+		Existing: []string{"Door-to-balloon vaqti qancha?"},
+	})
+	require.NoError(t, err)
+	for _, c := range cards {
+		t.Logf("KARTA: %s -> %s | used=%v", c.Front, c.Back, c.UsedSources)
+	}
+	assert.NotEmpty(t, cards)
+	assert.LessOrEqual(t, len(cards), 4)
+	t.Logf("tokens=%d", usage.TotalTokens)
+
+	deck, _, err := p.GenerateFlashcards(context.Background(), &models.FlashcardGenInput{Mode: "topic", Language: "ru", Count: 5, FreeTopic: true, TopicNames: []string{"Анафилактический шок"}})
+	require.NoError(t, err)
+	t.Logf("DECK: %d karta; 1-chi: %s -> %s", len(deck), deck[0].Front, deck[0].Back)
+
+	_, _, err = p.GenerateFlashcards(context.Background(), &models.FlashcardGenInput{Mode: "topic", Language: "uz", Count: 5, FreeTopic: true, TopicNames: []string{"Футбол чемпионати"}})
+	t.Logf("not medical -> %v", err)
+}

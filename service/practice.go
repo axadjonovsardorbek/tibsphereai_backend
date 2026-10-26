@@ -37,10 +37,12 @@ type PracticeService struct {
 	locks    sync.Map // sessionId -> *sync.Mutex (bir vaqtda bitta generatsiya)
 	// prefetch - javobdan keyin keyingi elementni fonda generatsiya qilish (testlarda o'chiriladi).
 	prefetch bool
+	// asyncFlashcards - sessiya yakunida kartalarni fonda yaratish (testlarda sinxron).
+	asyncFlashcards bool
 }
 
 func NewPracticeService(storage *st.Storage, aiClient *ai.Client, settings *AppSettingService) *PracticeService {
-	return &PracticeService{storage: *storage, ai: aiClient, settings: settings, biller: NewBiller(storage.Db, settings), prefetch: true}
+	return &PracticeService{storage: *storage, ai: aiClient, settings: settings, biller: NewBiller(storage.Db, settings), prefetch: true, asyncFlashcards: true}
 }
 
 // Wallet - foydalanuvchi hamyoni (kunlik bepul tangalar, balans, tarif) - "Limit" belgisi uchun.
@@ -270,7 +272,7 @@ func (s *PracticeService) Next(ctx context.Context, userId, sessionId string) (*
 		return nil, err
 	}
 
-	row := &m.PracticeItemRow{SessionId: sessionId, Kind: sess.Mode, PromptVersion: ai.PracticePromptVersion, Model: ""}
+	row := &m.PracticeItemRow{SessionId: sessionId, Kind: sess.Mode, PromptVersion: ai.PracticePromptVersion, Model: "", CategoryId: sess.CategoryId}
 	var (
 		used   []int
 		usage  *ai.Usage
@@ -285,6 +287,7 @@ func (s *PracticeService) Next(ctx context.Context, userId, sessionId string) (*
 				c.Difficulty = sess.Difficulty
 				row.Payload, _ = json.Marshal(c)
 				row.Summary = c.Summary
+				row.TopicId = s.resolveTopic(sess, in, c.Topic)
 			}
 		} else {
 			var t *m.PracticeTestGen
@@ -294,6 +297,7 @@ func (s *PracticeService) Next(ctx context.Context, userId, sessionId string) (*
 				ShuffleTest(t, rand.New(rand.NewSource(rand.Int63())))
 				row.Payload, _ = json.Marshal(t)
 				row.Summary = t.Summary
+				row.TopicId = s.resolveTopic(sess, in, t.Topic)
 			}
 		}
 		usage = addUsage(usage, u)
@@ -326,6 +330,24 @@ func (s *PracticeService) Next(ctx context.Context, userId, sessionId string) (*
 	return itemRes(pending)
 }
 
+// resolveTopic - elementning mavzu id'si: sessiyada bitta mavzu tanlangan bo'lsa o'sha, aks holda
+// (aralash/bir nechta) AI aytgan nom bo'yicha mos mavzu; topilmasa bo'sh.
+func (s *PracticeService) resolveTopic(sess *m.PracticeSessionRow, in *m.PracticeGenInput, name string) string {
+	if len(sess.TopicIds) == 1 {
+		return sess.TopicIds[0]
+	}
+	name = strings.ToLower(strings.TrimSpace(name))
+	if name == "" || len(in.TopicIds) != len(in.TopicNames) {
+		return ""
+	}
+	for i, n := range in.TopicNames {
+		if strings.ToLower(strings.TrimSpace(n)) == name {
+			return in.TopicIds[i]
+		}
+	}
+	return ""
+}
+
 // buildInput - generatsiya kirishi: nomlar, mavzu yo'nalishlari, oldingi xulosalar va RAG chunklari.
 func (s *PracticeService) buildInput(ctx context.Context, sess *m.PracticeSessionRow) (*m.PracticeGenInput, error) {
 	in := &m.PracticeGenInput{Mode: sess.Mode, Language: sess.Language, Difficulty: sess.Difficulty}
@@ -352,6 +374,7 @@ func (s *PracticeService) buildInput(ctx context.Context, sess *m.PracticeSessio
 		if err == nil && list != nil {
 			for _, t := range list.Topics {
 				if t.Id != nil {
+					in.TopicIds = append(in.TopicIds, *t.Id)
 					in.TopicNames = append(in.TopicNames, pickName(t.Name, sess.Language))
 					if t.AiHint != nil {
 						in.TopicHints = append(in.TopicHints, *t.AiHint)
@@ -365,6 +388,7 @@ func (s *PracticeService) buildInput(ctx context.Context, sess *m.PracticeSessio
 			if err != nil {
 				return nil, err
 			}
+			in.TopicIds = append(in.TopicIds, tid)
 			in.TopicNames = append(in.TopicNames, pickName(t.Name, sess.Language))
 			if t.AiHint != nil {
 				in.TopicHints = append(in.TopicHints, *t.AiHint)
@@ -388,20 +412,26 @@ func pickName(name map[string]string, lang string) string {
 // retrieve - RAG: so'rov embedding'i bo'yicha eng mos chunklar, ulardan bir qismi tasodifiy
 // (xilma-xillik uchun). Embedding ishlamasa yoki manba bo'lmasa - tasodifiy/bo'sh.
 func (s *PracticeService) retrieve(ctx context.Context, sess *m.PracticeSessionRow, in *m.PracticeGenInput) []m.SourceChunk {
-	if s.storage.SourceS == nil {
+	q := in.CategoryName + ". " + strings.Join(in.TopicNames, ", ") + ". " + strings.Join(in.TopicHints, " ")
+	if in.FreeTopic {
+		q = strings.Join(in.TopicNames, ", ")
+	}
+	return ragChunks(ctx, &s.storage, s.ai, sess.CategoryId, sess.TopicIds, q)
+}
+
+// ragChunks - umumiy RAG qidiruvi (practice, fleshkarta, yo'l xaritasi): doira (bo'lim/mavzu; bo'sh
+// bo'lim = erkin mavzu, barcha manbalar), so'rov embedding'i bo'yicha eng mos chunklar.
+func ragChunks(ctx context.Context, storage *st.Storage, client *ai.Client, categoryId string, topicIds []string, query string) []m.SourceChunk {
+	if storage.SourceS == nil {
 		return nil
 	}
 	var qEmb []float32
-	if s.ai != nil && s.ai.Embedder != nil {
-		q := in.CategoryName + ". " + strings.Join(in.TopicNames, ", ") + ". " + strings.Join(in.TopicHints, " ")
-		if in.FreeTopic {
-			q = strings.Join(in.TopicNames, ", ")
-		}
-		if embs, _, err := s.ai.Embedder.Embed(ctx, []string{q}, true); err == nil && len(embs) == 1 {
+	if client != nil && client.Embedder != nil && strings.TrimSpace(query) != "" {
+		if embs, _, err := client.Embedder.Embed(ctx, []string{query}, true); err == nil && len(embs) == 1 {
 			qEmb = st.Normalize(embs[0])
 		}
 	}
-	pool, err := s.storage.SourceS.SearchChunks(sess.CategoryId, sess.TopicIds, qEmb, practiceSearchPool)
+	pool, err := storage.SourceS.SearchChunks(categoryId, topicIds, qEmb, practiceSearchPool)
 	if err != nil {
 		fmt.Println("practice chunk search failed:", err)
 		return nil
@@ -734,6 +764,8 @@ func (s *PracticeService) finish(sess *m.PracticeSessionRow, status string) (*m.
 			fmt.Println("failed to add practice XP:", err)
 		}
 	}
+	// Xatolar asosida fleshkartalar (fonda): natija "flashcards_status/flashcards_created" da ko'rinadi.
+	s.startSessionFlashcards(sess)
 	cur, err := s.storage.PracticeS.GetSession(sess.Id)
 	if err != nil {
 		return nil, err

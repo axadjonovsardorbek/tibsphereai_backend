@@ -347,3 +347,34 @@ func (r *SourceRepo) SearchChunks(categoryId string, topicIds []string, queryEmb
 	}
 	return out, nil
 }
+
+func (r *SourceRepo) GetChunks(ids []string) ([]m.SourceChunk, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.db.Query(context.Background(), `
+		SELECT c.id, c.source_id, c.idx, c.locator, c.content, c.tokens, s.name, s.type, s.author, s.url
+		FROM source_chunks c JOIN case_sources s ON s.id = c.source_id
+		WHERE c.id = ANY($1::uuid[]) AND s.deleted_at = 0
+	`, ids)
+	if err != nil {
+		return nil, fmt.Errorf("error while getting chunks: %w", err)
+	}
+	defer rows.Close()
+	byId := map[string]m.SourceChunk{}
+	for rows.Next() {
+		var c m.SourceChunk
+		if err := rows.Scan(&c.Id, &c.SourceId, &c.Idx, &c.Locator, &c.Content, &c.Tokens, &c.SourceName, &c.SourceType, &c.Author, &c.Url); err != nil {
+			return nil, err
+		}
+		byId[c.Id] = c
+	}
+	// so'ralgan tartibda qaytaramiz
+	var out []m.SourceChunk
+	for _, id := range ids {
+		if c, ok := byId[id]; ok {
+			out = append(out, c)
+		}
+	}
+	return out, nil
+}

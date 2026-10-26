@@ -30,6 +30,7 @@ type Storage struct {
 	CaseSourceS       storage.CaseSourceI
 	SourceS           storage.SourceI
 	PracticeS         storage.PracticeI
+	FlashcardS        storage.FlashcardI
 	DashboardS        storage.DashBoardI
 	UserS             storage.UserI
 	UserDeviceS       storage.UserDeviceI
@@ -82,6 +83,7 @@ func NewPostgresStorage(cf config.Config, rdb *redis.Client) (*Storage, error) {
 		CaseSourceS:       NewCaseSourceRepo(pool),
 		SourceS:           NewSourceRepo(pool),
 		PracticeS:         NewPracticeRepo(pool),
+		FlashcardS:        NewFlashcardRepo(pool),
 		DashboardS:        NewDashboardRepo(pool),
 		UserS:             NewUserRepo(pool, rdb),
 		UserDeviceS:       NewUserDeviceRepo(pool),

@@ -76,3 +76,25 @@ func TestBuildCommon_IncludesContextAndPrevious(t *testing.T) {
 	assert.Contains(t, buildCommon(&models.PracticeGenInput{Language: "uz"}), "Manba berilmagan")
 	assert.True(t, strings.Contains(buildCommon(&models.PracticeGenInput{Language: "xx"}), "o'zbek"))
 }
+
+func TestValidateFlashcards(t *testing.T) {
+	long := make([]rune, 400)
+	for i := range long {
+		long[i] = 'a'
+	}
+	in := []models.FlashcardGen{
+		{Front: " Savol 1 ", Back: " Javob 1 "},
+		{Front: "savol 1", Back: "takroriy old tomon"},
+		{Front: "", Back: "bo'sh front"},
+		{Front: "Back yo'q", Back: "  "},
+		{Front: string(long), Back: "juda uzun front"},
+		{Front: "Savol 2", Back: "Javob 2"},
+		{Front: "Savol 3", Back: "Javob 3"},
+	}
+	out := ValidateFlashcards(in, 2)
+	assert.Len(t, out, 2)
+	assert.Equal(t, "Savol 1", out[0].Front)
+	assert.Equal(t, "Javob 1", out[0].Back)
+	assert.Equal(t, "Savol 2", out[1].Front)
+	assert.Len(t, ValidateFlashcards(in, 0), 3) // 0 = cheklovsiz: faqat yaroqlilari
+}

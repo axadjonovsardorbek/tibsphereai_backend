@@ -124,6 +124,7 @@ type PracticeCaseGen struct {
 	Explanation    string         `json:"explanation"`
 	Difficulty     string         `json:"difficulty"`
 	Summary        string         `json:"summary"` // takrorlanmaslik uchun qisqa xulosa
+	Topic          string         `json:"topic"`   // aralash sessiyada AI tanlagan mavzu nomi (backend id'ga moslaydi)
 }
 
 // PracticeTestGen - AI generatsiya qilgan test savoli (payload).
@@ -134,6 +135,7 @@ type PracticeTestGen struct {
 	Explanation  string   `json:"explanation"`
 	Difficulty   string   `json:"difficulty"`
 	Summary      string   `json:"summary"`
+	Topic        string   `json:"topic"` // aralash sessiyada AI tanlagan mavzu nomi
 }
 
 // PracticeEval - case javobini AI baholashi.
@@ -150,6 +152,7 @@ type PracticeGenInput struct {
 	Difficulty   string
 	CategoryName string
 	TopicNames   []string
+	TopicIds     []string // TopicNames bilan bir xil tartibda
 	TopicHints   []string
 	Chunks       []SourceChunk // RAG kontekst (bo'sh bo'lishi mumkin)
 	Previous     []string      // oldingi elementlar xulosalari
@@ -201,6 +204,8 @@ type PracticeItemRow struct {
 	PromptVersion  string
 	Model          string
 	TokensUsed     int
+	TopicId        string // element mavzusi (bo'sh bo'lishi mumkin)
+	CategoryId     string
 }
 
 // PracticeStats - admin statistika (new-feature.md 4.1.4).

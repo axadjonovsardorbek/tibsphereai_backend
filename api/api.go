@@ -215,6 +215,11 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			source.DELETE("/:id/delete", h.DeleteSource)
 		}
 
+		webFlashcard := web.Group("/flashcard").Use(mid.NewAuth(enforcer, rdb))
+		{
+			webFlashcard.GET("/stats", h.GetFlashcardAdminStats)
+		}
+
 		webPractice := web.Group("/practice").Use(mid.NewAuth(enforcer, rdb))
 		{
 			webPractice.GET("/stats", h.GetPracticeStats)
@@ -402,6 +407,20 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			practice.POST("/sessions/:id/finish", h.FinishPractice)
 			practice.POST("/items/:id/answer", h.AnswerPractice)
 			practice.POST("/items/:id/report", h.ReportPracticeItem)
+		}
+
+		flashcard := mobile.Group("/flashcard").Use(mid.NewAuth(enforcer, rdb))
+		{
+			flashcard.GET("/due", h.GetDueFlashcards)
+			flashcard.GET("/stats", h.GetFlashcardStats)
+			flashcard.GET("/decks", h.ListFlashcardDecks)
+			flashcard.POST("/decks", h.CreateFlashcardDeck)
+			flashcard.DELETE("/decks/:id", h.DeleteFlashcardDeck)
+			flashcard.GET("/cards", h.ListFlashcards)
+			flashcard.POST("/cards", h.CreateFlashcard)
+			flashcard.PUT("/cards/:id", h.UpdateFlashcard)
+			flashcard.DELETE("/cards/:id", h.DeleteFlashcard)
+			flashcard.POST("/cards/:id/review", h.ReviewFlashcard)
 		}
 
 		debrief := mobile.Group("/debrief").Use(mid.NewAuth(enforcer, rdb))

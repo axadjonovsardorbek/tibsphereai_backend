@@ -89,14 +89,15 @@ type VoiceAI interface {
 
 // Client - AI xizmatlarini bitta joyda ushlab turadi.
 type Client struct {
-	Practice PracticeAI
-	Embedder EmbedderAI
-	Patient  PatientAI
-	Debrief  DebriefAI
-	CaseGen  CaseGeneratorAI
-	Action   ActionEvaluatorAI
-	Voice    VoiceAI
-	Enabled  bool // haqiqiy Gemini API ulanganmi (GEMINI_API_KEY bor)
+	Practice   PracticeAI
+	Flashcards FlashcardAI
+	Embedder   EmbedderAI
+	Patient    PatientAI
+	Debrief    DebriefAI
+	CaseGen    CaseGeneratorAI
+	Action     ActionEvaluatorAI
+	Voice      VoiceAI
+	Enabled    bool // haqiqiy Gemini API ulanganmi (GEMINI_API_KEY bor)
 }
 
 // NewClient - GEMINI_API_KEY bo'sh bo'lsa mock, aks holda haqiqiy Gemini
@@ -106,9 +107,9 @@ type Client struct {
 func NewClient(cfg *config.Config, promptRepo storage.AIPromptI) *Client {
 	if cfg.GEMINI_API_KEY == "" {
 		m := &mockClient{}
-		return &Client{Patient: m, Debrief: m, Action: m, CaseGen: mockCaseGen{}, Voice: m, Practice: mockPractice{}, Embedder: mockPractice{}, Enabled: false}
+		return &Client{Patient: m, Debrief: m, Action: m, CaseGen: mockCaseGen{}, Voice: m, Practice: mockPractice{}, Flashcards: mockPractice{}, Embedder: mockPractice{}, Enabled: false}
 	}
 
 	g := newGeminiClient(cfg, promptRepo)
-	return &Client{Patient: g, Debrief: g, Action: g, CaseGen: geminiCaseGen{g}, Voice: g, Practice: geminiPractice{g}, Embedder: geminiPractice{g}, Enabled: true}
+	return &Client{Patient: g, Debrief: g, Action: g, CaseGen: geminiCaseGen{g}, Voice: g, Practice: geminiPractice{g}, Flashcards: geminiPractice{g}, Embedder: geminiPractice{g}, Enabled: true}
 }

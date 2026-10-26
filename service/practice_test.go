@@ -226,6 +226,8 @@ type practiceEnv struct {
 	pool     *pgxpool.Pool
 	store    *st.Storage
 	prac     *PracticeService
+	flash    *FlashcardService
+	cardAI   *fakeFlashcardAI
 	settings *AppSettingService
 	src      *SourceService
 	aiFake   *fakePracticeAI
@@ -241,16 +243,20 @@ func newPracticeEnv(t *testing.T) *practiceEnv {
 	store := &st.Storage{
 		Db: pool, SourceS: st.NewSourceRepo(pool), PracticeS: st.NewPracticeRepo(pool),
 		CategoryS: st.NewCategoryRepo(pool), TopicS: st.NewTopicRepo(pool), UserS: st.NewUserRepo(pool, nil),
-		AIUsageLogS: st.NewAIUsageLogRepo(pool), AppSettingS: st.NewAppSettingRepo(pool),
+		AIUsageLogS: st.NewAIUsageLogRepo(pool), AppSettingS: st.NewAppSettingRepo(pool), FlashcardS: st.NewFlashcardRepo(pool),
 	}
 	settings := NewAppSettingService(store, 3)
 	fa := &fakePracticeAI{verdictScore: 90}
-	client := &ai.Client{Practice: fa, Embedder: fakeEmbedder{}}
+	ff := &fakeFlashcardAI{}
+	client := &ai.Client{Practice: fa, Flashcards: ff, Embedder: fakeEmbedder{}}
 
 	env := &practiceEnv{pool: pool, store: store, aiFake: fa, userId: uuid.NewString(), catId: uuid.NewString(), topic1: uuid.NewString(), topic2: uuid.NewString()}
 	env.prac = NewPracticeService(store, client, settings)
 	env.settings = settings
 	env.prac.prefetch = false
+	env.prac.asyncFlashcards = false
+	env.flash = NewFlashcardService(store, client, settings)
+	env.cardAI = ff
 	env.src = NewSourceService(store, client)
 	env.src.async = false
 
@@ -262,6 +268,9 @@ func newPracticeEnv(t *testing.T) *practiceEnv {
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		bg := context.Background()
+		_, _ = pool.Exec(bg, `DELETE FROM flashcard_reviews WHERE user_id = $1`, env.userId)
+		_, _ = pool.Exec(bg, `DELETE FROM flashcards WHERE user_id = $1`, env.userId)
+		_, _ = pool.Exec(bg, `DELETE FROM flashcard_decks WHERE user_id = $1`, env.userId)
 		_, _ = pool.Exec(bg, `DELETE FROM practice_sessions WHERE user_id = $1`, env.userId)
 		_, _ = pool.Exec(bg, `DELETE FROM case_sources WHERE name LIKE 'ptest-%'`)
 		_, _ = pool.Exec(bg, `DELETE FROM topics WHERE category_id = $1`, env.catId)

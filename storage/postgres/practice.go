@@ -104,10 +104,10 @@ func (r *PracticeRepo) AddItem(it *m.PracticeItemRow) (string, error) {
 	}
 	var id string
 	err := r.db.QueryRow(context.Background(), `
-		INSERT INTO practice_items (session_id, idx, kind, payload, sources, source_chunk_ids, summary, prompt_version, model, tokens_used)
-		VALUES ($1, (SELECT COALESCE(MAX(idx), -1) + 1 FROM practice_items WHERE session_id = $1), $2, $3, $4, $5::uuid[], $6, $7, $8, $9)
+		INSERT INTO practice_items (session_id, idx, kind, payload, sources, source_chunk_ids, summary, prompt_version, model, tokens_used, topic_id, category_id)
+		VALUES ($1, (SELECT COALESCE(MAX(idx), -1) + 1 FROM practice_items WHERE session_id = $1), $2, $3, $4, $5::uuid[], $6, $7, $8, $9, $10, $11)
 		RETURNING id::text
-	`, it.SessionId, it.Kind, it.Payload, srcs, chunkIds, it.Summary, it.PromptVersion, it.Model, it.TokensUsed).Scan(&id)
+	`, it.SessionId, it.Kind, it.Payload, srcs, chunkIds, it.Summary, it.PromptVersion, it.Model, it.TokensUsed, nullStr(it.TopicId), nullStr(it.CategoryId)).Scan(&id)
 	if err != nil {
 		return "", fmt.Errorf("error while adding practice item: %w", err)
 	}
@@ -115,13 +115,15 @@ func (r *PracticeRepo) AddItem(it *m.PracticeItemRow) (string, error) {
 }
 
 const itemCols = `i.id::text, i.session_id::text, s.user_id::text, i.idx, i.kind, i.payload, i.sources, i.source_chunk_ids::text[],
-	i.summary, i.user_answer, i.evaluation, i.is_correct, i.score, i.reported, i.prompt_version, i.model, i.tokens_used`
+	i.summary, i.user_answer, i.evaluation, i.is_correct, i.score, i.reported, i.prompt_version, i.model, i.tokens_used,
+	COALESCE(i.topic_id::text, ''), COALESCE(i.category_id::text, '')`
 
 func scanItem(row pgx.Row) (*m.PracticeItemRow, error) {
 	it := &m.PracticeItemRow{}
 	var srcs []byte
 	err := row.Scan(&it.Id, &it.SessionId, &it.UserId, &it.Idx, &it.Kind, &it.Payload, &srcs, &it.SourceChunkIds,
-		&it.Summary, &it.UserAnswer, &it.Evaluation, &it.IsCorrect, &it.Score, &it.Reported, &it.PromptVersion, &it.Model, &it.TokensUsed)
+		&it.Summary, &it.UserAnswer, &it.Evaluation, &it.IsCorrect, &it.Score, &it.Reported, &it.PromptVersion, &it.Model, &it.TokensUsed,
+		&it.TopicId, &it.CategoryId)
 	if err != nil {
 		return nil, err
 	}
