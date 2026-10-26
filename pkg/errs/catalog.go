@@ -206,6 +206,31 @@ var (
 		Ru: "Не удалось выполнить оплату",
 		En: "Payment could not be completed",
 	})
+	ErrTooManyRequests = New(http.StatusTooManyRequests, "too_many_requests", Text{
+		Uz: "Juda ko'p so'rov yuborildi, birozdan so'ng qayta urinib ko'ring",
+		Ru: "Слишком много запросов, попробуйте позже",
+		En: "Too many requests, please try again later",
+	})
+	ErrOTPLocked = New(http.StatusTooManyRequests, "otp_locked", Text{
+		Uz: "Kod ko'p marta noto'g'ri kiritildi, yangi kod so'rang",
+		Ru: "Код введён неверно слишком много раз, запросите новый",
+		En: "Too many wrong code attempts, request a new code",
+	})
+	ErrCaptchaFailed = New(http.StatusBadRequest, "captcha_failed", Text{
+		Uz: "Captcha tekshiruvidan o'tilmadi",
+		Ru: "Проверка captcha не пройдена",
+		En: "Captcha verification failed",
+	})
+	ErrAuthMethodRequired = New(http.StatusBadRequest, "auth_method_required", Text{
+		Uz: "Hisobga kirishning kamida bitta usuli qolishi kerak",
+		Ru: "Должен остаться хотя бы один способ входа",
+		En: "At least one sign-in method must remain",
+	})
+	ErrIdentifierTaken = New(http.StatusConflict, "identifier_taken", Text{
+		Uz: "Bu email/telefon boshqa hisobga ulangan",
+		Ru: "Этот email/телефон привязан к другому аккаунту",
+		En: "This email/phone is linked to another account",
+	})
 	ErrInsufficientCoins = New(http.StatusBadRequest, "insufficient_coins", Text{
 		Uz: "Tanga balansi yetarli emas",
 		Ru: "Недостаточно монет на балансе",

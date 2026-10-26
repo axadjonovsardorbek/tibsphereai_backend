@@ -153,6 +153,12 @@ p, user, /mobile/user/activity, GET
 p, user, /mobile/user/rating, GET
 p, user, /mobile/user/device, POST
 p, user, /mobile/user/device, DELETE
+p, user, /mobile/user/phone/start, POST
+p, user, /mobile/user/phone/confirm, POST
+p, user, /mobile/user/phone, DELETE
+p, user, /mobile/user/email/send, POST
+p, user, /mobile/user/email/confirm, POST
+p, user, /mobile/user/email, DELETE
 p, user, /mobile/banner, GET
 p, user, /mobile/banner/:id, GET
 p, user, /mobile/contact, POST

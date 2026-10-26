@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/cast"
@@ -20,7 +21,9 @@ type Config struct {
 	REDIS_HOST string
 	REDIS_PORT string
 
-	NEW_BOT_TOKEN     string
+	NEW_BOT_TOKEN string
+	// TG_BOT_USERNAME - login boti username'i (@siz; bo'sh bo'lsa Telegram getMe'dan olinadi).
+	TG_BOT_USERNAME   string
 	BOT_TOKEN         string
 	GROUP_ID          string
 	GROUP_FOR_INFO_ID string
@@ -69,6 +72,12 @@ type Config struct {
 	GEMINI_TTS_MODEL string
 	// GEMINI_EMBEDDING_MODEL - manba chunklarini vektorlash (RAG) uchun.
 	GEMINI_EMBEDDING_MODEL string
+
+	// Captcha (OTP/Telegram login himoyasi): provider turnstile|hcaptcha|recaptcha; secret bo'sh bo'lsa o'chiq.
+	CAPTCHA_PROVIDER string
+	CAPTCHA_SECRET   string
+	// RATE_LIMIT_DISABLED=true - rate limiting'ni o'chirish (faqat lokal debug uchun).
+	RATE_LIMIT_DISABLED bool
 
 	// Google OAuth (mobile "1-bosqichli kirish")
 	GOOGLE_CLIENT_ID string
@@ -140,6 +149,10 @@ func Load() Config {
 	config.GEMINI_EMBEDDING_MODEL = cast.ToString(coalesce("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001"))
 
 	config.GOOGLE_CLIENT_ID = cast.ToString(coalesce("GOOGLE_CLIENT_ID", ""))
+	config.TG_BOT_USERNAME = strings.TrimPrefix(cast.ToString(coalesce("TG_BOT_USERNAME", "")), "@")
+	config.CAPTCHA_PROVIDER = cast.ToString(coalesce("CAPTCHA_PROVIDER", "turnstile"))
+	config.CAPTCHA_SECRET = cast.ToString(coalesce("CAPTCHA_SECRET", ""))
+	config.RATE_LIMIT_DISABLED = cast.ToBool(coalesce("RATE_LIMIT_DISABLED", "false"))
 
 	config.DAILY_FREE_LIMIT = cast.ToInt(coalesce("DAILY_FREE_LIMIT", 3))
 

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"tibsphereai/internal/config"
+	"tibsphereai/internal/tglink"
 
 	"github.com/go-redis/redis"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
@@ -138,6 +139,12 @@ func BotAuth(config *config.Config) {
 					payload = fields[1]
 				}
 
+				// OTP'siz kirish / telefon ulash: /start login_<token> yoki phone_<token>
+				if purpose, token, ok := tglink.ParseStartPayload(payload); ok {
+					handleLinkStart(bot, rdb, config, update.Message, purpose, token)
+					continue
+				}
+
 				if payload == "login" {
 					msg := tgbotapi.NewMessage(chatID, "📱 Iltimos, raqamingizni yuboring:")
 					msg.ReplyMarkup = tgbotapi.ReplyKeyboardMarkup{
@@ -193,6 +200,20 @@ func BotAuth(config *config.Config) {
 			phone := update.Message.Contact.PhoneNumber
 			userID := update.Message.Contact.UserID
 			name := update.Message.Contact.FirstName + update.Message.Contact.LastName
+
+			// Xavfsizlik: faqat o'z kontaktini yuborgan foydalanuvchi qabul qilinadi (boshqa odamning
+			// raqamini "forward" qilib, uning nomidan kirib bo'lmasin).
+			if update.Message.From == nil || userID != update.Message.From.ID {
+				bot.Send(tgbotapi.NewMessage(chatID, "⚠️ Iltimos, «📲 Raqamni yuborish» tugmasi orqali o'zingizning raqamingizni yuboring."))
+				continue
+			}
+
+			// OTP'siz oqim: shu chat uchun kutilayotgan token bo'lsa, kontakt egasi tasdiqlanadi.
+			if purpose, token, ok := tglink.PopWaiting(rdb, chatID); ok {
+				tglink.RememberUser(rdb, int64(userID), tglink.Known{Phone: NormalizePhone(phone), Name: name})
+				confirmLink(bot, rdb, config, chatID, purpose, token, tglink.Info{Phone: NormalizePhone(phone), Name: name, TgID: int64(userID)})
+				continue
+			}
 
 			log.Printf("✅ Raqam qabul qilindi: %s (Telegram ID: %d)", phone, userID)
 
@@ -256,4 +277,46 @@ func NormalizePhone(phone string) string {
 		return "+" + phone
 	}
 	return phone
+}
+
+// handleLinkStart - /start <purpose>_<token>: Telegram ID oldin tasdiqlangan bo'lsa darhol tasdiqlaydi,
+// aks holda foydalanuvchidan o'z raqamini (bir marta) so'raydi.
+func handleLinkStart(bot *tgbotapi.BotAPI, rdb *redis.Client, cfg *config.Config, msg *tgbotapi.Message, purpose, token string) {
+	chatID := msg.Chat.ID
+	if _, err := tglink.Get(rdb, purpose, token); err != nil {
+		bot.Send(tgbotapi.NewMessage(chatID, "⌛ Havola eskirgan yoki noto'g'ri. Ilovaga qaytib, qaytadan urinib ko'ring."))
+		return
+	}
+	if msg.From != nil {
+		if k, ok := tglink.KnownUser(rdb, int64(msg.From.ID)); ok {
+			confirmLink(bot, rdb, cfg, chatID, purpose, token, tglink.Info{Phone: k.Phone, Name: k.Name, TgID: int64(msg.From.ID)})
+			return
+		}
+	}
+	tglink.SetWaiting(rdb, chatID, purpose, token)
+	m := tgbotapi.NewMessage(chatID, "📱 Tasdiqlash uchun raqamingizni yuboring (bir marta):")
+	m.ReplyMarkup = tgbotapi.ReplyKeyboardMarkup{
+		Keyboard:        [][]tgbotapi.KeyboardButton{{{Text: "📲 Raqamni yuborish", RequestContact: true}}},
+		ResizeKeyboard:  true,
+		OneTimeKeyboard: true,
+	}
+	bot.Send(m)
+}
+
+// confirmLink - tokenni tasdiqlaydi va foydalanuvchini ilovaga qaytaradi.
+func confirmLink(bot *tgbotapi.BotAPI, rdb *redis.Client, cfg *config.Config, chatID int64, purpose, token string, who tglink.Info) {
+	if err := tglink.Confirm(rdb, purpose, token, who); err != nil {
+		log.Printf("link confirm failed (%s): %v", purpose, err)
+		bot.Send(tgbotapi.NewMessage(chatID, "⌛ Havola eskirgan. Ilovaga qaytib, qaytadan urinib ko'ring."))
+		return
+	}
+	text := "✅ Tasdiqlandi! Ilovaga qayting - kirish avtomatik davom etadi."
+	if purpose == tglink.PurposePhone {
+		text = "✅ Raqamingiz tasdiqlandi! Ilovaga qayting - u hisobingizga ulanadi."
+	}
+	m := tgbotapi.NewMessage(chatID, text)
+	m.ReplyMarkup = webAppInlineKeyboard{
+		InlineKeyboard: [][]webAppInlineButton{{{Text: "↩️ Ilovaga qaytish", WebApp: webAppInfo{URL: cfg.WEBSITE_URL}}}},
+	}
+	bot.Send(m)
 }

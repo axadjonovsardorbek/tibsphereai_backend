@@ -53,6 +53,9 @@ func ExtractFile(filename string, data []byte) ([]Section, error) {
 	if len(data) > MaxFileBytes {
 		return nil, fmt.Errorf("fayl juda katta (max %d MB)", MaxFileBytes>>20)
 	}
+	if err := checkSignature(filename, data); err != nil {
+		return nil, err
+	}
 	var (
 		secs []Section
 		err  error
@@ -236,4 +239,24 @@ func FetchURL(client *http.Client, u string) ([]Section, error) {
 		return nil, err
 	}
 	return cleanSections([]Section{{Text: HTMLToText(string(body))}})
+}
+
+// checkSignature - kengaytma bilan fayl haqiqiy tarkibi (magic bytes) mos kelishini tekshiradi:
+// ".pdf" nomi ostida boshqa narsa (masalan ijro etiladigan fayl) yuklanishining oldini oladi.
+func checkSignature(filename string, data []byte) error {
+	switch strings.ToLower(path.Ext(filename)) {
+	case ".pdf":
+		if !bytes.HasPrefix(bytes.TrimLeft(data[:min(len(data), 1024)], "\x00\n\r\t "), []byte("%PDF-")) {
+			return errors.New("fayl PDF emas (imzo mos kelmadi)")
+		}
+	case ".docx", ".epub":
+		if !bytes.HasPrefix(data, []byte("PK\x03\x04")) {
+			return fmt.Errorf("fayl %s emas (imzo mos kelmadi)", strings.ToUpper(strings.TrimPrefix(path.Ext(filename), ".")))
+		}
+	case ".txt", ".md":
+		if bytes.IndexByte(data[:min(len(data), 8192)], 0) >= 0 {
+			return errors.New("matn faylida binar belgilar bor")
+		}
+	}
+	return nil
 }

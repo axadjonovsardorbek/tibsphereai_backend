@@ -9,6 +9,7 @@ import (
 	"tibsphereai/internal/config"
 	"tibsphereai/internal/helper"
 	"tibsphereai/internal/push"
+	"tibsphereai/internal/ratelimit"
 	"tibsphereai/pkg/errs"
 	m "tibsphereai/pkg/models"
 	st "tibsphereai/storage/postgres"
@@ -23,13 +24,30 @@ type UserService struct {
 	rdb     *redis.Client
 	cfg     *config.Config
 	push    *push.Client
+	// emailSender - OTP emailini yuboradi (testlarda almashtiriladi).
+	emailSender func(email, otp string) error
 }
 
 func NewUserService(storage *st.Storage, rdb *redis.Client, cfg *config.Config, pushClient *push.Client) *UserService {
-	return &UserService{storage: *storage, rdb: rdb, cfg: cfg, push: pushClient}
+	u := &UserService{storage: *storage, rdb: rdb, cfg: cfg, push: pushClient}
+	u.emailSender = u.sendEmailOTP
+	return u
 }
 
+const (
+	otpSendLimit   = 5 // bitta identifikatorga 10 daqiqada ko'pi bilan 5 ta kod
+	otpSendWindow  = 10 * time.Minute
+	otpMaxAttempts = 5 // noto'g'ri kod urinishlari; oshsa kod yaroqsiz bo'ladi
+	otpAttemptsTTL = 10 * time.Minute
+)
+
 func (s *UserService) SendConfirmationCode(ctx context.Context, req *m.SendConfirmationCodeReq) (*m.Void, error) {
+	// Spam/SMS-bombing'dan himoya: bitta email/telefonga cheklangan miqdorda kod yuboriladi.
+	if req.Identifier != "" && !s.cfg.RATE_LIMIT_DISABLED {
+		if ok, _ := ratelimit.Allow(s.rdb, "rl:otp_send:"+req.Identifier, otpSendLimit, otpSendWindow); !ok {
+			return nil, errs.ErrTooManyRequests
+		}
+	}
 	otp := helper.GenerateOtp()
 
 	if req.Type == "telegram" {
@@ -43,72 +61,80 @@ func (s *UserService) SendConfirmationCode(ctx context.Context, req *m.SendConfi
 		s.rdb.Set(req.Identifier, otp, 5*time.Minute)
 		fmt.Printf("Generated OTP for email %s: %s\n", req.Identifier, otp)
 
-		from := s.cfg.EMAIL_NAME
-		logoURL := s.cfg.EMAIL_LOGO
-
-		htmlBody := fmt.Sprintf(`<!doctype html>
-	<html lang="uz">
-	<head>
-	  <meta charset="utf-8" />
-	  <meta name="viewport" content="width=device-width, initial-scale=1" />
-	</head>
-	<body style="margin:0;padding:0;background:#f6f7fb;font-family:Arial,Helvetica,sans-serif;">
-	  <div style="max-width:560px;margin:0 auto;padding:24px;">
-		<div style="background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e9ecf3;">
-		  <div style="height:6px;background:#e11d48;"></div>
-		  <div style="padding:22px 24px 24px 24px;">
-			<div style="display:flex;align-items:center;gap:12px;">
-			  <img src="%s" alt="TibStation" height="38" style="display:block;border:0;outline:none;text-decoration:none;" />
-			  <div>
-				<div style="font-size:18px;font-weight:800;color:#111827;line-height:1.2;">TibStation</div>
-				<div style="font-size:13px;color:#6b7280;margin-top:2px;">Kirish uchun tasdiqlash kodi</div>
-			  </div>
-			</div>
-			<div style="margin-top:18px;font-size:14px;line-height:1.6;color:#111827;">
-			  Assalomu alaykum!<br><br>
-			  Siz <b>TibStation</b> platformasiga kirish uchun so‘rov yubordingiz.
-			</div>
-			<div style="margin:20px 0;padding:16px;border-radius:12px;background:#fff1f2;border:1px solid #fecdd3;text-align:center;">
-			  <div style="font-size:12px;color:#9f1239;margin-bottom:8px;font-weight:700;">Tasdiqlash kodingiz</div>
-			  <div style="font-size:30px;font-weight:900;letter-spacing:2px;color:#111827;
-						  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;">
-				%s
-			  </div>
-			</div>
-			<div style="font-size:13px;line-height:1.6;color:#b91c1c;font-weight:700;margin-bottom:8px;">
-			  ⚠️ Hech qachon ushbu kodni boshqalar bilan ulashmang.
-			</div>
-			<div style="font-size:13px;line-height:1.6;color:#374151;">
-			  ⏳ Kod <b>5 daqiqa</b> davomida amal qiladi.<br>
-			  Agar bu so‘rovni siz yubormagan bo‘lsangiz, ushbu xabarni e’tiborsiz qoldiring.
-			</div>
-			<hr style="border:none;border-top:1px solid #eef0f6;margin:18px 0;">
-			<div style="font-size:12px;color:#6b7280;">Hurmat bilan,<br>TibStation</div>
-		  </div>
-		</div>
-		<div style="text-align:center;color:#9ca3af;font-size:12px;margin-top:12px;">© TibStation</div>
-	  </div>
-	</body>
-	</html>`, logoURL, otp)
-
-		subject := "TibStation — Kirish uchun tasdiqlash kodi"
-		message := fmt.Sprintf("Tasdiqlash kodingiz: %s\nKod 5 daqiqa davomida amal qiladi.", otp)
-
-		err := helper.SendVerificationCode(m.Params{
-			From:     from,
-			Subject:  subject,
-			To:       req.Identifier,
-			Message:  message,
-			HTMLBody: htmlBody,
-		}, *s.cfg)
-		if err != nil {
-			return nil, fmt.Errorf("failed to send verification code: %v", err)
+		if err := s.emailSender(req.Identifier, otp); err != nil {
+			return nil, err
 		}
 
 		return &m.Void{}, nil
 	}
 
 	return nil, errors.New("invalid type")
+}
+
+// sendEmailOTP - tasdiqlash kodini brend shablonli email bilan yuboradi (kirish va email ulash uchun umumiy).
+func (s *UserService) sendEmailOTP(email, otp string) error {
+	from := s.cfg.EMAIL_NAME
+	logoURL := s.cfg.EMAIL_LOGO
+
+	htmlBody := fmt.Sprintf(`<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body style="margin:0;padding:0;background:#f6f7fb;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:560px;margin:0 auto;padding:24px;">
+	<div style="background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e9ecf3;">
+	  <div style="height:6px;background:#e11d48;"></div>
+	  <div style="padding:22px 24px 24px 24px;">
+		<div style="display:flex;align-items:center;gap:12px;">
+		  <img src="%s" alt="TibStation" height="38" style="display:block;border:0;outline:none;text-decoration:none;" />
+		  <div>
+			<div style="font-size:18px;font-weight:800;color:#111827;line-height:1.2;">TibStation</div>
+			<div style="font-size:13px;color:#6b7280;margin-top:2px;">Kirish uchun tasdiqlash kodi</div>
+		  </div>
+		</div>
+		<div style="margin-top:18px;font-size:14px;line-height:1.6;color:#111827;">
+		  Assalomu alaykum!<br><br>
+		  Siz <b>TibStation</b> platformasiga kirish uchun so‘rov yubordingiz.
+		</div>
+		<div style="margin:20px 0;padding:16px;border-radius:12px;background:#fff1f2;border:1px solid #fecdd3;text-align:center;">
+		  <div style="font-size:12px;color:#9f1239;margin-bottom:8px;font-weight:700;">Tasdiqlash kodingiz</div>
+		  <div style="font-size:30px;font-weight:900;letter-spacing:2px;color:#111827;
+					  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;">
+			%s
+		  </div>
+		</div>
+		<div style="font-size:13px;line-height:1.6;color:#b91c1c;font-weight:700;margin-bottom:8px;">
+		  ⚠️ Hech qachon ushbu kodni boshqalar bilan ulashmang.
+		</div>
+		<div style="font-size:13px;line-height:1.6;color:#374151;">
+		  ⏳ Kod <b>5 daqiqa</b> davomida amal qiladi.<br>
+		  Agar bu so‘rovni siz yubormagan bo‘lsangiz, ushbu xabarni e’tiborsiz qoldiring.
+		</div>
+		<hr style="border:none;border-top:1px solid #eef0f6;margin:18px 0;">
+		<div style="font-size:12px;color:#6b7280;">Hurmat bilan,<br>TibStation</div>
+	  </div>
+	</div>
+	<div style="text-align:center;color:#9ca3af;font-size:12px;margin-top:12px;">© TibStation</div>
+  </div>
+</body>
+</html>`, logoURL, otp)
+
+	subject := "TibStation — Kirish uchun tasdiqlash kodi"
+	message := fmt.Sprintf("Tasdiqlash kodingiz: %s\nKod 5 daqiqa davomida amal qiladi.", otp)
+
+	err := helper.SendVerificationCode(m.Params{
+		From:     from,
+		Subject:  subject,
+		To:       email,
+		Message:  message,
+		HTMLBody: htmlBody,
+	}, *s.cfg)
+	if err != nil {
+		return fmt.Errorf("failed to send verification code: %v", err)
+	}
+	return nil
 }
 
 func (s *UserService) Confirmation(ctx context.Context, req *m.ConfirmationReq) (*m.TokenRes, error) {
@@ -124,8 +150,16 @@ func (s *UserService) Confirmation(ctx context.Context, req *m.ConfirmationReq) 
 	}
 
 	if storedOtp != req.ConfirmationCode {
+		// Brute-force'dan himoya: 6 xonali kodni topish uchun cheksiz urinish mumkin emas.
+		if !s.cfg.RATE_LIMIT_DISABLED {
+			if ok, _ := ratelimit.Allow(s.rdb, "otp_try:"+req.Identifier, otpMaxAttempts, otpAttemptsTTL); !ok {
+				s.rdb.Del(req.Identifier)
+				return nil, errs.ErrOTPLocked
+			}
+		}
 		return nil, errs.ErrInvalidOTP
 	}
+	s.rdb.Del("otp_try:" + req.Identifier)
 
 	defer func() {
 		if err := s.rdb.Del(req.Identifier).Err(); err != nil {

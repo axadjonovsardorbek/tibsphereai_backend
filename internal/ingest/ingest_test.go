@@ -75,3 +75,14 @@ func TestHTMLToText(t *testing.T) {
 	assert.NotContains(t, s, "menu")
 	assert.NotContains(t, s, "x()")
 }
+
+func TestExtractFile_SignatureMismatch(t *testing.T) {
+	_, err := ExtractFile("fake.pdf", []byte("MZ\x90\x00 bu aslida ijro etiladigan fayl, PDF emas"))
+	assert.Error(t, err)
+	_, err = ExtractFile("fake.docx", []byte("%PDF-1.4 pdf docx nomi ostida, yetarlicha uzun matn"))
+	assert.Error(t, err)
+	_, err = ExtractFile("fake.epub", []byte("oddiy matn epub nomi ostida, yetarlicha uzun matn bor"))
+	assert.Error(t, err)
+	_, err = ExtractFile("bin.txt", []byte("matn\x00\x01\x02 binar"))
+	assert.Error(t, err)
+}
