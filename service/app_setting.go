@@ -169,3 +169,14 @@ func (s *AppSettingService) DailyFreeCoins(ctx context.Context) int {
 	}
 	return int(v)
 }
+
+// PracticeImagesEnabled - case'larga AI tibbiy tasvir (EKG/rentgen...) generatsiyasi yoqilganmi (default o'chiq:
+// tasvirlar illyustrativ va qo'shimcha xarajat keltiradi, admin ongli ravishda yoqadi).
+func (s *AppSettingService) PracticeImagesEnabled(ctx context.Context) bool {
+	setting, err := s.storage.AppSettingS.Get(m.AppSettingPracticeImages)
+	if err != nil || setting == nil {
+		return false
+	}
+	v, err := strconv.ParseBool(setting.Value)
+	return err == nil && v
+}

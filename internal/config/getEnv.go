@@ -72,6 +72,8 @@ type Config struct {
 	GEMINI_TTS_MODEL string
 	// GEMINI_EMBEDDING_MODEL - manba chunklarini vektorlash (RAG) uchun.
 	GEMINI_EMBEDDING_MODEL string
+	// GEMINI_IMAGE_MODEL - case uchun tibbiy tasvir (EKG, rentgen...) generatsiyasi (practice_images_enabled yoqilgan bo'lsa).
+	GEMINI_IMAGE_MODEL string
 
 	// Captcha (OTP/Telegram login himoyasi): provider turnstile|hcaptcha|recaptcha; secret bo'sh bo'lsa o'chiq.
 	CAPTCHA_PROVIDER string
@@ -147,6 +149,7 @@ func Load() Config {
 	config.GEMINI_MODEL = cast.ToString(coalesce("GEMINI_MODEL", "gemini-2.0-flash"))
 	config.GEMINI_TTS_MODEL = cast.ToString(coalesce("GEMINI_TTS_MODEL", "gemini-3.8-flash-tts"))
 	config.GEMINI_EMBEDDING_MODEL = cast.ToString(coalesce("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001"))
+	config.GEMINI_IMAGE_MODEL = cast.ToString(coalesce("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image"))
 
 	config.GOOGLE_CLIENT_ID = cast.ToString(coalesce("GOOGLE_CLIENT_ID", ""))
 	config.TG_BOT_USERNAME = strings.TrimPrefix(cast.ToString(coalesce("TG_BOT_USERNAME", "")), "@")

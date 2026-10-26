@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"math"
 	"math/rand"
 	"strings"
@@ -25,6 +26,8 @@ const (
 	maxAnswerChars       = 4000
 
 	noSourcesNote = "Manba topilmadi, javob umumiy tibbiy bilimga asoslangan."
+	// imageNote - AI yaratgan tasvir ogohlantirishi (haqiqiy bemor tasviri emas).
+	imageNote = "AI yaratgan illyustrativ tasvir (ta'lim maqsadida), haqiqiy bemor tasviri emas."
 )
 
 // PracticeService - AI real-time case/test (new-feature.md): sessiya, generatsiya (RAG),
@@ -39,6 +42,7 @@ type PracticeService struct {
 	prefetch bool
 	// asyncFlashcards - sessiya yakunida kartalarni fonda yaratish (testlarda sinxron).
 	asyncFlashcards bool
+	images          ImageStore
 }
 
 func NewPracticeService(storage *st.Storage, aiClient *ai.Client, settings *AppSettingService) *PracticeService {
@@ -274,10 +278,12 @@ func (s *PracticeService) Next(ctx context.Context, userId, sessionId string) (*
 
 	row := &m.PracticeItemRow{SessionId: sessionId, Kind: sess.Mode, PromptVersion: ai.PracticePromptVersion, Model: "", CategoryId: sess.CategoryId}
 	var (
-		used   []int
-		usage  *ai.Usage
-		genErr error
+		used    []int
+		usage   *ai.Usage
+		genErr  error
+		caseGen *m.PracticeCaseGen
 	)
+	in.WantImaging = sess.Mode == m.PracticeModeCase && s.imagesEnabled(ctx)
 	for attempt := 0; attempt < practiceGenAttempts; attempt++ {
 		var u *ai.Usage
 		if sess.Mode == m.PracticeModeCase {
@@ -285,6 +291,7 @@ func (s *PracticeService) Next(ctx context.Context, userId, sessionId string) (*
 			c, used, u, genErr = s.ai.Practice.GenerateCase(ctx, in)
 			if genErr == nil {
 				c.Difficulty = sess.Difficulty
+				caseGen = c
 				row.Payload, _ = json.Marshal(c)
 				row.Summary = c.Summary
 				row.TopicId = s.resolveTopic(sess, in, c.Topic)
@@ -314,6 +321,13 @@ func (s *PracticeService) Next(ctx context.Context, userId, sessionId string) (*
 	}
 	if genErr != nil {
 		return nil, errs.ErrPracticeGenFailed.Wrap(genErr)
+	}
+	// Tibbiy tasvir (EKG/rentgen...): AI taklif qilsa generatsiya qilinadi; xato bo'lsa case rasmsiz davom etadi.
+	if caseGen != nil && in.WantImaging {
+		if iu := s.attachImage(ctx, sessionId, userId, caseGen); iu != nil {
+			usage = addUsage(usage, iu)
+			row.Payload, _ = json.Marshal(caseGen)
+		}
 	}
 	if usage != nil {
 		row.TokensUsed = usage.TotalTokens
@@ -810,6 +824,10 @@ func itemRes(it *m.PracticeItemRow) (*m.PracticeItemRes, error) {
 			return nil, err
 		}
 		r.ChiefComplaint, r.Patient = c.ChiefComplaint, c.Patient
+		if c.ImageUrl != "" {
+			r.ImageUrl, r.ImageType = c.ImageUrl, c.ImageType
+			r.ImageNote = imageNote
+		}
 		correctText, explanation = c.ExpectedAnswer, c.Explanation
 	} else {
 		var t m.PracticeTestGen
@@ -852,4 +870,49 @@ func itemRes(it *m.PracticeItemRow) (*m.PracticeItemRes, error) {
 		r.SourcesNote = noSourcesNote
 	}
 	return r, nil
+}
+
+// ImageStore - AI yaratgan tasvirlarni saqlaydi (MinIO); URL qaytaradi.
+type ImageStore interface {
+	UploadBytes(fileName string, data []byte, contentType string) (string, error)
+}
+
+// SetImageStore - tasvirlarni saqlash joyini ulaydi (app.go'da MinIO). Ulanmagan bo'lsa tasvir generatsiyasi o'chiq.
+func (s *PracticeService) SetImageStore(store ImageStore) { s.images = store }
+
+// imagesEnabled - admin sozlamasi (practice_images_enabled) yoqilgan va saqlash joyi ulangan.
+func (s *PracticeService) imagesEnabled(ctx context.Context) bool {
+	if s.images == nil || s.ai == nil || s.ai.Image == nil || s.settings == nil {
+		return false
+	}
+	return s.settings.PracticeImagesEnabled(ctx)
+}
+
+const imageGenTimeout = 60 * time.Second
+
+// attachImage - AI taklif qilgan tasvirni generatsiya qilib MinIO'ga yuklaydi va case'ga biriktiradi.
+// Tasvir yo'q/xato bo'lsa nil qaytaradi (case rasmsiz ishlayveradi). Sarflangan token hisobga olinadi.
+func (s *PracticeService) attachImage(ctx context.Context, sessionId, userId string, c *m.PracticeCaseGen) *ai.Usage {
+	if c.Imaging == nil || strings.TrimSpace(c.Imaging.Prompt) == "" || c.Imaging.Type == "" || c.Imaging.Type == "none" {
+		return nil
+	}
+	ictx, cancel := context.WithTimeout(ctx, imageGenTimeout)
+	defer cancel()
+	data, mime, usage, err := s.ai.Image.GenerateImage(ictx, c.Imaging.Prompt)
+	s.recordUsage(ctx, sessionId, userId, "practice_image", usage)
+	if err != nil || len(data) == 0 {
+		fmt.Println("practice image generation failed:", err)
+		return usage
+	}
+	ext := ".png"
+	if strings.Contains(mime, "jpeg") || strings.Contains(mime, "jpg") {
+		ext = ".jpg"
+	}
+	url, err := s.images.UploadBytes("practice/"+uuid.NewString()+ext, data, mime)
+	if err != nil {
+		fmt.Println("practice image upload failed:", err)
+		return usage
+	}
+	c.ImageUrl, c.ImageType = url, c.Imaging.Type
+	return usage
 }

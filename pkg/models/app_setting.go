@@ -77,3 +77,11 @@ const AppSettingDailyFreeCoins = "daily_free_coins"
 type DailyFreeCoinsRes struct {
 	DailyFreeCoins int `json:"daily_free_coins"`
 }
+
+// AppSettingPracticeImages - "true"/"false": AI practice case'lariga tibbiy tasvir generatsiyasi.
+const AppSettingPracticeImages = "practice_images_enabled"
+
+// PracticeImagesRes - admin panel "AI tasvirlar" tugmasi uchun.
+type PracticeImagesRes struct {
+	Enabled bool `json:"enabled"`
+}

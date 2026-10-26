@@ -278,6 +278,8 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			setting.PUT("/difficulty-reward", h.SetDifficultyRewards)
 			setting.GET("/daily-free-coins", h.GetDailyFreeCoins)
 			setting.PUT("/daily-free-coins", h.SetDailyFreeCoins)
+			setting.GET("/practice-images", h.GetPracticeImages)
+			setting.PUT("/practice-images", h.SetPracticeImages)
 			setting.GET("/coin-rate", h.GetCoinRate)
 			setting.PUT("/coin-rate", h.SetCoinRate)
 		}

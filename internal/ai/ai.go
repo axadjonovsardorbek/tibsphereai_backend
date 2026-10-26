@@ -92,6 +92,7 @@ type Client struct {
 	Practice   PracticeAI
 	Flashcards FlashcardAI
 	Roadmap    RoadmapAI
+	Image      ImageAI
 	Embedder   EmbedderAI
 	Patient    PatientAI
 	Debrief    DebriefAI
@@ -108,9 +109,9 @@ type Client struct {
 func NewClient(cfg *config.Config, promptRepo storage.AIPromptI) *Client {
 	if cfg.GEMINI_API_KEY == "" {
 		m := &mockClient{}
-		return &Client{Patient: m, Debrief: m, Action: m, CaseGen: mockCaseGen{}, Voice: m, Practice: mockPractice{}, Flashcards: mockPractice{}, Roadmap: mockPractice{}, Embedder: mockPractice{}, Enabled: false}
+		return &Client{Patient: m, Debrief: m, Action: m, CaseGen: mockCaseGen{}, Voice: m, Practice: mockPractice{}, Flashcards: mockPractice{}, Roadmap: mockPractice{}, Image: mockPractice{}, Embedder: mockPractice{}, Enabled: false}
 	}
 
 	g := newGeminiClient(cfg, promptRepo)
-	return &Client{Patient: g, Debrief: g, Action: g, CaseGen: geminiCaseGen{g}, Voice: g, Practice: geminiPractice{g}, Flashcards: geminiPractice{g}, Roadmap: geminiPractice{g}, Embedder: geminiPractice{g}, Enabled: true}
+	return &Client{Patient: g, Debrief: g, Action: g, CaseGen: geminiCaseGen{g}, Voice: g, Practice: geminiPractice{g}, Flashcards: geminiPractice{g}, Roadmap: geminiPractice{g}, Image: geminiPractice{g}, Embedder: geminiPractice{g}, Enabled: true}
 }

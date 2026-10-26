@@ -175,3 +175,37 @@ func (h *Handler) SetDailyFreeCoins(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "setting saved"})
 }
+
+// GetPracticeImages godoc
+// @Summary AI practice case'lariga tibbiy tasvir (EKG, rentgen...) generatsiyasi yoqilganmi
+// @Tags setting
+// @Produce json
+// @Success 200 {object} models.PracticeImagesRes
+// @Security BearerAuth
+// @Router /web/setting/practice-images [get]
+func (h *Handler) GetPracticeImages(c *gin.Context) {
+	c.JSON(http.StatusOK, m.PracticeImagesRes{Enabled: h.Clients.AppSetting.PracticeImagesEnabled(context.Background())})
+}
+
+// SetPracticeImages godoc
+// @Summary AI tasvir generatsiyasini yoqish/o'chirish
+// @Description Yoqilsa case'larning bir qismiga AI tasvir (illyustrativ) qo'shiladi; qo'shimcha token sarfi bor.
+// @Tags setting
+// @Accept json
+// @Produce json
+// @Param body body models.PracticeImagesRes true "enabled"
+// @Success 200 {object} string
+// @Security BearerAuth
+// @Router /web/setting/practice-images [put]
+func (h *Handler) SetPracticeImages(c *gin.Context) {
+	var req m.PracticeImagesRes
+	if err := c.BindJSON(&req); err != nil {
+		errs.Bad(c, err)
+		return
+	}
+	if _, err := h.Clients.AppSetting.Set(context.Background(), &m.AppSettingSetReq{Key: m.AppSettingPracticeImages, Value: strconv.FormatBool(req.Enabled)}); err != nil {
+		errs.Bad(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "setting saved"})
+}

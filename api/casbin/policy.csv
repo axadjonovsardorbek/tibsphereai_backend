@@ -123,6 +123,8 @@ p, admin, /web/setting/difficulty-reward, GET
 p, admin, /web/setting/difficulty-reward, PUT
 p, admin, /web/setting/daily-free-coins, GET
 p, admin, /web/setting/daily-free-coins, PUT
+p, admin, /web/setting/practice-images, GET
+p, admin, /web/setting/practice-images, PUT
 p, admin, /web/setting/coin-rate, GET
 p, admin, /web/setting/coin-rate, PUT
 p, admin, /web/ai-prompt, GET

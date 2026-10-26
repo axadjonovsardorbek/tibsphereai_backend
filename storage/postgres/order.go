@@ -109,6 +109,12 @@ func (r *OrderRepo) Create(req *m.OrderCreateReq) (*m.OrderCreateRes, error) {
 	if coinsUsed < 0 {
 		coinsUsed = 0
 	}
+	// TZ_MVP: tangani so'mga aylantirib qisman to'lash (coin_to_uzs_rate) olib tashlandi - tanga
+	// paketlari alohida tariflarda sotiladi. Eski mijoz coins_used > 0 yuborsa aniq xato qaytariladi
+	// (jimgina narx hisoblab, noto'g'ri summa bilan to'lov yaratilmasligi uchun).
+	if coinsUsed > 0 {
+		return nil, errs.ErrCoinPaymentDisabled
+	}
 
 	if coinsUsed > 0 {
 		var balance int

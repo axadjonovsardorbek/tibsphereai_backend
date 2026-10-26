@@ -761,12 +761,15 @@ const MODULES = {
       {name:'name', label:'Nomi (qidiruv)', type:'text'},
       {name:'audience', label:'Rejim', type:'select', includeEmpty:true, options:[{value:'doctor',label:'👨‍⚕️ Shifokor'},{value:'citizen',label:'🚑 Aholi (Birinchi yordam)'}]},
     ],
-    columns:['id','name','audience','order_num','created_at'],
+    columns:['id','name','audience','is_active','order_num','created_at'],
+    createValues:{is_active:true},
     fields:[
       {name:'name', label:'Nomi', type:'ml', required:true},
+      {name:'description', label:'Tavsif', type:'ml', textarea:true},
       {name:'icon_url', label:'Ikonka URL', type:'file'},
       {name:'audience', label:'Rejim (Home ekran toggle)', type:'select', options:[{value:'doctor',label:'👨‍⚕️ Shifokor'},{value:'citizen',label:'🚑 Aholi (Birinchi yordam)'}]},
       {name:'order_num', label:'Tartib raqami', type:'number'},
+      {name:'is_active', label:'Faol (nofaol bo\'lim ilovada va AI mashqda ko\'rinmaydi)', type:'checkbox'},
     ],
     canCreate:true, canUpdate:true, canDelete:true,
     onSaved:()=>invalidateRef('category'),
@@ -774,18 +777,21 @@ const MODULES = {
   topic: {
     label:'Mavzular (Topic)', base:'/web/topic', listKey:'topics',
     search:[{name:'category_id', label:'Bo\'lim', type:'select', asyncOptions:'category', includeEmpty:true}],
-    columns:['id','category_id','name','order_num','created_at'],
+    columns:['id','category_id','name','is_active','order_num','created_at'],
+    createValues:{is_active:true},
     fields:[
       {name:'category_id', label:'Bo\'lim', type:'select', asyncOptions:'category', required:true},
       {name:'name', label:'Nomi', type:'ml', required:true},
+      {name:'description', label:'Tavsif', type:'ml', textarea:true},
       {name:'order_num', label:'Tartib raqami', type:'number'},
+      {name:'is_active', label:'Faol (nofaol mavzu ilovada va AI mashqda ko\'rinmaydi)', type:'checkbox'},
       {name:'ai_hint', label:'AI yo\'nalishi (ixtiyoriy; masalan: "faqat pediatrik holatlar")', type:'textarea', full:true},
     ],
     canCreate:true, canUpdate:true, canDelete:true,
     onSaved:()=>invalidateRef('topic'),
   },
   case: {
-    label:'Klinik case\'lar', base:'/web/case', listKey:'cases',
+    label:'Klinik case\'lar (arxiv — yangi modelda AI real-time yaratadi)', base:'/web/case', listKey:'cases',
     search:[
       {name:'topic_id', label:'Mavzu', type:'select', asyncOptions:'topic', includeEmpty:true},
       {name:'category_id', label:'Bo\'lim', type:'select', asyncOptions:'category', includeEmpty:true},
@@ -1376,6 +1382,87 @@ async function renderPracticeStats(){
 }
 
 /* ============================================================
+   FLESHKARTALAR MONITORINGI (/web/flashcard/stats)
+   ============================================================ */
+async function renderFlashcardStats(){
+  const main = document.getElementById('main');
+  main.innerHTML = '<h2 class="pageTitle">Fleshkartalar monitoringi</h2><p class="pageDesc">/web/flashcard/stats — AI yaratgan kartalar, takrorlashlar, eslab qolish va o\'zlashtirish</p>';
+  let d;
+  try{ d = await api('/web/flashcard/stats'); }catch(e){ return; }
+  const pct = v => (Number(v||0)*100).toFixed(1)+'%';
+  const cards = document.createElement('div'); cards.className='cards';
+  [
+    ['Jami kartalar', d.total_cards], ['To\'plamlar', d.total_decks], ['Kartasi bor foydalanuvchilar', d.users_with_cards],
+    ['Bugun yaratilgan', d.generated_today], ['Bugungi takrorlashlar', d.reviews_today], ['Bugun takrorlagan foydalanuvchilar', d.active_reviewers_today],
+    ['Eslab qolish (30 kun, good+easy)', pct(d.retention_30d)], ['O\'zlashtirish (interval ≥ 21 kun)', pct(d.mastery_rate)],
+  ].forEach(([l,v])=>{
+    const c = document.createElement('div'); c.className='card';
+    c.innerHTML = '<div class="v">'+esc(v ?? '—')+'</div><div class="l">'+esc(l)+'</div>';
+    cards.appendChild(c);
+  });
+  main.appendChild(cards);
+  const h = document.createElement('h3'); h.textContent='Eng ko\'p xato qilinayotgan mavzular'; h.style.margin='18px 0 8px'; main.appendChild(h);
+  const rows = d.weak_topics || [];
+  if(!rows.length){ const p=document.createElement('p'); p.className='muted'; p.textContent='Hali yetarli ma\'lumot yo\'q (mavzu bo\'yicha kamida 3 ta javob kerak).'; main.appendChild(p); return; }
+  const t = document.createElement('table');
+  t.innerHTML = '<thead><tr><th>Mavzu</th><th>Javoblar</th><th>Xato ulushi</th><th>Xatolardan yaratilgan kartalar</th></tr></thead>';
+  const tb = document.createElement('tbody');
+  rows.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML='<td>'+fmtCell(r.name)+'</td><td>'+esc(r.answered)+'</td><td>'+pct(r.wrong_rate)+'</td><td>'+esc(r.card_count)+'</td>'; tb.appendChild(tr); });
+  t.appendChild(tb); main.appendChild(t);
+}
+
+/* ============================================================
+   FOYDALANUVCHILAR FIKRI (/web/feedback)
+   ============================================================ */
+async function renderFeedback(){
+  const main = document.getElementById('main');
+  main.innerHTML = '<h2 class="pageTitle">Foydalanuvchilar fikri</h2><p class="pageDesc">/web/feedback — ilova ichidagi baho va izohlar</p>';
+  const toolbar = document.createElement('div'); toolbar.className='toolbar'; main.appendChild(toolbar);
+  const mk = (label, opts)=>{
+    const f = document.createElement('div'); f.className='field';
+    const l = document.createElement('label'); l.textContent=label;
+    const sel = document.createElement('select');
+    opts.forEach(([v,t])=>{ const o=document.createElement('option'); o.value=v; o.textContent=t; sel.appendChild(o); });
+    f.appendChild(l); f.appendChild(sel); toolbar.appendChild(f); sel.onchange=()=>{page=1;load();}; return sel;
+  };
+  let page = 1; const limit = 20;
+  const kindSel = mk('Turi', [['','— hammasi —'],['general','Umumiy'],['bug','Xato'],['idea','G\'oya'],['content','Kontent'],['nps','NPS']]);
+  const statusSel = mk('Holat', [['','— hammasi —'],['new','Yangi'],['seen','Ko\'rildi'],['done','Bajarildi']]);
+  const sum = document.createElement('div'); sum.className='cards'; main.appendChild(sum);
+  const wrap = document.createElement('div'); main.appendChild(wrap);
+  const pager = document.createElement('div'); pager.className='pager'; main.appendChild(pager);
+  async function load(){
+    let r;
+    try{ r = await api('/web/feedback', {query:{kind:kindSel.value, status:statusSel.value, limit, page}}); }catch(e){ return; }
+    const s = r.summary || {};
+    sum.innerHTML = '';
+    [['Jami', s.total],['O\'rtacha baho', (s.avg_rating||0).toFixed(2)],['Yangi', s.new]].forEach(([l,v])=>{
+      const c=document.createElement('div'); c.className='card'; c.innerHTML='<div class="v">'+esc(v ?? '—')+'</div><div class="l">'+esc(l)+'</div>'; sum.appendChild(c);
+    });
+    const list = (r.list && r.list.data) || [];
+    if(!list.length){ wrap.innerHTML='<p class="muted">Fikr topilmadi.</p>'; pager.innerHTML=''; return; }
+    const t = document.createElement('table');
+    t.innerHTML='<thead><tr><th>Sana</th><th>Foydalanuvchi</th><th>Baho</th><th>Turi</th><th>Xabar</th><th>Kontekst</th><th>Holat</th></tr></thead>';
+    const tb = document.createElement('tbody');
+    list.forEach(f=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML='<td>'+esc((f.created_at||'').slice(0,16))+'</td><td>'+esc(f.user_name||f.user_id)+'</td><td>'+(f.rating?('⭐'.repeat(f.rating)):'—')+'</td><td>'+esc(f.kind)+'</td><td style="max-width:360px;white-space:pre-wrap">'+esc(f.message||'')+'</td><td>'+esc(f.context||'')+'</td>';
+      const td=document.createElement('td');
+      const sel=document.createElement('select');
+      ['new','seen','done'].forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; if(v===f.status)o.selected=true; sel.appendChild(o); });
+      sel.onchange=async()=>{ try{ await api('/web/feedback/'+f.id+'/status',{method:'PUT',body:{status:sel.value}}); toast('Holat yangilandi','ok'); }catch(e){} };
+      td.appendChild(sel); tr.appendChild(td); tb.appendChild(tr);
+    });
+    t.appendChild(tb); wrap.innerHTML=''; wrap.appendChild(t);
+    const info=document.createElement('span'); const lp=r.list; info.textContent='Sahifa '+(lp.page||1)+' / '+(lp.total_pages||1)+' — jami: '+(lp.total||list.length);
+    const prev=document.createElement('button'); prev.className='sm'; prev.textContent='← Oldingi'; prev.disabled=page<=1; prev.onclick=()=>{page--;load();};
+    const next=document.createElement('button'); next.className='sm'; next.textContent='Keyingi →'; next.disabled=!lp.has_next; next.onclick=()=>{page++;load();};
+    pager.innerHTML=''; pager.appendChild(prev); pager.appendChild(info); pager.appendChild(next);
+  }
+  load();
+}
+
+/* ============================================================
    USERS (readonly: view + delete)
    ============================================================ */
 async function renderUsers(){
@@ -1706,6 +1793,48 @@ async function renderAIPrompt(){
 async function renderSettings(){
   const main = document.getElementById('main');
   main.innerHTML = '<h2 class="pageTitle">Tizim sozlamalari</h2><p class="pageDesc">/web/setting — key/value (value JSON string sifatida)</p>';
+
+  // --- TZ_MVP: Pay-as-you-go sozlamalari ---
+  const payCard = document.createElement('div'); payCard.className='card'; payCard.style.marginBottom='16px';
+  payCard.innerHTML = '<div class="v" style="font-size:16px;margin-bottom:4px">🪙 Pay-as-you-go: tanga sozlamalari</div>'+
+    '<div class="l" style="margin-bottom:10px">AI mashqlari (keys, test, fleshkarta to\'plami, yo\'l xaritasi) <b>AI sarflagan tokenga qarab</b> tanga yechadi. '+
+    'Avval kunlik bepul tangalar, keyin sotib olingan balans ishlatiladi; Premium obunachilardan yechilmaydi. Fleshkartalarni <b>kunlik takrorlash bepul</b>.</div>';
+  const payGrid = document.createElement('div');
+  payGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px';
+  const mkNum = (label, step)=>{
+    const f = document.createElement('div'); f.className='field';
+    const l = document.createElement('label'); l.textContent=label;
+    const i = document.createElement('input'); i.type='number'; i.min='0'; i.step=step;
+    f.appendChild(l); f.appendChild(i); payGrid.appendChild(f); return i;
+  };
+  const dailyInp = mkNum('Kunlik bepul tangalar (har 24 soatda, to\'planmaydi)', '1');
+  const rateInp = mkNum('Token narxi: 1 000 token = X tanga (0 = tanga yechilmaydi)', '0.1');
+  const imgWrap = document.createElement('div'); imgWrap.className='field';
+  imgWrap.innerHTML = '<label>AI tibbiy tasvirlar (EKG, rentgen...) case\'larda</label>';
+  const imgChk = document.createElement('input'); imgChk.type='checkbox'; imgChk.style.cssText='width:auto;margin:6px 0';
+  const imgTxt = document.createElement('span'); imgTxt.className='muted'; imgTxt.textContent=' yoqish (illyustrativ, qo\'shimcha token sarfi)';
+  const imgRow = document.createElement('div'); imgRow.appendChild(imgChk); imgRow.appendChild(imgTxt); imgWrap.appendChild(imgRow);
+  payGrid.appendChild(imgWrap);
+  payCard.appendChild(payGrid);
+  const paySave = document.createElement('button'); paySave.className='primary'; paySave.style.marginTop='10px'; paySave.textContent='💾 Saqlash';
+  paySave.onclick = async()=>{
+    try{
+      await api('/web/setting/daily-free-coins', {method:'PUT', body:{daily_free_coins: Math.max(0, parseInt(dailyInp.value||'0',10)||0)}});
+      await api('/web/setting/coin-rate', {method:'PUT', body:{coins_per_1k_tokens: Math.max(0, Number(rateInp.value||0))}});
+      await api('/web/setting/practice-images', {method:'PUT', body:{enabled: imgChk.checked}});
+      toast('Saqlandi','ok');
+    }catch(e){}
+  };
+  payCard.appendChild(paySave);
+  const legacy = document.createElement('p'); legacy.className='muted'; legacy.style.marginTop='8px';
+  legacy.innerHTML = 'Eski sozlamalar: <code>daily_free_limit</code> (keys soni) faqat eski simulyatsiya moduli uchun; <code>coin_to_uzs_rate</code> olib tashlangan (tanga paketlari tariflarda); <code>voice_enabled</code> — keyinga qoldirilgan.';
+  payCard.appendChild(legacy);
+  main.appendChild(payCard);
+  (async()=>{
+    try{ dailyInp.value = (await api('/web/setting/daily-free-coins')).daily_free_coins; }catch(e){}
+    try{ rateInp.value = (await api('/web/setting/coin-rate')).coins_per_1k_tokens; }catch(e){}
+    try{ imgChk.checked = !!(await api('/web/setting/practice-images')).enabled; }catch(e){}
+  })();
 
   // --- Mukofot sozlamalari: bazaviy XP/Coin endi "Levellar" sahifasida (har bir
   // foydalanuvchi darajasi - Level 1/2/3... - o'zining xp_reward/coin_reward'iga
@@ -2048,8 +2177,9 @@ const NAV = [
   {group:'Ta\'lim kontenti', items:[
     {key:'category', label:'📁 Bo\'limlar', render: ()=>renderGenericModule('category')},
     {key:'topic', label:'📑 Mavzular', render: ()=>renderGenericModule('topic')},
-    {key:'case', label:'🧠 Case\'lar', render: ()=>renderGenericModule('case')},
+    {key:'case', label:'🧠 Case\'lar (arxiv)', render: ()=>renderGenericModule('case')},
     {key:'practice_stats', label:'📈 AI Practice', render: renderPracticeStats},
+    {key:'flashcard_stats', label:'🃏 Fleshkartalar', render: renderFlashcardStats},
     {key:'level', label:'🏅 Levellar', render: ()=>renderGenericModule('level')},
     {key:'ai_prompt', label:'🤖 AI Promptlar', render: renderAIPrompt},
   ]},
@@ -2062,6 +2192,7 @@ const NAV = [
   {group:'Foydalanuvchilar', items:[
     {key:'user', label:'👤 Foydalanuvchilar', render: renderUsers},
     {key:'notification', label:'🔔 Bildirishnomalar', render: ()=>renderGenericModule('notification')},
+    {key:'feedback', label:'💬 Fikrlar', render: renderFeedback},
   ]},
   {group:'Boshqaruv', items:[
     {key:'admin', label:'🧑‍💼 Adminlar', render: ()=>renderGenericModule('admin')},

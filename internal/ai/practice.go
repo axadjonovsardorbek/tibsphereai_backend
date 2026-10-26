@@ -3,6 +3,7 @@ package ai
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -136,6 +137,9 @@ var practiceGenParams = map[string]any{"temperature": 0.9}
 
 func (p geminiPractice) GenerateCase(ctx context.Context, in *models.PracticeGenInput) (*models.PracticeCaseGen, []int, *Usage, error) {
 	prompt := buildCommon(in) + "\n\n" + caseGenInstruction
+	if in.WantImaging {
+		prompt += imagingInstruction
+	}
 	text, usage, err := p.g.generateContent(ctx, prompt, practiceGenParams, true)
 	if err != nil {
 		return nil, nil, usage, err
@@ -531,4 +535,53 @@ func (p geminiPractice) Advise(ctx context.Context, language string, summaryLine
 
 func (mockPractice) Advise(ctx context.Context, language string, summaryLines, stepLines []string) (string, []string, *Usage, error) {
 	return "", nil, nil, errPracticeNotConfigured
+}
+
+// --- Tibbiy tasvir (EKG, rentgen, KT, MRT, UZI...) ---
+
+// ImageAI - case uchun tibbiy tasvir generatsiya qiladi (Gemini image model).
+type ImageAI interface {
+	GenerateImage(ctx context.Context, prompt string) (data []byte, mimeType string, usage *Usage, err error)
+}
+
+const imagingInstruction = `
+
+QO'SHIMCHA (tasvir): Agar bu case uchun tibbiy tasvir/yozuv klinik jihatdan muhim bo'lsa (EKG, rentgen, KT, MRT, UZI, teri/ko'z/jarohat fotosurati va h.k.), JSON'ga "imaging" maydonini qo'sh:
+"imaging": {"type": "ecg|xray|ct|mri|ultrasound|photo", "prompt": "<INGLIZ TILIDA aniq tasvir tavsifi>"}
+- "prompt": tasvir TASHXISGA TO'LIQ MOS bo'lsin (masalan "12-lead ECG, inferior STEMI: ST elevation in II, III, aVF with reciprocal depression in I, aVL"), realistik tibbiy tasvir uslubida, matn/ism/yozuv va bemor ma'lumotlarisiz.
+- Agar tasvir kerak bo'lmasa: "imaging": {"type": "none", "prompt": ""}.
+- Tasvir tashxisni oshkor qilmasligi uchun "patient"/"chief_complaint" matnida tasvir natijasini (masalan "EKGda ST elevatsiya") yozma - u tasvirdan o'qilishi kerak.`
+
+const imageSafetyPrefix = "Realistic medical image for an educational clinical case, documentary medical-photo/clinical-document style, no text overlay, no watermark, no patient identifiers. "
+
+func (p geminiPractice) GenerateImage(ctx context.Context, prompt string) ([]byte, string, *Usage, error) {
+	g := p.g
+	if g.imageModel == "" {
+		return nil, "", nil, errors.New("image model sozlanmagan")
+	}
+	reqBody := geminiRequest{
+		Contents:         []geminiContent{{Role: "user", Parts: []geminiPart{{Text: imageSafetyPrefix + strings.TrimSpace(prompt)}}}},
+		GenerationConfig: &geminiGenerationConfig{ResponseModalities: []string{"IMAGE", "TEXT"}},
+	}
+	gr, usage, err := g.doRequest(ctx, g.imageModel, reqBody)
+	if err != nil {
+		return nil, "", usage, err
+	}
+	if len(gr.Candidates) == 0 {
+		return nil, "", usage, errors.New("image: javob bo'sh")
+	}
+	for _, part := range gr.Candidates[0].Content.Parts {
+		if part.InlineData != nil && part.InlineData.Data != "" {
+			raw, err := base64.StdEncoding.DecodeString(part.InlineData.Data)
+			if err != nil {
+				return nil, "", usage, fmt.Errorf("image decode: %w", err)
+			}
+			return raw, part.InlineData.MimeType, usage, nil
+		}
+	}
+	return nil, "", usage, errors.New("image: javobda rasm topilmadi")
+}
+
+func (mockPractice) GenerateImage(ctx context.Context, prompt string) ([]byte, string, *Usage, error) {
+	return nil, "", nil, errPracticeNotConfigured
 }

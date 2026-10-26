@@ -1,6 +1,7 @@
 package minio
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"mime"
@@ -93,4 +94,15 @@ func (m *MinIO) Upload(fileName, filePath string) (string, error) {
 	minioURL := fmt.Sprintf("%s/%s/%s", domain, bucketName, fileName)
 
 	return minioURL, nil
+}
+
+// UploadBytes - xotiradagi baytlarni (masalan AI yaratgan rasm) yuklaydi va ommaviy URL qaytaradi.
+func (m *MinIO) UploadBytes(fileName string, data []byte, contentType string) (string, error) {
+	bucketName := m.Cnf.MINIO_BUCKET_NAME
+	_, err := m.Client.PutObject(context.Background(), bucketName, fileName, bytes.NewReader(data), int64(len(data)),
+		minio.PutObjectOptions{ContentType: contentType})
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s/%s/%s", m.Cnf.MINIO_DOMAIN, bucketName, fileName), nil
 }

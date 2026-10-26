@@ -75,6 +75,10 @@ type PracticeItemRes struct {
 	// case
 	ChiefComplaint string         `json:"chief_complaint,omitempty"`
 	Patient        map[string]any `json:"patient,omitempty"` // yosh, jins, anamnez, ko'rik, analizlar
+	// AI yaratgan tibbiy tasvir (EKG, rentgen...): case bilan birga ko'rsatiladi.
+	ImageUrl  string `json:"image_url,omitempty"`
+	ImageType string `json:"image_type,omitempty"`
+	ImageNote string `json:"image_note,omitempty"`
 	// test
 	Question string           `json:"question,omitempty"`
 	Options  []PracticeOption `json:"options,omitempty"`
@@ -125,6 +129,17 @@ type PracticeCaseGen struct {
 	Difficulty     string         `json:"difficulty"`
 	Summary        string         `json:"summary"` // takrorlanmaslik uchun qisqa xulosa
 	Topic          string         `json:"topic"`   // aralash sessiyada AI tanlagan mavzu nomi (backend id'ga moslaydi)
+	// Imaging - AI taklif qilgan tibbiy tasvir (EKG, rentgen...): faqat practice_images_enabled yoqilganda so'raladi.
+	Imaging *PracticeImaging `json:"imaging,omitempty"`
+	// ImageUrl/ImageType - generatsiya qilingan tasvir (MinIO); backend to'ldiradi.
+	ImageUrl  string `json:"image_url,omitempty"`
+	ImageType string `json:"image_type,omitempty"`
+}
+
+// PracticeImaging - AI aytgan tasvir turi va uni chizish uchun ingliz tilidagi prompt.
+type PracticeImaging struct {
+	Type   string `json:"type"` // ecg | xray | ct | mri | ultrasound | photo | none
+	Prompt string `json:"prompt"`
 }
 
 // PracticeTestGen - AI generatsiya qilgan test savoli (payload).
@@ -158,6 +173,8 @@ type PracticeGenInput struct {
 	Previous     []string      // oldingi elementlar xulosalari
 	// FreeTopic - TopicNames[0] foydalanuvchi yozgan erkin mavzu (delimiter ichida, tibbiy bo'lmasa rad etiladi).
 	FreeTopic bool
+	// WantImaging - case uchun tibbiy tasvir (EKG, rentgen...) promptini ham so'rash.
+	WantImaging bool
 }
 
 // PracticeSessionRow - storage qatlami uchun sessiya qatori.

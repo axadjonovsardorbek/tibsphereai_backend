@@ -5,6 +5,7 @@ import (
 	"hash/fnv"
 	"math/rand"
 	"os"
+	"strings"
 	"testing"
 
 	"tibsphereai/internal/ai"
@@ -149,11 +150,12 @@ func practiceTestDB(t *testing.T) *pgxpool.Pool {
 }
 
 type fakePracticeAI struct {
-	verdictScore int
-	failEval     bool
-	notMedical   bool
-	tokens       int // har chaqiruvdagi jami token (0 = 150)
-	calls        int
+	verdictScore      int
+	failEval          bool
+	notMedical        bool
+	sawImagingRequest bool
+	tokens            int // har chaqiruvdagi jami token (0 = 150)
+	calls             int
 }
 
 func (f *fakePracticeAI) usage() *ai.Usage {
@@ -173,10 +175,15 @@ func (f *fakePracticeAI) GenerateCase(ctx context.Context, in *m.PracticeGenInpu
 	if len(in.Chunks) > 0 {
 		used = []int{1}
 	}
-	return &m.PracticeCaseGen{
+	c := &m.PracticeCaseGen{
 		ChiefComplaint: "Ko'kragim og'riyapti", Patient: map[string]any{"yosh": 55}, ExpectedAnswer: "STEMI",
 		Explanation: "ST elevatsiya", Summary: "STEMI case " + string(rune('0'+f.calls)),
-	}, used, f.usage(), nil
+	}
+	if in.WantImaging {
+		f.sawImagingRequest = true
+		c.Imaging = &m.PracticeImaging{Type: "ecg", Prompt: "12-lead ECG, inferior STEMI"}
+	}
+	return c, used, f.usage(), nil
 }
 
 func (f *fakePracticeAI) GenerateTest(ctx context.Context, in *m.PracticeGenInput) (*m.PracticeTestGen, []int, *ai.Usage, error) {
@@ -770,4 +777,85 @@ func TestPractice_XP_DifficultyMultiplier(t *testing.T) {
 	var streak int
 	_ = e.pool.QueryRow(ctx, `SELECT streak_count FROM users WHERE id = $1`, e.userId).Scan(&streak)
 	assert.Equal(t, 1, streak, "javob berish streak'ni boshlaydi")
+}
+
+type fakeImageAI struct {
+	calls int
+	fail  bool
+}
+
+func (f *fakeImageAI) GenerateImage(ctx context.Context, prompt string) ([]byte, string, *ai.Usage, error) {
+	f.calls++
+	if f.fail {
+		return nil, "", &ai.Usage{PromptTokens: 30, OutputTokens: 0, TotalTokens: 30}, assert.AnError
+	}
+	return []byte("\x89PNG fake"), "image/png", &ai.Usage{PromptTokens: 32, OutputTokens: 1600, TotalTokens: 1632}, nil
+}
+
+type fakeImageStore struct{ uploaded []string }
+
+func (f *fakeImageStore) UploadBytes(name string, data []byte, ct string) (string, error) {
+	f.uploaded = append(f.uploaded, name)
+	return "https://minio.example/bucket/" + name, nil
+}
+
+func TestPractice_CaseImages(t *testing.T) {
+	e := newPracticeEnv(t)
+	ctx := context.Background()
+	e.setSetting(t, "coins_per_1k_tokens", "1")
+	e.setSetting(t, "daily_free_coins", "20")
+	img := &fakeImageAI{}
+	store := &fakeImageStore{}
+	e.prac.ai = &ai.Client{Practice: e.aiFake, Flashcards: e.cardAI, Embedder: fakeEmbedder{}, Image: img}
+	e.prac.SetImageStore(store)
+
+	start := func() *m.PracticeSessionRes {
+		s, err := e.prac.Start(ctx, &m.PracticeStartReq{UserId: e.userId, Mode: "case", CategoryId: e.catId})
+		require.NoError(t, err)
+		return s
+	}
+
+	// admin sozlamasi o'chiq (default): tasvir so'ralmaydi ham, yaratilmaydi ham
+	s1 := start()
+	it, err := e.prac.Next(ctx, e.userId, s1.Id)
+	require.NoError(t, err)
+	assert.False(t, e.aiFake.sawImagingRequest)
+	assert.Empty(t, it.ImageUrl)
+	assert.Equal(t, 0, img.calls)
+
+	// yoqiladi: AI imaging so'raladi, rasm generatsiya qilinib MinIO'ga yuklanadi, case bilan birga ko'rinadi
+	e.setSetting(t, "practice_images_enabled", "true")
+	s2 := start()
+	it, err = e.prac.Next(ctx, e.userId, s2.Id)
+	require.NoError(t, err)
+	assert.True(t, e.aiFake.sawImagingRequest)
+	assert.Equal(t, 1, img.calls)
+	require.Len(t, store.uploaded, 1)
+	assert.True(t, strings.HasPrefix(it.ImageUrl, "https://minio.example/bucket/practice/"))
+	assert.True(t, strings.HasSuffix(it.ImageUrl, ".png"))
+	assert.Equal(t, "ecg", it.ImageType)
+	assert.NotEmpty(t, it.ImageNote, "AI yaratgan tasvir ogohlantirishi")
+	// tasvir tokenlari sessiyaga qo'shiladi (150 + 1632)
+	d, _ := e.prac.GetSession(ctx, e.userId, s2.Id)
+	assert.Equal(t, 150+1632, d.TokensUsed)
+	// takroriy next - xuddi shu element, yangi rasm yaratilmaydi
+	again, _ := e.prac.Next(ctx, e.userId, s2.Id)
+	assert.Equal(t, it.Id, again.Id)
+	assert.Equal(t, 1, img.calls)
+
+	// tasvir xato: case rasmsiz davom etadi
+	img.fail = true
+	s3 := start()
+	it, err = e.prac.Next(ctx, e.userId, s3.Id)
+	require.NoError(t, err)
+	assert.Empty(t, it.ImageUrl)
+	assert.NotEmpty(t, it.ChiefComplaint)
+
+	// test rejimida tasvir yo'q
+	img.fail = false
+	calls := img.calls
+	s4, _ := e.prac.Start(ctx, &m.PracticeStartReq{UserId: e.userId, Mode: "test", CategoryId: e.catId, Count: 1})
+	_, err = e.prac.Next(ctx, e.userId, s4.Id)
+	require.NoError(t, err)
+	assert.Equal(t, calls, img.calls)
 }

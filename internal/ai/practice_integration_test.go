@@ -111,3 +111,19 @@ func TestPracticeReal_RoadmapAdvise(t *testing.T) {
 	}
 	assert.Len(t, reasons, 2)
 }
+
+func TestPracticeReal_CaseWithImaging(t *testing.T) {
+	p := realPractice(t)
+	p.g.imageModel = "gemini-3.1-flash-image"
+	in := &models.PracticeGenInput{Mode: "case", Language: "uz", Difficulty: "medium", CategoryName: "Kardiologiya", TopicNames: []string{"O'tkir koronar sindrom"}, WantImaging: true}
+	c, _, _, err := p.GenerateCase(context.Background(), in)
+	require.NoError(t, err)
+	require.NotNil(t, c.Imaging, "AI imaging maydonini qaytarishi kerak (EKG klinik muhim)")
+	t.Logf("IMAGING: %s | %s", c.Imaging.Type, c.Imaging.Prompt)
+	t.Logf("COMPLAINT: %s", c.ChiefComplaint)
+	assert.NotEqual(t, "none", c.Imaging.Type)
+	data, mime, usage, err := p.GenerateImage(context.Background(), c.Imaging.Prompt)
+	require.NoError(t, err)
+	t.Logf("IMAGE: %s %d bayt, tokens=%d", mime, len(data), usage.TotalTokens)
+	assert.Greater(t, len(data), 10_000)
+}

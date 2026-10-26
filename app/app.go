@@ -61,6 +61,7 @@ func Run(cf *config.Config) {
 		log.Fatalf("error while connecting clients. err: %s", err.Error())
 	}
 
+	services.Practice.SetImageStore(minioClient)
 	handlers := handler.NewHandler(*services, minioClient, cf)
 
 	go bot.BotAuth(cf)

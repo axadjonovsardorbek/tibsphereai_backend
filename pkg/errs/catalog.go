@@ -231,6 +231,11 @@ var (
 		Ru: "Этот email/телефон привязан к другому аккаунту",
 		En: "This email/phone is linked to another account",
 	})
+	ErrCoinPaymentDisabled = New(http.StatusBadRequest, "coin_payment_disabled", Text{
+		Uz: "Tanga bilan qisman to'lov olib tashlangan: tanga paketini sotib oling yoki to'liq to'lang",
+		Ru: "Частичная оплата монетами отключена: купите пакет монет или оплатите полностью",
+		En: "Paying part of an order with coins is no longer supported: buy a coin package or pay in full",
+	})
 	ErrInsufficientCoins = New(http.StatusBadRequest, "insufficient_coins", Text{
 		Uz: "Tanga balansi yetarli emas",
 		Ru: "Недостаточно монет на балансе",
