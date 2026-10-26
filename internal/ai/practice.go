@@ -467,3 +467,61 @@ func ValidateFlashcards(in []models.FlashcardGen, max int) []models.FlashcardGen
 func (mockPractice) GenerateFlashcards(ctx context.Context, in *models.FlashcardGenInput) ([]models.FlashcardGen, *Usage, error) {
 	return nil, nil, errPracticeNotConfigured
 }
+
+// --- AI yo'l xaritasi: qadamlar uchun izoh va umumiy xulosa ---
+
+// RoadmapAI - backend hisoblagan o'qish yo'li qadamlariga shaxsiy izoh va umumiy xulosa yozadi.
+// Qadamlarning o'zi (mavzu, harakat, qiyinlik) deterministik hisoblanadi; AI ularni o'zgartira olmaydi.
+type RoadmapAI interface {
+	Advise(ctx context.Context, language string, summaryLines, stepLines []string) (summary string, reasons []string, usage *Usage, err error)
+}
+
+const roadmapInstruction = `Sen shaxsiy tibbiy o'qituvchi-murabbiysan (coach). Quyida foydalanuvchining bilim xaritasi xulosasi va unga tuzilgan o'qish yo'li QADAMLARI berilgan. Qadamlarni O'ZGARTIRMA, qo'shma va olib tashlama.
+
+Vazifa:
+1. "summary" - 2-3 gap: umumiy holat (qaysi yo'nalishlar kuchli, qaysi zaif) va rag'batlantiruvchi, aniq tavsiya.
+2. "reasons" - HAR BIR qadam uchun (xuddi shu tartibda, qadamlar soniga teng) 1 gaplik shaxsiy izoh: nega aynan shu qadam hozir foydali.
+
+Foydalanuvchi bilan "sen" tilida, do'stona, lekin professional gaplash. Raqamlarni to'qib chiqarma: faqat berilgan ma'lumotlardan foydalan.
+
+Javobni FAQAT shu JSON formatda qaytar:
+{"summary":"...","reasons":["...","..."]}`
+
+func (p geminiPractice) Advise(ctx context.Context, language string, summaryLines, stepLines []string) (string, []string, *Usage, error) {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Chiqish tili: %s.\n\nBilim xaritasi xulosasi:\n", langName(language))
+	for _, l := range summaryLines {
+		fmt.Fprintf(&b, "- %s\n", l)
+	}
+	b.WriteString("\nO'qish yo'li qadamlari:\n")
+	for i, l := range stepLines {
+		fmt.Fprintf(&b, "%d. %s\n", i+1, l)
+	}
+	b.WriteString("\n" + roadmapInstruction)
+	text, usage, err := p.g.generateContent(ctx, b.String(), map[string]any{"temperature": 0.6}, true)
+	if err != nil {
+		return "", nil, usage, err
+	}
+	var raw struct {
+		Summary string   `json:"summary"`
+		Reasons []string `json:"reasons"`
+	}
+	if err := unmarshalJSONLoose(text, &raw); err != nil {
+		return "", nil, usage, fmt.Errorf("roadmap parse error: %w (raw: %s)", err, truncate(text, 300))
+	}
+	raw.Summary = strings.TrimSpace(raw.Summary)
+	if raw.Summary == "" || len(raw.Reasons) != len(stepLines) {
+		return "", nil, usage, fmt.Errorf("roadmap javobi to'liq emas (qadamlar %d, izohlar %d)", len(stepLines), len(raw.Reasons))
+	}
+	for i := range raw.Reasons {
+		raw.Reasons[i] = strings.TrimSpace(raw.Reasons[i])
+		if raw.Reasons[i] == "" {
+			return "", nil, usage, errors.New("roadmap: bo'sh izoh")
+		}
+	}
+	return raw.Summary, raw.Reasons, usage, nil
+}
+
+func (mockPractice) Advise(ctx context.Context, language string, summaryLines, stepLines []string) (string, []string, *Usage, error) {
+	return "", nil, nil, errPracticeNotConfigured
+}

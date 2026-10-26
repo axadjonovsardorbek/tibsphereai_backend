@@ -102,6 +102,8 @@ p, admin, /web/source/:id/reindex, POST
 p, admin, /web/source/:id/delete, DELETE
 p, admin, /web/practice/stats, GET
 p, admin, /web/flashcard/stats, GET
+p, admin, /web/feedback, GET
+p, admin, /web/feedback/:id/status, PUT
 p, admin, /web/partner, POST
 p, admin, /web/partner, GET
 p, admin, /web/partner/:id, GET
@@ -186,6 +188,9 @@ p, user, /mobile/flashcard/cards, POST
 p, user, /mobile/flashcard/cards/:id, PUT
 p, user, /mobile/flashcard/cards/:id, DELETE
 p, user, /mobile/flashcard/cards/:id/review, POST
+p, user, /mobile/roadmap, GET
+p, user, /mobile/roadmap/refresh, POST
+p, user, /mobile/feedback, POST
 p, user, /mobile/practice/wallet, GET
 p, user, /mobile/practice/sessions, POST
 p, user, /mobile/practice/sessions, GET

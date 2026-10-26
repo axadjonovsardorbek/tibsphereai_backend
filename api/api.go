@@ -220,6 +220,12 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			webFlashcard.GET("/stats", h.GetFlashcardAdminStats)
 		}
 
+		webFeedback := web.Group("/feedback").Use(mid.NewAuth(enforcer, rdb))
+		{
+			webFeedback.GET("", h.GetAllFeedback)
+			webFeedback.PUT("/:id/status", h.SetFeedbackStatus)
+		}
+
 		webPractice := web.Group("/practice").Use(mid.NewAuth(enforcer, rdb))
 		{
 			webPractice.GET("/stats", h.GetPracticeStats)
@@ -408,6 +414,10 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			practice.POST("/items/:id/answer", h.AnswerPractice)
 			practice.POST("/items/:id/report", h.ReportPracticeItem)
 		}
+
+		mobile.GET("/roadmap", mid.NewAuth(enforcer, rdb), h.GetRoadmap)
+		mobile.POST("/roadmap/refresh", mid.NewAuth(enforcer, rdb), h.RefreshRoadmap)
+		mobile.POST("/feedback", mid.NewAuth(enforcer, rdb), h.CreateFeedback)
 
 		flashcard := mobile.Group("/flashcard").Use(mid.NewAuth(enforcer, rdb))
 		{

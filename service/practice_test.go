@@ -244,6 +244,7 @@ func newPracticeEnv(t *testing.T) *practiceEnv {
 		Db: pool, SourceS: st.NewSourceRepo(pool), PracticeS: st.NewPracticeRepo(pool),
 		CategoryS: st.NewCategoryRepo(pool), TopicS: st.NewTopicRepo(pool), UserS: st.NewUserRepo(pool, nil),
 		AIUsageLogS: st.NewAIUsageLogRepo(pool), AppSettingS: st.NewAppSettingRepo(pool), FlashcardS: st.NewFlashcardRepo(pool),
+		RoadmapS: st.NewRoadmapRepo(pool), FeedbackS: st.NewFeedbackRepo(pool),
 	}
 	settings := NewAppSettingService(store, 3)
 	fa := &fakePracticeAI{verdictScore: 90}

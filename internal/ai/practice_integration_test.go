@@ -98,3 +98,16 @@ func TestPracticeReal_Flashcards(t *testing.T) {
 	_, _, err = p.GenerateFlashcards(context.Background(), &models.FlashcardGenInput{Mode: "topic", Language: "uz", Count: 5, FreeTopic: true, TopicNames: []string{"Футбол чемпионати"}})
 	t.Logf("not medical -> %v", err)
 }
+
+func TestPracticeReal_RoadmapAdvise(t *testing.T) {
+	p := realPractice(t)
+	summary, reasons, _, err := p.Advise(context.Background(), "ru",
+		[]string{"jami mavzular: 4; kuchli: 1, o'rtacha: 1, zaif: 1, ma'lumot kam: 0, boshlanmagan: 1", "ОКС: o'zlashtirish 32/100, 6 ta javob, daraja=weak"},
+		[]string{"harakat=flashcard_review, soni=7 | asosiy sabab: due", "harakat=test, mavzu=ОКС, qiyinlik=easy, soni=10 | asosiy sabab: weak"})
+	require.NoError(t, err)
+	t.Logf("SUMMARY: %s", summary)
+	for _, r := range reasons {
+		t.Logf("REASON: %s", r)
+	}
+	assert.Len(t, reasons, 2)
+}

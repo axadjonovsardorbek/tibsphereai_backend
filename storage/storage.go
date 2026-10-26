@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	m "tibsphereai/pkg/models"
+	"time"
 )
 
 type AdminI interface {
@@ -278,6 +279,23 @@ type FlashcardI interface {
 	// ExistingFronts - dublikat yaratmaslik uchun oxirgi old tomonlar.
 	ExistingFronts(userId string, limit int) ([]string, error)
 	AdminStats() (*m.FlashcardAdminStats, error)
+}
+
+// RoadmapI - AI yo'l xaritasi uchun xom ma'lumotlar va kesh (TZ_MVP).
+type RoadmapI interface {
+	Performance(userId string, limit int) ([]m.PerfRow, error)
+	Catalog() ([]m.CatalogTopic, error)
+	CardsByTopic(userId string) (map[string]m.TopicCards, error)
+	DueCards(userId string) (int, error)
+	GetCache(userId string) (payload []byte, lang string, at time.Time, err error)
+	SaveCache(userId string, payload []byte, lang string) error
+}
+
+// FeedbackI - foydalanuvchilar fikri (TZ_MVP).
+type FeedbackI interface {
+	Create(req *m.FeedbackCreateReq) (*m.ById, error)
+	GetAll(req *m.FeedbackListReq) (*m.PaginationResponse, []*m.FeedbackRes, *m.FeedbackSummary, error)
+	SetStatus(id, status string) error
 }
 
 type DashBoardI interface {
