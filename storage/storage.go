@@ -247,6 +247,11 @@ type PracticeI interface {
 	SetAnswer(itemId string, answer, eval []byte, isCorrect bool, score int, tokens int) error
 	AddTokens(sessionId string, prompt, completion int) error
 	Finish(sessionId, status string, score, xp int) error
+	// SetBilling - sessiya tanga hisobidan ishlayotganini belgilaydi (obunachi bo'lmaganlar).
+	SetBilling(sessionId string, billed bool) error
+	// AddCharged - sessiyada yechilgan tangalar yig'indisiga qo'shadi.
+	AddCharged(sessionId string, coins int) error
+	SetFlashcards(sessionId, status string, created int) error
 	Report(itemId, reason string) error
 	Stats() (*m.PracticeStats, error)
 }

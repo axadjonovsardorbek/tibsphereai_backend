@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"tibsphereai/pkg/errs"
 
 	m "tibsphereai/pkg/models"
@@ -131,6 +132,44 @@ func (h *Handler) SetCoinRate(c *gin.Context) {
 		return
 	}
 	if err := h.Clients.AppSetting.SetCoinsPer1kTokens(context.Background(), req.CoinsPer1kTokens); err != nil {
+		errs.Bad(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "setting saved"})
+}
+
+// GetDailyFreeCoins godoc
+// @Summary Kunlik bepul tangalar (har foydalanuvchiga har 24 soatda)
+// @Tags setting
+// @Produce json
+// @Success 200 {object} models.DailyFreeCoinsRes
+// @Security BearerAuth
+// @Router /web/setting/daily-free-coins [get]
+func (h *Handler) GetDailyFreeCoins(c *gin.Context) {
+	c.JSON(http.StatusOK, m.DailyFreeCoinsRes{DailyFreeCoins: h.Clients.AppSetting.DailyFreeCoins(context.Background())})
+}
+
+// SetDailyFreeCoins godoc
+// @Summary Kunlik bepul tangalarni o'zgartirish (0 - bepul tanga yo'q)
+// @Description Bugun allaqachon berilgan tangalarga ta'sir qilmaydi, ertadan kuchga kiradi.
+// @Tags setting
+// @Accept json
+// @Produce json
+// @Param body body models.DailyFreeCoinsRes true "daily_free_coins"
+// @Success 200 {object} string
+// @Security BearerAuth
+// @Router /web/setting/daily-free-coins [put]
+func (h *Handler) SetDailyFreeCoins(c *gin.Context) {
+	var req m.DailyFreeCoinsRes
+	if err := c.BindJSON(&req); err != nil {
+		errs.Bad(c, err)
+		return
+	}
+	if req.DailyFreeCoins < 0 || req.DailyFreeCoins > 10000 {
+		errs.Bad(c, fmt.Errorf("daily_free_coins must be between 0 and 10000"))
+		return
+	}
+	if _, err := h.Clients.AppSetting.Set(context.Background(), &m.AppSettingSetReq{Key: m.AppSettingDailyFreeCoins, Value: strconv.Itoa(req.DailyFreeCoins)}); err != nil {
 		errs.Bad(c, err)
 		return
 	}

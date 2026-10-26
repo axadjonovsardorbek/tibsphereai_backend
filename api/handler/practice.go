@@ -180,3 +180,23 @@ func (h *Handler) ReportPracticeItem(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "reported"})
 }
+
+// GetPracticeWallet godoc
+// @Summary Hamyon: bugungi bepul tangalar, balans va tarif (Pay-as-you-go "Limit" belgisi uchun)
+// @Tags practice
+// @Produce json
+// @Success 200 {object} service.Wallet
+// @Security BearerAuth
+// @Router /mobile/practice/wallet [get]
+func (h *Handler) GetPracticeWallet(c *gin.Context) {
+	userId := claimData(c, "user_id")
+	if userId == "" {
+		return
+	}
+	w, err := h.Clients.Practice.Wallet(c.Request.Context(), userId)
+	if err != nil {
+		errs.Bad(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, w)
+}

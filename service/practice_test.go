@@ -50,9 +50,15 @@ func TestBuildSourceRefs(t *testing.T) {
 	assert.Equal(t, "p. 5", refs[1].Locator)
 	assert.Equal(t, []string{"c3", "c1"}, ids)
 
-	// AI hech narsa aytmasa - promptga kiritilgan hammasi (manba bo'yicha birlashtirilgan).
+	// AI used_sources'ni umuman aytmasa (nil) - promptga kiritilgan hammasi (manba bo'yicha birlashtirilgan).
 	refs, _ = BuildSourceRefs(chunks, nil)
 	assert.Len(t, refs, 2)
+	// AI aniq "hech qaysi" desa ([]) yoki faqat noto'g'ri raqamlar - manba yo'q.
+	refs, ids = BuildSourceRefs(chunks, []int{})
+	assert.Empty(t, refs)
+	assert.Empty(t, ids)
+	refs, _ = BuildSourceRefs(chunks, []int{99})
+	assert.Empty(t, refs)
 	// chunk umuman yo'q - bo'sh ro'yxat (manba to'qib chiqarilmaydi).
 	refs, ids = BuildSourceRefs(nil, []int{1, 2})
 	assert.Empty(t, refs)
@@ -145,11 +151,24 @@ func practiceTestDB(t *testing.T) *pgxpool.Pool {
 type fakePracticeAI struct {
 	verdictScore int
 	failEval     bool
+	notMedical   bool
+	tokens       int // har chaqiruvdagi jami token (0 = 150)
 	calls        int
+}
+
+func (f *fakePracticeAI) usage() *ai.Usage {
+	t := f.tokens
+	if t == 0 {
+		t = 150
+	}
+	return &ai.Usage{PromptTokens: t * 2 / 3, OutputTokens: t - t*2/3, TotalTokens: t}
 }
 
 func (f *fakePracticeAI) GenerateCase(ctx context.Context, in *m.PracticeGenInput) (*m.PracticeCaseGen, []int, *ai.Usage, error) {
 	f.calls++
+	if f.notMedical {
+		return nil, nil, f.usage(), ai.ErrTopicNotMedical
+	}
 	used := []int{}
 	if len(in.Chunks) > 0 {
 		used = []int{1}
@@ -157,11 +176,14 @@ func (f *fakePracticeAI) GenerateCase(ctx context.Context, in *m.PracticeGenInpu
 	return &m.PracticeCaseGen{
 		ChiefComplaint: "Ko'kragim og'riyapti", Patient: map[string]any{"yosh": 55}, ExpectedAnswer: "STEMI",
 		Explanation: "ST elevatsiya", Summary: "STEMI case " + string(rune('0'+f.calls)),
-	}, used, &ai.Usage{PromptTokens: 100, OutputTokens: 50, TotalTokens: 150}, nil
+	}, used, f.usage(), nil
 }
 
 func (f *fakePracticeAI) GenerateTest(ctx context.Context, in *m.PracticeGenInput) (*m.PracticeTestGen, []int, *ai.Usage, error) {
 	f.calls++
+	if f.notMedical {
+		return nil, nil, f.usage(), ai.ErrTopicNotMedical
+	}
 	used := []int{}
 	if len(in.Chunks) > 0 {
 		used = []int{1}
@@ -169,14 +191,14 @@ func (f *fakePracticeAI) GenerateTest(ctx context.Context, in *m.PracticeGenInpu
 	return &m.PracticeTestGen{
 		Question: "Qaysi biri to'g'ri?", Options: []string{"To'g'ri", "Xato 1", "Xato 2", "Xato 3"}, CorrectIndex: 0,
 		Explanation: "Chunki", Summary: "savol " + string(rune('0'+f.calls)),
-	}, used, &ai.Usage{PromptTokens: 80, OutputTokens: 20, TotalTokens: 100}, nil
+	}, used, f.usage(), nil
 }
 
 func (f *fakePracticeAI) EvaluateCase(ctx context.Context, lang, complaint string, patient map[string]any, expected, answer string) (*m.PracticeEval, *ai.Usage, error) {
 	if f.failEval {
 		return nil, nil, assert.AnError
 	}
-	return &m.PracticeEval{Score: f.verdictScore, Feedback: "izoh"}, &ai.Usage{TotalTokens: 60, PromptTokens: 40, OutputTokens: 20}, nil
+	return &m.PracticeEval{Score: f.verdictScore, Feedback: "izoh"}, f.usage(), nil
 }
 
 // fakeEmbedder - deterministik 8 o'lchamli vektor (matn xeshidan).
@@ -201,15 +223,16 @@ func (f fakeEmbedder) Embed(ctx context.Context, texts []string, query bool) ([]
 }
 
 type practiceEnv struct {
-	pool   *pgxpool.Pool
-	store  *st.Storage
-	prac   *PracticeService
-	src    *SourceService
-	aiFake *fakePracticeAI
-	userId string
-	catId  string
-	topic1 string
-	topic2 string
+	pool     *pgxpool.Pool
+	store    *st.Storage
+	prac     *PracticeService
+	settings *AppSettingService
+	src      *SourceService
+	aiFake   *fakePracticeAI
+	userId   string
+	catId    string
+	topic1   string
+	topic2   string
 }
 
 func newPracticeEnv(t *testing.T) *practiceEnv {
@@ -218,13 +241,15 @@ func newPracticeEnv(t *testing.T) *practiceEnv {
 	store := &st.Storage{
 		Db: pool, SourceS: st.NewSourceRepo(pool), PracticeS: st.NewPracticeRepo(pool),
 		CategoryS: st.NewCategoryRepo(pool), TopicS: st.NewTopicRepo(pool), UserS: st.NewUserRepo(pool, nil),
-		AIUsageLogS: st.NewAIUsageLogRepo(pool),
+		AIUsageLogS: st.NewAIUsageLogRepo(pool), AppSettingS: st.NewAppSettingRepo(pool),
 	}
+	settings := NewAppSettingService(store, 3)
 	fa := &fakePracticeAI{verdictScore: 90}
 	client := &ai.Client{Practice: fa, Embedder: fakeEmbedder{}}
 
 	env := &practiceEnv{pool: pool, store: store, aiFake: fa, userId: uuid.NewString(), catId: uuid.NewString(), topic1: uuid.NewString(), topic2: uuid.NewString()}
-	env.prac = NewPracticeService(store, client)
+	env.prac = NewPracticeService(store, client, settings)
+	env.settings = settings
 	env.prac.prefetch = false
 	env.src = NewSourceService(store, client)
 	env.src.async = false
@@ -502,11 +527,11 @@ func TestPractice_CaseMode_Evaluation(t *testing.T) {
 	assert.Equal(t, "STEMI", ans.Item.CorrectAnswer)
 	assert.False(t, ans.SessionFinished) // case rejimi cheksiz
 
-	// foydalanuvchi to'xtatadi: ball 60, XP = 60/100*5 = 3
+	// foydalanuvchi to'xtatadi: ball 60, XP = 60/100*5 = 3, qiyinlik hard (2x) -> 6
 	fin, err := e.prac.Finish(ctx, e.userId, sess.Id)
 	require.NoError(t, err)
 	assert.Equal(t, 60, fin.Score)
-	assert.Equal(t, 3, fin.XPEarned)
+	assert.Equal(t, 6, fin.XPEarned)
 	assert.Equal(t, m.PracticeStatusFinished, fin.Status)
 
 	// takrorlanmaslik: ikkinchi generatsiyada oldingi xulosa promptga beriladi
@@ -524,4 +549,215 @@ func TestPractice_Finish_NoAnswers_Abandoned(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, m.PracticeStatusAbandoned, fin.Status)
 	assert.Equal(t, 0, fin.XPEarned)
+}
+
+// --- Pay-as-you-go, erkin mavzu, streak, XP koeffitsienti ---
+
+func (e *practiceEnv) setSetting(t *testing.T, key, value string) {
+	t.Helper()
+	var old *string
+	var v string
+	if err := e.pool.QueryRow(context.Background(), `SELECT value FROM app_settings WHERE key = $1`, key).Scan(&v); err == nil {
+		old = &v
+	}
+	_, err := e.pool.Exec(context.Background(), `INSERT INTO app_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, key, value)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if old == nil {
+			_, _ = e.pool.Exec(context.Background(), `DELETE FROM app_settings WHERE key = $1`, key)
+		} else {
+			_, _ = e.pool.Exec(context.Background(), `UPDATE app_settings SET value = $2 WHERE key = $1`, key, *old)
+		}
+	})
+}
+
+func TestCoinsForTokens(t *testing.T) {
+	assert.Equal(t, 0, CoinsForTokens(0, 1))
+	assert.Equal(t, 0, CoinsForTokens(500, 0))
+	assert.Equal(t, 1, CoinsForTokens(1, 1))
+	assert.Equal(t, 1, CoinsForTokens(1000, 1))
+	assert.Equal(t, 2, CoinsForTokens(1001, 1))
+	assert.Equal(t, 3, CoinsForTokens(2000, 1.5))
+}
+
+func TestBiller_DailyFreeCoins_ChargeOrder(t *testing.T) {
+	e := newPracticeEnv(t)
+	ctx := context.Background()
+	e.setSetting(t, "daily_free_coins", "10")
+	b := NewBiller(e.pool, e.settings)
+
+	w, err := b.Wallet(ctx, e.userId)
+	require.NoError(t, err)
+	assert.Equal(t, 10, w.DailyFreeCoins)
+	assert.Equal(t, 10, w.FreeCoinsLeft)
+	assert.Equal(t, 0, w.Coins)
+
+	// bepul tangalar birinchi sarflanadi
+	n, err := b.Charge(ctx, e.userId, 4, "test", "t", "1")
+	require.NoError(t, err)
+	assert.Equal(t, 4, n)
+	w, _ = b.Wallet(ctx, e.userId)
+	assert.Equal(t, 6, w.FreeCoinsLeft)
+
+	// balans bor: bepuldan keyin balansdan yechiladi, balansdan ortig'i yechilmaydi
+	_, err = e.pool.Exec(ctx, `UPDATE users SET coins = 3 WHERE id = $1`, e.userId)
+	require.NoError(t, err)
+	n, err = b.Charge(ctx, e.userId, 20, "test", "t", "2")
+	require.NoError(t, err)
+	assert.Equal(t, 9, n) // 6 bepul + 3 balans
+	w, _ = b.Wallet(ctx, e.userId)
+	assert.Equal(t, 0, w.FreeCoinsLeft)
+	assert.Equal(t, 0, w.Coins)
+	assert.Equal(t, 10, w.DailyFreeCoins, "bugungi bepul tangalar qayta berilmaydi")
+	require.ErrorIs(t, b.RequireFunds(ctx, e.userId), errs.ErrInsufficientCoins)
+
+	// obunachidan yechilmaydi
+	tid := uuid.NewString()
+	_, err = e.pool.Exec(ctx, `INSERT INTO tariffs (id, name, duration, price) VALUES ($1, 'ptest-tariff', 1, 0)`, tid)
+	require.NoError(t, err)
+	_, err = e.pool.Exec(ctx, `INSERT INTO subscriptions (user_id, tariff_id, status, ended_at) VALUES ($1, $2, 'active', now() + interval '1 day')`, e.userId, tid)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, _ = e.pool.Exec(context.Background(), `DELETE FROM subscriptions WHERE user_id = $1`, e.userId)
+		_, _ = e.pool.Exec(context.Background(), `DELETE FROM tariffs WHERE id = $1`, tid)
+	})
+	assert.True(t, b.HasSubscription(ctx, e.userId))
+	n, err = b.Charge(ctx, e.userId, 5, "test", "t", "3")
+	require.NoError(t, err)
+	assert.Equal(t, 0, n)
+	require.NoError(t, b.RequireFunds(ctx, e.userId))
+}
+
+func TestPractice_Billing_StopsWhenWalletEmpty(t *testing.T) {
+	e := newPracticeEnv(t)
+	ctx := context.Background()
+	e.setSetting(t, "coins_per_1k_tokens", "1")
+	e.setSetting(t, "daily_free_coins", "2")
+	e.aiFake.tokens = 1500 // har generatsiya = 2 tanga
+
+	sess, err := e.prac.Start(ctx, &m.PracticeStartReq{UserId: e.userId, Mode: "test", CategoryId: e.catId, Count: 5})
+	require.NoError(t, err)
+
+	it, err := e.prac.Next(ctx, e.userId, sess.Id)
+	require.NoError(t, err)
+	got, err := e.prac.GetSession(ctx, e.userId, sess.Id)
+	require.NoError(t, err)
+	assert.Equal(t, 1500, got.TokensUsed)
+	assert.Equal(t, 2, got.CoinsSpent)
+
+	// test javobi AI chaqirmaydi - hamyon bo'sh bo'lsa ham javob berish mumkin
+	_, err = e.prac.Answer(ctx, &m.PracticeAnswerReq{UserId: e.userId, ItemId: it.Id, Answer: "A"})
+	require.NoError(t, err)
+	// hamyon bo'sh: keyingi generatsiya to'xtatiladi
+	_, err = e.prac.Next(ctx, e.userId, sess.Id)
+	assert.ErrorIs(t, err, errs.ErrInsufficientCoins)
+
+	// yangi sessiya ham boshlanmaydi
+	_, err = e.prac.Start(ctx, &m.PracticeStartReq{UserId: e.userId, Mode: "case", CategoryId: e.catId})
+	assert.ErrorIs(t, err, errs.ErrInsufficientCoins)
+
+	// tanga sotib olgach davom etadi
+	_, err = e.pool.Exec(ctx, `UPDATE users SET coins = 5 WHERE id = $1`, e.userId)
+	require.NoError(t, err)
+	_, err = e.prac.Next(ctx, e.userId, sess.Id)
+	require.NoError(t, err)
+	var coins int
+	_ = e.pool.QueryRow(ctx, `SELECT coins FROM users WHERE id = $1`, e.userId).Scan(&coins)
+	// jami 3000 token = 3 tanga (kumulyativ ceil), 2 tasi avval bepuldan yechilgan -> 1 tanga balansdan
+	assert.Equal(t, 4, coins)
+}
+
+func TestPractice_Billing_RateZero_IsFree(t *testing.T) {
+	e := newPracticeEnv(t)
+	ctx := context.Background()
+	e.setSetting(t, "coins_per_1k_tokens", "0")
+	e.setSetting(t, "daily_free_coins", "0")
+	sess, err := e.prac.Start(ctx, &m.PracticeStartReq{UserId: e.userId, Mode: "test", CategoryId: e.catId, Count: 2})
+	require.NoError(t, err)
+	_, err = e.prac.Next(ctx, e.userId, sess.Id)
+	require.NoError(t, err)
+	got, _ := e.prac.GetSession(ctx, e.userId, sess.Id)
+	assert.Equal(t, 0, got.CoinsSpent)
+}
+
+func TestPractice_FreeTopic(t *testing.T) {
+	e := newPracticeEnv(t)
+	ctx := context.Background()
+	e.setSetting(t, "coins_per_1k_tokens", "0")
+
+	_, err := e.prac.Start(ctx, &m.PracticeStartReq{UserId: e.userId, Mode: "case", TopicText: "ab"})
+	assert.Error(t, err, "juda qisqa")
+	_, err = e.prac.Start(ctx, &m.PracticeStartReq{UserId: e.userId, Mode: "case", TopicText: "Qandli diabet", CategoryId: e.catId})
+	assert.Error(t, err, "category bilan aralashtirib bo'lmaydi")
+	_, err = e.prac.Start(ctx, &m.PracticeStartReq{UserId: e.userId, Mode: "case"})
+	assert.Error(t, err, "na category, na topic_text")
+
+	sess, err := e.prac.Start(ctx, &m.PracticeStartReq{UserId: e.userId, Mode: "case", TopicText: "  Qandli\n diabet <b>2</b> tur  "})
+	require.NoError(t, err)
+	assert.Equal(t, "Qandli diabet b2/b tur", sess.FreeTopic) // < > va yangi qatorlar tozalanadi
+	assert.Empty(t, sess.CategoryId)
+	it, err := e.prac.Next(ctx, e.userId, sess.Id)
+	require.NoError(t, err)
+	assert.NotEmpty(t, it.ChiefComplaint)
+
+	// tibbiy bo'lmagan mavzu: AI rad etadi, sessiya yopiladi
+	e.aiFake.notMedical = true
+	s2, err := e.prac.Start(ctx, &m.PracticeStartReq{UserId: e.userId, Mode: "test", TopicText: "Bitcoin narxi"})
+	require.NoError(t, err)
+	_, err = e.prac.Next(ctx, e.userId, s2.Id)
+	assert.ErrorIs(t, err, errs.ErrTopicNotMedical)
+	d, _ := e.prac.GetSession(ctx, e.userId, s2.Id)
+	assert.Equal(t, m.PracticeStatusAbandoned, d.Status)
+}
+
+func TestStreak(t *testing.T) {
+	e := newPracticeEnv(t)
+	ctx := context.Background()
+	read := func() (int, int) {
+		var c, l int
+		_ = e.pool.QueryRow(ctx, `SELECT streak_count, longest_streak FROM users WHERE id = $1`, e.userId).Scan(&c, &l)
+		return c, l
+	}
+	touchStreak(ctx, e.pool, e.userId)
+	c, l := read()
+	assert.Equal(t, 1, c)
+	assert.Equal(t, 1, l)
+	touchStreak(ctx, e.pool, e.userId) // bir kunda takror - o'zgarmaydi
+	c, _ = read()
+	assert.Equal(t, 1, c)
+
+	// kecha faol bo'lgan, streak 3 -> bugun 4
+	_, err := e.pool.Exec(ctx, `UPDATE users SET streak_count = 3, longest_streak = 3, streak_last_day = (now() AT TIME ZONE 'Asia/Tashkent')::date - 1 WHERE id = $1`, e.userId)
+	require.NoError(t, err)
+	touchStreak(ctx, e.pool, e.userId)
+	c, l = read()
+	assert.Equal(t, 4, c)
+	assert.Equal(t, 4, l)
+
+	// 2 kun tanaffus - qaytadan 1, longest saqlanadi
+	_, err = e.pool.Exec(ctx, `UPDATE users SET streak_last_day = (now() AT TIME ZONE 'Asia/Tashkent')::date - 2 WHERE id = $1`, e.userId)
+	require.NoError(t, err)
+	touchStreak(ctx, e.pool, e.userId)
+	c, l = read()
+	assert.Equal(t, 1, c)
+	assert.Equal(t, 4, l)
+}
+
+func TestPractice_XP_DifficultyMultiplier(t *testing.T) {
+	e := newPracticeEnv(t)
+	ctx := context.Background()
+	e.setSetting(t, "coins_per_1k_tokens", "0")
+	e.setSetting(t, "hard_reward_multiplier", "2")
+	e.aiFake.verdictScore = 100
+	sess, err := e.prac.Start(ctx, &m.PracticeStartReq{UserId: e.userId, Mode: "case", CategoryId: e.catId, Difficulty: "hard"})
+	require.NoError(t, err)
+	it, _ := e.prac.Next(ctx, e.userId, sess.Id)
+	_, err = e.prac.Answer(ctx, &m.PracticeAnswerReq{UserId: e.userId, ItemId: it.Id, Answer: "STEMI"})
+	require.NoError(t, err)
+	fin, err := e.prac.Finish(ctx, e.userId, sess.Id)
+	require.NoError(t, err)
+	assert.Equal(t, 10, fin.XPEarned) // 5 XP * 2.0
+	var streak int
+	_ = e.pool.QueryRow(ctx, `SELECT streak_count FROM users WHERE id = $1`, e.userId).Scan(&streak)
+	assert.Equal(t, 1, streak, "javob berish streak'ni boshlaydi")
 }

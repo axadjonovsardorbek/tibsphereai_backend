@@ -67,3 +67,13 @@ type DifficultyRewardRes struct {
 	MediumMultiplier float64 `json:"medium_multiplier"`
 	HardMultiplier   float64 `json:"hard_multiplier"`
 }
+
+// AppSettingDailyFreeCoins - har 24 soatda har bir foydalanuvchiga beriladigan bepul tangalar
+// (to'planmaydi, har kuni yangidan). Eski daily_free_limit (keys soni) faqat eski simulyatsiya
+// moduli uchun qoladi.
+const AppSettingDailyFreeCoins = "daily_free_coins"
+
+// DailyFreeCoinsRes - admin panel "Kunlik bepul tangalar" formasi uchun.
+type DailyFreeCoinsRes struct {
+	DailyFreeCoins int `json:"daily_free_coins"`
+}

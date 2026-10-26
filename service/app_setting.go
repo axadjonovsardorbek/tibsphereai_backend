@@ -160,3 +160,12 @@ func (s *AppSettingService) GetLimitStatus(ctx context.Context, userId string) (
 	}
 	return &m.UserLimitStatusRes{Used: used, Total: total, Remaining: remaining, CoinsPer1kTokens: s.CoinsPer1kTokens(ctx)}, nil
 }
+
+// DailyFreeCoins - har 24 soatda har foydalanuvchiga beriladigan bepul tangalar (default 10; 0 - yo'q).
+func (s *AppSettingService) DailyFreeCoins(ctx context.Context) int {
+	v := s.getFloatSetting(m.AppSettingDailyFreeCoins, 10)
+	if v < 0 {
+		return 10
+	}
+	return int(v)
+}

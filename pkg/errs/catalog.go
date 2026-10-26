@@ -133,6 +133,11 @@ var (
 		Ru: "AI не смог подготовить задание, попробуйте ещё раз",
 		En: "AI could not generate the item, please retry",
 	})
+	ErrTopicNotMedical = New(http.StatusBadRequest, "topic_not_medical", Text{
+		Uz: "Bu mavzu tibbiyotga aloqador emas, tibbiy mavzu yozing",
+		Ru: "Эта тема не относится к медицине, введите медицинскую тему",
+		En: "This topic is not medical, please enter a medical topic",
+	})
 	ErrPracticeAnswered = New(http.StatusConflict, "item_already_answered", Text{
 		Uz: "Bu savolga allaqachon javob berilgan",
 		Ru: "На это задание уже дан ответ",

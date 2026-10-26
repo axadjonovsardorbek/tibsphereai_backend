@@ -24,23 +24,29 @@ func (r *PracticeRepo) CreateSession(s *m.PracticeSessionRow) (string, error) {
 	if topics == nil {
 		topics = []string{}
 	}
+	var cat interface{}
+	if s.CategoryId != "" {
+		cat = s.CategoryId
+	}
 	err := r.db.QueryRow(context.Background(), `
-		INSERT INTO practice_sessions (user_id, mode, category_id, topic_ids, difficulty, total_items, language)
-		VALUES ($1, $2, $3, $4::uuid[], $5, $6, $7) RETURNING id::text
-	`, s.UserId, s.Mode, s.CategoryId, topics, s.Difficulty, s.TotalItems, s.Language).Scan(&id)
+		INSERT INTO practice_sessions (user_id, mode, category_id, topic_ids, difficulty, total_items, language, free_topic, coin_billed)
+		VALUES ($1, $2, $3, $4::uuid[], $5, $6, $7, $8, $9) RETURNING id::text
+	`, s.UserId, s.Mode, cat, topics, s.Difficulty, s.TotalItems, s.Language, s.FreeTopic, s.CoinBilled).Scan(&id)
 	if err != nil {
 		return "", fmt.Errorf("error while creating practice session: %w", err)
 	}
 	return id, nil
 }
 
-const sessionCols = `id::text, user_id::text, mode, category_id::text, topic_ids::text[], difficulty, total_items,
-	status, score, xp_earned, language, started_at::text, finished_at::text`
+const sessionCols = `id::text, user_id::text, mode, COALESCE(category_id::text, ''), topic_ids::text[], difficulty, total_items,
+	status, score, xp_earned, language, started_at::text, finished_at::text,
+	free_topic, coin_billed, coins_charged, prompt_tokens, completion_tokens, flashcards_status, flashcards_created`
 
 func scanSession(row pgx.Row) (*m.PracticeSessionRow, error) {
 	s := &m.PracticeSessionRow{}
 	err := row.Scan(&s.Id, &s.UserId, &s.Mode, &s.CategoryId, &s.TopicIds, &s.Difficulty, &s.TotalItems,
-		&s.Status, &s.Score, &s.XPEarned, &s.Language, &s.StartedAt, &s.FinishedAt)
+		&s.Status, &s.Score, &s.XPEarned, &s.Language, &s.StartedAt, &s.FinishedAt,
+		&s.FreeTopic, &s.CoinBilled, &s.CoinsCharged, &s.PromptTokens, &s.CompletionTokens, &s.FlashcardsStatus, &s.FlashcardsCreated)
 	return s, err
 }
 
@@ -69,7 +75,8 @@ func (r *PracticeRepo) ListSessions(req *m.PracticeListReq) (*m.PaginationRespon
 	for rows.Next() {
 		s := &m.PracticeSessionRow{}
 		if err := rows.Scan(&total, &s.Id, &s.UserId, &s.Mode, &s.CategoryId, &s.TopicIds, &s.Difficulty, &s.TotalItems,
-			&s.Status, &s.Score, &s.XPEarned, &s.Language, &s.StartedAt, &s.FinishedAt); err != nil {
+			&s.Status, &s.Score, &s.XPEarned, &s.Language, &s.StartedAt, &s.FinishedAt,
+			&s.FreeTopic, &s.CoinBilled, &s.CoinsCharged, &s.PromptTokens, &s.CompletionTokens, &s.FlashcardsStatus, &s.FlashcardsCreated); err != nil {
 			return nil, nil, err
 		}
 		out = append(out, s)
@@ -216,6 +223,22 @@ func (r *PracticeRepo) Finish(sessionId, status string, score, xp int) error {
 	return nil
 }
 
+func (r *PracticeRepo) SetBilling(sessionId string, billed bool) error {
+	_, err := r.db.Exec(context.Background(), `UPDATE practice_sessions SET coin_billed = $2 WHERE id = $1`, sessionId, billed)
+	return err
+}
+
+func (r *PracticeRepo) AddCharged(sessionId string, coins int) error {
+	_, err := r.db.Exec(context.Background(), `UPDATE practice_sessions SET coins_charged = coins_charged + $2 WHERE id = $1`, sessionId, coins)
+	return err
+}
+
+func (r *PracticeRepo) SetFlashcards(sessionId, status string, created int) error {
+	_, err := r.db.Exec(context.Background(),
+		`UPDATE practice_sessions SET flashcards_status = $2, flashcards_created = $3 WHERE id = $1`, sessionId, status, created)
+	return err
+}
+
 func (r *PracticeRepo) Report(itemId, reason string) error {
 	_, err := r.db.Exec(context.Background(),
 		`UPDATE practice_items SET reported = TRUE, report_reason = $2 WHERE id = $1`, itemId, reason)
@@ -239,7 +262,7 @@ func (r *PracticeRepo) Stats() (*m.PracticeStats, error) {
 
 	rows, err := r.db.Query(ctx, `
 		SELECT c.id::text, c.name, COUNT(DISTINCT ps.id), COUNT(pi.id)
-		FROM practice_sessions ps JOIN categories c ON c.id = ps.category_id
+		FROM practice_sessions ps JOIN categories c ON c.id = ps.category_id -- erkin mavzu sessiyalari (category_id NULL) kirmaydi
 		LEFT JOIN practice_items pi ON pi.session_id = ps.id
 		GROUP BY c.id, c.name ORDER BY COUNT(DISTINCT ps.id) DESC LIMIT 20`)
 	if err != nil {

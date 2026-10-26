@@ -67,7 +67,7 @@ func NewClients(cfg *config.Config, conn *postgres.Storage, rdb *redis.Client, p
 		Partner:          service.NewPartnerService(conn),
 		CaseSource:       service.NewCaseSourceService(conn),
 		Source:           service.NewSourceService(conn, aiClient),
-		Practice:         service.NewPracticeService(conn, aiClient),
+		Practice:         service.NewPracticeService(conn, aiClient, appSettingSvc),
 		Dashboard:        service.NewDashboardService(conn, rdb),
 		User:             userSvc,
 		UserDevice:       service.NewUserDeviceService(conn, pushClient),

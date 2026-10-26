@@ -506,6 +506,7 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 		if _, err := s.storage.UserS.CreateActivity(&m.UserActivityCreateReq{UserId: *session.UserId, Activity: 1}); err != nil {
 			fmt.Println("failed to log activity:", err)
 		}
+		touchStreak(ctx, s.storage.Db, *session.UserId)
 	}
 
 	debriefReady := false

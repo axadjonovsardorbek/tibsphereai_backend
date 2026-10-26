@@ -8,20 +8,24 @@ const (
 )
 
 type CategoryCreateReq struct {
-	Name     map[string]string `json:"name"`
-	IconUrl  string            `json:"icon_url"`
-	OrderNum int               `json:"order_num"`
-	Audience string            `json:"audience"` // doctor|citizen, bo'sh - doctor
+	Name        map[string]string `json:"name"`
+	IconUrl     string            `json:"icon_url"`
+	OrderNum    int               `json:"order_num"`
+	Audience    string            `json:"audience"` // doctor|citizen, bo'sh - doctor
+	Description map[string]string `json:"description"`
+	IsActive    *bool             `json:"is_active"` // nil = faol
 }
 
 type CategoryRes struct {
-	Id        *string           `json:"id"`
-	Name      map[string]string `json:"name"`
-	IconUrl   *string           `json:"icon_url"`
-	OrderNum  *int              `json:"order_num"`
-	Audience  *string           `json:"audience"`
-	CreatedAt *string           `json:"created_at"`
-	UpdatedAt *string           `json:"updated_at"`
+	Id          *string           `json:"id"`
+	Name        map[string]string `json:"name"`
+	IconUrl     *string           `json:"icon_url"`
+	OrderNum    *int              `json:"order_num"`
+	Audience    *string           `json:"audience"`
+	Description map[string]string `json:"description"`
+	IsActive    *bool             `json:"is_active"`
+	CreatedAt   *string           `json:"created_at"`
+	UpdatedAt   *string           `json:"updated_at"`
 }
 
 type CategoryList struct {
@@ -36,11 +40,13 @@ type CategoryGetListReq struct {
 }
 
 type CategoryUpdateReq struct {
-	Id       string            `json:"id"`
-	Name     map[string]string `json:"name"`
-	IconUrl  string            `json:"icon_url"`
-	OrderNum int               `json:"order_num"`
-	Audience string            `json:"audience"`
+	Id          string            `json:"id"`
+	Name        map[string]string `json:"name"`
+	IconUrl     string            `json:"icon_url"`
+	OrderNum    int               `json:"order_num"`
+	Audience    string            `json:"audience"`
+	Description map[string]string `json:"description"` // nil = o'zgartirilmaydi
+	IsActive    *bool             `json:"is_active"`   // nil = o'zgartirilmaydi
 }
 
 type CategoryMobileRes struct {

@@ -30,15 +30,43 @@ const (
 // PracticeService - AI real-time case/test (new-feature.md): sessiya, generatsiya (RAG),
 // javobni baholash, yakunlash (XP) va shikoyat.
 type PracticeService struct {
-	storage st.Storage
-	ai      *ai.Client
-	locks   sync.Map // sessionId -> *sync.Mutex (bir vaqtda bitta generatsiya)
+	storage  st.Storage
+	ai       *ai.Client
+	settings *AppSettingService
+	biller   *Biller
+	locks    sync.Map // sessionId -> *sync.Mutex (bir vaqtda bitta generatsiya)
 	// prefetch - javobdan keyin keyingi elementni fonda generatsiya qilish (testlarda o'chiriladi).
 	prefetch bool
 }
 
-func NewPracticeService(storage *st.Storage, aiClient *ai.Client) *PracticeService {
-	return &PracticeService{storage: *storage, ai: aiClient, prefetch: true}
+func NewPracticeService(storage *st.Storage, aiClient *ai.Client, settings *AppSettingService) *PracticeService {
+	return &PracticeService{storage: *storage, ai: aiClient, settings: settings, biller: NewBiller(storage.Db, settings), prefetch: true}
+}
+
+// Wallet - foydalanuvchi hamyoni (kunlik bepul tangalar, balans, tarif) - "Limit" belgisi uchun.
+func (s *PracticeService) Wallet(ctx context.Context, userId string) (Wallet, error) {
+	return s.biller.Wallet(ctx, userId)
+}
+
+// sanitizeTopic - erkin mavzu matnini tozalaydi: boshqaruv belgilari/yangi qatorlar olib tashlanadi,
+// uzunlik cheklanadi (prompt injection yuzasini kamaytirish).
+func sanitizeTopic(t string) string {
+	var b strings.Builder
+	for _, r := range t {
+		switch {
+		case r == '\n' || r == '\r' || r == '\t':
+			b.WriteRune(' ')
+		case r < 32 || r == 127 || r == '<' || r == '>' || r == '`':
+			// tashlab yuboriladi
+		default:
+			b.WriteRune(r)
+		}
+	}
+	out := strings.Join(strings.Fields(b.String()), " ")
+	if r := []rune(out); len(r) > 200 {
+		out = string(r[:200])
+	}
+	return out
 }
 
 func (s *PracticeService) lock(sessionId string) func() {
@@ -60,11 +88,25 @@ func (s *PracticeService) Start(ctx context.Context, req *m.PracticeStartReq) (*
 	if !validDifficulty(req.Difficulty) {
 		return nil, errors.New("difficulty must be easy, medium or hard")
 	}
-	if req.CategoryId == "" {
-		return nil, errors.New("category_id is required")
-	}
-	if _, err := s.storage.CategoryS.GetById(&m.ById{Id: req.CategoryId}); err != nil {
-		return nil, err
+	freeTopic := sanitizeTopic(req.TopicText)
+	if freeTopic != "" {
+		if req.CategoryId != "" || len(req.TopicIds) > 0 {
+			return nil, errors.New("topic_text cannot be combined with category_id/topic_ids")
+		}
+		if len([]rune(freeTopic)) < 3 {
+			return nil, errors.New("topic_text is too short")
+		}
+	} else {
+		if req.CategoryId == "" {
+			return nil, errors.New("category_id or topic_text is required")
+		}
+		cat, err := s.storage.CategoryS.GetById(&m.ById{Id: req.CategoryId})
+		if err != nil {
+			return nil, err
+		}
+		if cat.IsActive != nil && !*cat.IsActive {
+			return nil, errors.New("category is not active")
+		}
 	}
 	for _, tid := range req.TopicIds {
 		t, err := s.storage.TopicS.GetById(&m.ById{Id: tid})
@@ -73,6 +115,9 @@ func (s *PracticeService) Start(ctx context.Context, req *m.PracticeStartReq) (*
 		}
 		if t.CategoryId == nil || *t.CategoryId != req.CategoryId {
 			return nil, fmt.Errorf("topic %s does not belong to the category", tid)
+		}
+		if t.IsActive != nil && !*t.IsActive {
+			return nil, fmt.Errorf("topic %s is not active", tid)
 		}
 	}
 
@@ -90,9 +135,18 @@ func (s *PracticeService) Start(ctx context.Context, req *m.PracticeStartReq) (*
 	if lang != "ru" && lang != "en" {
 		lang = "uz"
 	}
+	// Pay-as-you-go: obunachi bo'lmagan foydalanuvchi uchun hamyonda (bepul kunlik + balans) tanga bo'lishi
+	// kerak; sessiya davomida AI token sarfiga qarab yechiladi.
+	billed := false
+	if !s.biller.HasSubscription(ctx, req.UserId) {
+		if err := s.biller.RequireFunds(ctx, req.UserId); err != nil {
+			return nil, err
+		}
+		billed = s.settings.CoinsPer1kTokens(ctx) > 0
+	}
 	id, err := s.storage.PracticeS.CreateSession(&m.PracticeSessionRow{
 		UserId: req.UserId, Mode: req.Mode, CategoryId: req.CategoryId, TopicIds: req.TopicIds,
-		Difficulty: req.Difficulty, TotalItems: total, Language: lang,
+		Difficulty: req.Difficulty, TotalItems: total, Language: lang, FreeTopic: freeTopic, CoinBilled: billed,
 	})
 	if err != nil {
 		return nil, err
@@ -121,6 +175,8 @@ func (s *PracticeService) sessionRes(sess *m.PracticeSessionRow) (*m.PracticeSes
 		Id: sess.Id, Mode: sess.Mode, CategoryId: sess.CategoryId, TopicIds: nonNil(sess.TopicIds),
 		Difficulty: sess.Difficulty, TotalItems: sess.TotalItems, Generated: gen, Answered: ans, Correct: cor,
 		Status: sess.Status, Score: sess.Score, XPEarned: sess.XPEarned, StartedAt: sess.StartedAt, FinishedAt: sess.FinishedAt,
+		FreeTopic: sess.FreeTopic, TokensUsed: sess.PromptTokens + sess.CompletionTokens, CoinsSpent: sess.CoinsCharged,
+		FlashcardsStatus: sess.FlashcardsStatus, FlashcardsCreated: sess.FlashcardsCreated,
 	}, nil
 }
 
@@ -204,6 +260,11 @@ func (s *PracticeService) Next(ctx context.Context, userId, sessionId string) (*
 		return nil, errs.ErrPracticeLimitReached
 	}
 
+	if sess.CoinBilled {
+		if err := s.biller.RequireFunds(ctx, userId); err != nil {
+			return nil, err
+		}
+	}
 	in, err := s.buildInput(ctx, sess)
 	if err != nil {
 		return nil, err
@@ -236,12 +297,17 @@ func (s *PracticeService) Next(ctx context.Context, userId, sessionId string) (*
 			}
 		}
 		usage = addUsage(usage, u)
-		if genErr == nil {
+		if genErr == nil || errors.Is(genErr, ai.ErrTopicNotMedical) {
 			break
 		}
 		fmt.Println("practice generation failed (attempt", attempt+1, "):", genErr)
 	}
-	s.recordUsage(sessionId, userId, "practice_generate", usage)
+	s.recordUsage(ctx, sessionId, userId, "practice_generate", usage)
+	if errors.Is(genErr, ai.ErrTopicNotMedical) {
+		// Tibbiy bo'lmagan erkin mavzu: sessiya yopiladi (keraksiz sessiya qolmasin).
+		_ = s.storage.PracticeS.Finish(sessionId, m.PracticeStatusAbandoned, 0, 0)
+		return nil, errs.ErrTopicNotMedical
+	}
 	if genErr != nil {
 		return nil, errs.ErrPracticeGenFailed.Wrap(genErr)
 	}
@@ -263,6 +329,17 @@ func (s *PracticeService) Next(ctx context.Context, userId, sessionId string) (*
 // buildInput - generatsiya kirishi: nomlar, mavzu yo'nalishlari, oldingi xulosalar va RAG chunklari.
 func (s *PracticeService) buildInput(ctx context.Context, sess *m.PracticeSessionRow) (*m.PracticeGenInput, error) {
 	in := &m.PracticeGenInput{Mode: sess.Mode, Language: sess.Language, Difficulty: sess.Difficulty}
+	var err error
+	if sess.FreeTopic != "" {
+		in.FreeTopic = true
+		in.CategoryName = "Erkin mavzu"
+		in.TopicNames = []string{sess.FreeTopic}
+		if in.Previous, err = s.storage.PracticeS.Summaries(sess.Id); err != nil {
+			return nil, err
+		}
+		in.Chunks = s.retrieve(ctx, sess, in)
+		return in, nil
+	}
 	cat, err := s.storage.CategoryS.GetById(&m.ById{Id: sess.CategoryId})
 	if err != nil {
 		return nil, err
@@ -317,6 +394,9 @@ func (s *PracticeService) retrieve(ctx context.Context, sess *m.PracticeSessionR
 	var qEmb []float32
 	if s.ai != nil && s.ai.Embedder != nil {
 		q := in.CategoryName + ". " + strings.Join(in.TopicNames, ", ") + ". " + strings.Join(in.TopicHints, " ")
+		if in.FreeTopic {
+			q = strings.Join(in.TopicNames, ", ")
+		}
 		if embs, _, err := s.ai.Embedder.Embed(ctx, []string{q}, true); err == nil && len(embs) == 1 {
 			qEmb = st.Normalize(embs[0])
 		}
@@ -344,19 +424,22 @@ func PickChunks(pool []m.SourceChunk, k int, rng *rand.Rand) []m.SourceChunk {
 
 // BuildSourceRefs - foydalanuvchiga ko'rsatiladigan manbalar: FAQAT promptga kiritilgan chunklardan
 // (AI o'ylab topa olmaydi). used - AI ishlatganini aytgan [n] raqamlar (1-based); noto'g'rilari
-// tashlanadi, bo'sh qolsa kiritilgan chunklarning hammasi hisoblanadi. Manba bo'yicha dublikatlar
+// tashlanadi. used == nil (AI aytmagan) bo'lsa kiritilgan chunklarning hammasi, bo'sh (non-nil) bo'lsa hech biri. Manba bo'yicha dublikatlar
 // birlashtiriladi, tartib - promptdagi tartib (mosligi bo'yicha).
 func BuildSourceRefs(chunks []m.SourceChunk, used []int) ([]m.SourceRef, []string) {
 	var picked []m.SourceChunk
-	seenIdx := map[int]bool{}
-	for _, n := range used {
-		if n >= 1 && n <= len(chunks) && !seenIdx[n] {
-			seenIdx[n] = true
-			picked = append(picked, chunks[n-1])
-		}
-	}
-	if len(picked) == 0 {
+	if used == nil {
+		// AI used_sources'ni umuman qaytarmagan - kiritilgan chunklarning hammasi hisoblanadi.
 		picked = chunks
+	} else {
+		// AI aniq aytgan: faqat shular (bo'sh bo'lsa - hech qaysi manba ishlatilmagan, "Manba topilmadi").
+		seenIdx := map[int]bool{}
+		for _, n := range used {
+			if n >= 1 && n <= len(chunks) && !seenIdx[n] {
+				seenIdx[n] = true
+				picked = append(picked, chunks[n-1])
+			}
+		}
 	}
 	refs := []m.SourceRef{}
 	seen := map[string]bool{}
@@ -403,13 +486,39 @@ func addUsage(a, b *ai.Usage) *ai.Usage {
 	}
 }
 
-func (s *PracticeService) recordUsage(sessionId, userId, feature string, usage *ai.Usage) {
+func (s *PracticeService) recordUsage(ctx context.Context, sessionId, userId, feature string, usage *ai.Usage) {
 	if usage == nil {
 		return
 	}
 	logAIUsage(&s.storage, feature, usage, userId, "")
 	if err := s.storage.PracticeS.AddTokens(sessionId, usage.PromptTokens, usage.OutputTokens); err != nil {
 		fmt.Println("failed to add practice tokens:", err)
+	}
+	s.settle(ctx, sessionId)
+}
+
+// settle - sessiyada shu paytgacha sarflangan tokenlarning tangadagi qiymatini (ceil(tokens/1000*tarif))
+// hisoblab, hali yechilmagan farqni hamyondan yechadi (avval bugungi bepul tangalar, keyin balans;
+// balansdan ortig'i yechilmaydi - keyingi chaqiruvdan oldin RequireFunds to'xtatadi).
+func (s *PracticeService) settle(ctx context.Context, sessionId string) {
+	sess, err := s.storage.PracticeS.GetSession(sessionId)
+	if err != nil || !sess.CoinBilled {
+		return
+	}
+	rate := s.settings.CoinsPer1kTokens(ctx)
+	delta := CoinsForTokens(sess.PromptTokens+sess.CompletionTokens, rate) - sess.CoinsCharged
+	if delta <= 0 {
+		return
+	}
+	charged, err := s.biller.Charge(ctx, sess.UserId, delta, "practice_ai_usage", "practice_session", sessionId)
+	if err != nil {
+		fmt.Println("failed to charge practice usage:", err)
+		return
+	}
+	if charged > 0 {
+		if err := s.storage.PracticeS.AddCharged(sessionId, charged); err != nil {
+			fmt.Println("failed to record practice coins_charged:", err)
+		}
 	}
 }
 
@@ -477,6 +586,11 @@ func (s *PracticeService) Answer(ctx context.Context, req *m.PracticeAnswerReq) 
 		if err := json.Unmarshal(it.Payload, &c); err != nil {
 			return nil, err
 		}
+		if sess.CoinBilled {
+			if err := s.biller.RequireFunds(ctx, req.UserId); err != nil {
+				return nil, err
+			}
+		}
 		var (
 			ev    *m.PracticeEval
 			usage *ai.Usage
@@ -490,7 +604,7 @@ func (s *PracticeService) Answer(ctx context.Context, req *m.PracticeAnswerReq) 
 				break
 			}
 		}
-		s.recordUsage(sess.Id, req.UserId, "practice_evaluate", usage)
+		s.recordUsage(ctx, sess.Id, req.UserId, "practice_evaluate", usage)
 		if eErr != nil {
 			fmt.Println("practice evaluation failed:", eErr)
 			return nil, errs.ErrPracticeGenFailed.Wrap(eErr) // element javobsiz qoladi - qayta yuborish mumkin
@@ -510,6 +624,8 @@ func (s *PracticeService) Answer(ctx context.Context, req *m.PracticeAnswerReq) 
 		}
 		return nil, err
 	}
+
+	touchStreak(ctx, s.storage.Db, req.UserId)
 
 	updated, err := s.storage.PracticeS.GetItem(it.Id)
 	if err != nil {
@@ -604,6 +720,10 @@ func (s *PracticeService) finish(sess *m.PracticeSessionRow, status string) (*m.
 		}
 	}
 	score, xp := ScoreAndXP(scores)
+	// Qiyinroq daraja ko'proq XP beradi (admin sozlaydigan medium/hard koeffitsientlari; easy = 1x).
+	if xp > 0 && s.settings != nil {
+		xp = int(float64(xp)*s.settings.DifficultyMultiplier(context.Background(), sess.Difficulty) + 0.5)
+	}
 	if err := s.storage.PracticeS.Finish(sess.Id, status, score, xp); err != nil {
 		return nil, err
 	}

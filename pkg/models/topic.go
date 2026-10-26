@@ -3,28 +3,34 @@ package models
 // Topic - Bo'lim (Category) ichidagi Mavzu (TZ 6-bo'lim: Bo'limlar -> Mavzular -> Case'lar).
 
 type TopicCreateReq struct {
-	CategoryId string            `json:"category_id"`
-	Name       map[string]string `json:"name"`
-	OrderNum   int               `json:"order_num"`
-	AiHint     string            `json:"ai_hint"` // AI practice uchun yo'nalish (masalan "faqat pediatrik holatlar")
+	CategoryId  string            `json:"category_id"`
+	Name        map[string]string `json:"name"`
+	OrderNum    int               `json:"order_num"`
+	AiHint      string            `json:"ai_hint"` // AI practice uchun yo'nalish (masalan "faqat pediatrik holatlar")
+	Description map[string]string `json:"description"`
+	IsActive    *bool             `json:"is_active"` // nil = faol
 }
 
 type TopicUpdateReq struct {
-	Id         string            `json:"id"`
-	CategoryId string            `json:"category_id"`
-	Name       map[string]string `json:"name"`
-	OrderNum   int               `json:"order_num"`
-	AiHint     *string           `json:"ai_hint"` // nil = o'zgartirilmaydi
+	Id          string            `json:"id"`
+	CategoryId  string            `json:"category_id"`
+	Name        map[string]string `json:"name"`
+	OrderNum    int               `json:"order_num"`
+	AiHint      *string           `json:"ai_hint"`     // nil = o'zgartirilmaydi
+	Description map[string]string `json:"description"` // nil = o'zgartirilmaydi
+	IsActive    *bool             `json:"is_active"`   // nil = o'zgartirilmaydi
 }
 
 type TopicRes struct {
-	Id         *string           `json:"id"`
-	CategoryId *string           `json:"category_id"`
-	Name       map[string]string `json:"name"`
-	OrderNum   *int              `json:"order_num"`
-	AiHint     *string           `json:"ai_hint"`
-	CreatedAt  *string           `json:"created_at"`
-	UpdatedAt  *string           `json:"updated_at"`
+	Id          *string           `json:"id"`
+	CategoryId  *string           `json:"category_id"`
+	Name        map[string]string `json:"name"`
+	OrderNum    *int              `json:"order_num"`
+	AiHint      *string           `json:"ai_hint"`
+	Description map[string]string `json:"description"`
+	IsActive    *bool             `json:"is_active"`
+	CreatedAt   *string           `json:"created_at"`
+	UpdatedAt   *string           `json:"updated_at"`
 }
 
 type TopicList struct {

@@ -20,31 +20,42 @@ const (
 )
 
 type PracticeStartReq struct {
-	UserId     string   `json:"-"`
-	Language   string   `json:"-"`
-	Mode       string   `json:"mode"`        // case | test
-	CategoryId string   `json:"category_id"` // majburiy
-	TopicIds   []string `json:"topic_ids"`   // bo'sh = butun bo'lim (aralash)
-	Difficulty string   `json:"difficulty"`  // easy | medium | hard
-	Count      int      `json:"count"`       // test: savollar soni (5..50), default 10
+	UserId     string `json:"-"`
+	Language   string `json:"-"`
+	Mode       string `json:"mode"`        // case | test
+	CategoryId string `json:"category_id"` // majburiy (erkin mavzuda bo'sh)
+	// TopicText - "Erkin mavzu": tayyor bo'lim/mavzusiz, foydalanuvchi yozgan istalgan tibbiy mavzu
+	// (category_id va topic_ids bilan birga ishlatilmaydi).
+	TopicText  string   `json:"topic_text"`
+	TopicIds   []string `json:"topic_ids"`  // bo'sh = butun bo'lim (aralash)
+	Difficulty string   `json:"difficulty"` // easy | medium | hard
+	Count      int      `json:"count"`      // test: savollar soni (5..50), default 10
 }
 
 type PracticeSessionRes struct {
-	Id         string             `json:"id"`
-	Mode       string             `json:"mode"`
-	CategoryId string             `json:"category_id"`
-	TopicIds   []string           `json:"topic_ids"`
-	Difficulty string             `json:"difficulty"`
-	TotalItems int                `json:"total_items"`
-	Generated  int                `json:"generated"` // hozirgacha generatsiya qilingan elementlar
-	Answered   int                `json:"answered"`
-	Correct    int                `json:"correct"`
-	Status     string             `json:"status"`
-	Score      int                `json:"score"`
-	XPEarned   int                `json:"xp_earned"`
-	StartedAt  string             `json:"started_at"`
-	FinishedAt *string            `json:"finished_at"`
-	Items      []*PracticeItemRes `json:"items,omitempty"` // faqat detal so'rovida
+	Id         string   `json:"id"`
+	Mode       string   `json:"mode"`
+	CategoryId string   `json:"category_id"`
+	TopicIds   []string `json:"topic_ids"`
+	Difficulty string   `json:"difficulty"`
+	TotalItems int      `json:"total_items"`
+	Generated  int      `json:"generated"` // hozirgacha generatsiya qilingan elementlar
+	Answered   int      `json:"answered"`
+	Correct    int      `json:"correct"`
+	Status     string   `json:"status"`
+	Score      int      `json:"score"`
+	XPEarned   int      `json:"xp_earned"`
+	StartedAt  string   `json:"started_at"`
+	FinishedAt *string  `json:"finished_at"`
+	FreeTopic  string   `json:"free_topic,omitempty"`
+	// Pay-as-you-go: sessiyada sarflangan AI tokenlar va ulardan yechilgan tanga.
+	TokensUsed int `json:"tokens_used"`
+	CoinsSpent int `json:"coins_spent"`
+	// Sessiya yakunida xatolar asosida fonda yaratiladigan fleshkartalar:
+	// none (xato yo'q/hali yakunlanmagan) | pending | done | failed.
+	FlashcardsStatus  string             `json:"flashcards_status"`
+	FlashcardsCreated int                `json:"flashcards_created"`
+	Items             []*PracticeItemRes `json:"items,omitempty"` // faqat detal so'rovida
 }
 
 // PracticeOption - test varianti (to'g'ri javob alohida maydonda, javobdan keyin ochiladi).
@@ -142,6 +153,8 @@ type PracticeGenInput struct {
 	TopicHints   []string
 	Chunks       []SourceChunk // RAG kontekst (bo'sh bo'lishi mumkin)
 	Previous     []string      // oldingi elementlar xulosalari
+	// FreeTopic - TopicNames[0] foydalanuvchi yozgan erkin mavzu (delimiter ichida, tibbiy bo'lmasa rad etiladi).
+	FreeTopic bool
 }
 
 // PracticeSessionRow - storage qatlami uchun sessiya qatori.
@@ -159,6 +172,14 @@ type PracticeSessionRow struct {
 	Language   string
 	StartedAt  string
 	FinishedAt *string
+
+	FreeTopic         string
+	CoinBilled        bool
+	CoinsCharged      int
+	PromptTokens      int
+	CompletionTokens  int
+	FlashcardsStatus  string
+	FlashcardsCreated int
 }
 
 // PracticeItemRow - storage qatlami uchun element qatori.

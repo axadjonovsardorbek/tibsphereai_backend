@@ -299,26 +299,38 @@ func Normalize(v []float32) []float32 {
 }
 
 func (r *SourceRepo) SearchChunks(categoryId string, topicIds []string, queryEmb []float32, limit int) ([]m.SourceChunk, error) {
-	if topicIds == nil {
-		topicIds = []string{}
-	}
 	var (
-		query string
-		args  = []interface{}{categoryId, topicIds}
+		args   []interface{}
+		scope  string
+		cols   = `c.id, c.source_id, c.idx, c.locator, c.content, c.tokens, s.name, s.type, s.author, s.url`
+		argPos = func() string { return "$" + strconv.Itoa(len(args)) }
 	)
-	cols := `c.id, c.source_id, c.idx, c.locator, c.content, c.tokens, s.name, s.type, s.author, s.url`
+	if categoryId == "" {
+		// Erkin mavzu: bo'lim/mavzu bog'lanishlariga qaramay barcha faol, tayyor manbalar
+		// (mosligi embedding bo'yicha tanlanadi).
+		scope = `s.deleted_at = 0 AND s.is_active AND s.status = 'ready'`
+	} else {
+		if topicIds == nil {
+			topicIds = []string{}
+		}
+		args = append(args, categoryId, topicIds)
+		scope = scopeWhere
+	}
+	var query string
 	if len(queryEmb) > 0 {
-		args = append(args, queryEmb, limit)
+		args = append(args, queryEmb)
+		emb := argPos()
+		args = append(args, limit)
 		// Embeddingi bor chunklar - dot product bo'yicha; embeddingsizlar oxirida.
 		query = `SELECT ` + cols + ` FROM source_chunks c JOIN case_sources s ON s.id = c.source_id
-			WHERE ` + scopeWhere + `
-			ORDER BY CASE WHEN c.embedding IS NULL OR cardinality(c.embedding) <> cardinality($3::real[]) THEN -1
-				ELSE (SELECT COALESCE(SUM(a * b), 0) FROM unnest(c.embedding, $3::real[]) AS t(a, b)) END DESC
-			LIMIT $4`
+			WHERE ` + scope + `
+			ORDER BY CASE WHEN c.embedding IS NULL OR cardinality(c.embedding) <> cardinality(` + emb + `::real[]) THEN -1
+				ELSE (SELECT COALESCE(SUM(a * b), 0) FROM unnest(c.embedding, ` + emb + `::real[]) AS t(a, b)) END DESC
+			LIMIT ` + argPos()
 	} else {
 		args = append(args, limit)
 		query = `SELECT ` + cols + ` FROM source_chunks c JOIN case_sources s ON s.id = c.source_id
-			WHERE ` + scopeWhere + ` ORDER BY random() LIMIT $3`
+			WHERE ` + scope + ` ORDER BY random() LIMIT ` + argPos()
 	}
 	rows, err := r.db.Query(context.Background(), query, args...)
 	if err != nil {
