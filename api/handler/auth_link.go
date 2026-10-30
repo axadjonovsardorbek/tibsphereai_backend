@@ -12,11 +12,13 @@ import (
 // @Description Ilova bot_url'ni ochadi; foydalanuvchi botda (bir marta raqamini yuborib) tasdiqlaydi.
 // @Description Ilova /mobile/auth/telegram/check ni 2 soniyada bir poll qiladi. Captcha yoqilgan bo'lsa X-Captcha-Token header kerak.
 // @Tags auth
+// @Description client=web - ilova oddiy brauzerda ochiq (Telegram Mini App emas): bot "Ilovaga qaytish" tugmasi oddiy havola bo'ladi (brauzerda sessiya saqlanadi). Bo'sh = Mini App.
 // @Produce json
+// @Param client query string false "web | miniapp (default miniapp)"
 // @Success 200 {object} service.TelegramLinkStartRes
 // @Router /mobile/auth/telegram/start [post]
 func (h *Handler) TelegramLoginStart(c *gin.Context) {
-	res, err := h.Clients.User.TelegramLoginStart(c.Request.Context())
+	res, err := h.Clients.User.TelegramLoginStart(c.Request.Context(), c.Query("client") == "web")
 	if err != nil {
 		errs.Bad(c, err)
 		return
@@ -55,6 +57,7 @@ func (h *Handler) TelegramLoginCheck(c *gin.Context) {
 // @Summary Hisobga telefon raqam ulash/almashtirishni boshlash (Telegram orqali tasdiqlanadi)
 // @Tags user
 // @Produce json
+// @Param client query string false "web | miniapp (default miniapp)"
 // @Success 200 {object} service.TelegramLinkStartRes
 // @Security BearerAuth
 // @Router /mobile/user/phone/start [post]
@@ -63,7 +66,7 @@ func (h *Handler) PhoneLinkStart(c *gin.Context) {
 	if userId == "" {
 		return
 	}
-	res, err := h.Clients.User.PhoneLinkStart(c.Request.Context(), userId)
+	res, err := h.Clients.User.PhoneLinkStart(c.Request.Context(), userId, c.Query("client") == "web")
 	if err != nil {
 		errs.Bad(c, err)
 		return

@@ -352,7 +352,7 @@ const docTemplate = `{
         },
         "/mobile/auth/telegram/start": {
             "post": {
-                "description": "Ilova bot_url'ni ochadi; foydalanuvchi botda (bir marta raqamini yuborib) tasdiqlaydi.\nIlova /mobile/auth/telegram/check ni 2 soniyada bir poll qiladi. Captcha yoqilgan bo'lsa X-Captcha-Token header kerak.",
+                "description": "Ilova bot_url'ni ochadi; foydalanuvchi botda (bir marta raqamini yuborib) tasdiqlaydi.\nIlova /mobile/auth/telegram/check ni 2 soniyada bir poll qiladi. Captcha yoqilgan bo'lsa X-Captcha-Token header kerak.\nclient=web - ilova oddiy brauzerda ochiq (Telegram Mini App emas): bot \"Ilovaga qaytish\" tugmasi oddiy havola bo'ladi (brauzerda sessiya saqlanadi). Bo'sh = Mini App.",
                 "produces": [
                     "application/json"
                 ],
@@ -360,6 +360,14 @@ const docTemplate = `{
                     "auth"
                 ],
                 "summary": "Telegram bot orqali OTP'siz kirishni boshlash (token + bot havolasi)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "web | miniapp (default miniapp)",
+                        "name": "client",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3177,6 +3185,14 @@ const docTemplate = `{
                     "user"
                 ],
                 "summary": "Hisobga telefon raqam ulash/almashtirishni boshlash (Telegram orqali tasdiqlanadi)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "web | miniapp (default miniapp)",
+                        "name": "client",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",

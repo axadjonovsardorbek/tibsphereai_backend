@@ -46,7 +46,7 @@ func TestAuth_TelegramLogin_Deeplink(t *testing.T) {
 	a := newAuthEnv(t)
 	ctx := context.Background()
 
-	start, err := a.svc.TelegramLoginStart(ctx)
+	start, err := a.svc.TelegramLoginStart(ctx, false)
 	require.NoError(t, err)
 	assert.Equal(t, 300, start.ExpiresIn)
 	assert.Equal(t, "https://t.me/tib_test_bot?start=login_"+start.Token, start.BotUrl)
@@ -79,7 +79,7 @@ func TestAuth_TelegramLogin_Deeplink(t *testing.T) {
 	assert.ErrorIs(t, err, errs.ErrOTPExpired)
 
 	// ikkinchi kirish xuddi shu foydalanuvchi
-	s2, _ := a.svc.TelegramLoginStart(ctx)
+	s2, _ := a.svc.TelegramLoginStart(ctx, false)
 	require.NoError(t, tglink.Confirm(a.rdb, tglink.PurposeLogin, s2.Token, tglink.Info{Phone: a.phone, Name: "Boshqa nom"}))
 	res2, err := a.svc.TelegramLoginCheck(ctx, s2.Token, "")
 	require.NoError(t, err)
@@ -90,7 +90,7 @@ func TestAuth_PhoneLink_Flow(t *testing.T) {
 	a := newAuthEnv(t)
 	ctx := context.Background()
 
-	start, err := a.svc.PhoneLinkStart(ctx, a.userId)
+	start, err := a.svc.PhoneLinkStart(ctx, a.userId, false)
 	require.NoError(t, err)
 	assert.Contains(t, start.BotUrl, "start=phone_"+start.Token)
 
@@ -118,7 +118,7 @@ func TestAuth_PhoneLink_Flow(t *testing.T) {
 	_, err = a.pool.Exec(ctx, `INSERT INTO users (id, name, email) VALUES ($1, 'other', $2)`, other, "ptest-"+other[:8]+"@example.uz")
 	require.NoError(t, err)
 	t.Cleanup(func() { _, _ = a.pool.Exec(context.Background(), `DELETE FROM users WHERE id = $1`, other) })
-	s2, _ := a.svc.PhoneLinkStart(ctx, other)
+	s2, _ := a.svc.PhoneLinkStart(ctx, other, false)
 	require.NoError(t, tglink.Confirm(a.rdb, tglink.PurposePhone, s2.Token, tglink.Info{Phone: a.phone}))
 	_, err = a.svc.PhoneLinkConfirm(ctx, other, s2.Token)
 	assert.ErrorIs(t, err, errs.ErrIdentifierTaken)

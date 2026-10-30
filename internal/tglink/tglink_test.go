@@ -44,7 +44,7 @@ func TestFlow_Login_ConfirmConsume(t *testing.T) {
 	// yaratilmagan token tasdiqlanmaydi (bot o'zi token o'ylab topa olmaydi)
 	assert.ErrorIs(t, Confirm(rdb, PurposeLogin, tok, Info{Phone: "+998901"}), ErrNotFound)
 
-	require.NoError(t, Create(rdb, PurposeLogin, tok, ""))
+	require.NoError(t, Create(rdb, PurposeLogin, tok, "", false))
 	in, ok, err := Consume(rdb, PurposeLogin, tok)
 	require.NoError(t, err)
 	assert.False(t, ok)
@@ -66,7 +66,7 @@ func TestFlow_Login_ConfirmConsume(t *testing.T) {
 func TestFlow_Phone_OwnerAndExpiry(t *testing.T) {
 	rdb, mr := rdbT(t)
 	tok := NewToken()
-	require.NoError(t, Create(rdb, PurposePhone, tok, "user-1"))
+	require.NoError(t, Create(rdb, PurposePhone, tok, "user-1", false))
 	require.NoError(t, Confirm(rdb, PurposePhone, tok, Info{Phone: "+998901234567"}))
 	in, err := Get(rdb, PurposePhone, tok)
 	require.NoError(t, err)

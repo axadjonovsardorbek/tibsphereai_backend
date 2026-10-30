@@ -40,6 +40,7 @@ type Info struct {
 	Phone  string `json:"phone,omitempty"`
 	Name   string `json:"name,omitempty"`
 	TgID   int64  `json:"tg_id,omitempty"`
+	Web    bool   `json:"web,omitempty"` // token oddiy brauzerdan boshlangan (Mini App emas)
 }
 
 func key(purpose, token string) string { return "tgl:" + purpose + ":" + token }
@@ -54,8 +55,8 @@ func NewToken() string {
 }
 
 // Create - kutilayotgan (pending) token yaratadi.
-func Create(rdb *redis.Client, purpose, token, owner string) error {
-	b, _ := json.Marshal(Info{Status: StatusPending, Owner: owner})
+func Create(rdb *redis.Client, purpose, token, owner string, web bool) error {
+	b, _ := json.Marshal(Info{Status: StatusPending, Owner: owner, Web: web})
 	return rdb.Set(key(purpose, token), b, TTL).Err()
 }
 
@@ -85,7 +86,7 @@ func Confirm(rdb *redis.Client, purpose, token string, who Info) error {
 	if cur.Status != StatusPending {
 		return ErrNotPending
 	}
-	who.Status, who.Owner = StatusConfirmed, cur.Owner
+	who.Status, who.Owner, who.Web = StatusConfirmed, cur.Owner, cur.Web
 	b, _ := json.Marshal(who)
 	return rdb.Set(key(purpose, token), b, TTL).Err()
 }

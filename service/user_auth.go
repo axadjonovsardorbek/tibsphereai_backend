@@ -74,13 +74,13 @@ func (s *UserService) botUsername(ctx context.Context) (string, error) {
 	return botNameVal, nil
 }
 
-func (s *UserService) linkStart(ctx context.Context, purpose, owner string) (*TelegramLinkStartRes, error) {
+func (s *UserService) linkStart(ctx context.Context, purpose, owner string, web bool) (*TelegramLinkStartRes, error) {
 	bot, err := s.botUsername(ctx)
 	if err != nil {
 		return nil, errs.ErrInternal.Wrap(err)
 	}
 	token := tglink.NewToken()
-	if err := tglink.Create(s.rdb, purpose, token, owner); err != nil {
+	if err := tglink.Create(s.rdb, purpose, token, owner, web); err != nil {
 		return nil, errs.ErrInternal.Wrap(err)
 	}
 	return &TelegramLinkStartRes{
@@ -90,8 +90,8 @@ func (s *UserService) linkStart(ctx context.Context, purpose, owner string) (*Te
 }
 
 // TelegramLoginStart - OTP'siz kirishni boshlaydi: bir martalik token va bot havolasini qaytaradi.
-func (s *UserService) TelegramLoginStart(ctx context.Context) (*TelegramLinkStartRes, error) {
-	return s.linkStart(ctx, tglink.PurposeLogin, "")
+func (s *UserService) TelegramLoginStart(ctx context.Context, web bool) (*TelegramLinkStartRes, error) {
+	return s.linkStart(ctx, tglink.PurposeLogin, "", web)
 }
 
 // TelegramLoginCheck - ilova poll qiladi: bot tasdiqlagan bo'lsa tokenlar (kirish yoki ro'yxatdan o'tish),
@@ -115,8 +115,8 @@ func (s *UserService) TelegramLoginCheck(ctx context.Context, token, referral st
 }
 
 // PhoneLinkStart - joriy hisobga telefon raqam ulash/almashtirishni boshlaydi (raqam Telegram orqali tasdiqlanadi).
-func (s *UserService) PhoneLinkStart(ctx context.Context, userId string) (*TelegramLinkStartRes, error) {
-	return s.linkStart(ctx, tglink.PurposePhone, userId)
+func (s *UserService) PhoneLinkStart(ctx context.Context, userId string, web bool) (*TelegramLinkStartRes, error) {
+	return s.linkStart(ctx, tglink.PurposePhone, userId, web)
 }
 
 // PhoneLinkConfirm - bot tasdiqlagan raqamni hisobga yozadi. Raqam boshqa hisobda bo'lsa 409.

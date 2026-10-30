@@ -305,6 +305,10 @@ func handleLinkStart(bot *tgbotapi.BotAPI, rdb *redis.Client, cfg *config.Config
 
 // confirmLink - tokenni tasdiqlaydi va foydalanuvchini ilovaga qaytaradi.
 func confirmLink(bot *tgbotapi.BotAPI, rdb *redis.Client, cfg *config.Config, chatID int64, purpose, token string, who tglink.Info) {
+	web := false
+	if cur, err := tglink.Get(rdb, purpose, token); err == nil {
+		web = cur.Web
+	}
 	if err := tglink.Confirm(rdb, purpose, token, who); err != nil {
 		log.Printf("link confirm failed (%s): %v", purpose, err)
 		bot.Send(tgbotapi.NewMessage(chatID, "⌛ Havola eskirgan. Ilovaga qaytib, qaytadan urinib ko'ring."))
@@ -315,8 +319,15 @@ func confirmLink(bot *tgbotapi.BotAPI, rdb *redis.Client, cfg *config.Config, ch
 		text = "✅ Raqamingiz tasdiqlandi! Ilovaga qayting - u hisobingizga ulanadi."
 	}
 	m := tgbotapi.NewMessage(chatID, text)
-	m.ReplyMarkup = webAppInlineKeyboard{
-		InlineKeyboard: [][]webAppInlineButton{{{Text: "↩️ Ilovaga qaytish", WebApp: webAppInfo{URL: cfg.WEBSITE_URL}}}},
+	if web {
+		// Brauzerdan boshlangan: Mini App oyna brauzer sessiyasini ko'rmaydi (akaunsiz ochiladi),
+		// shu sabab oddiy havola - brauzerda ochiladi va poll qilayotgan tab kiradi.
+		m.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonURL("↩️ Ilovaga qaytish", cfg.WEBSITE_URL)))
+	} else {
+		m.ReplyMarkup = webAppInlineKeyboard{
+			InlineKeyboard: [][]webAppInlineButton{{{Text: "↩️ Ilovaga qaytish", WebApp: webAppInfo{URL: cfg.WEBSITE_URL}}}},
+		}
 	}
 	bot.Send(m)
 }

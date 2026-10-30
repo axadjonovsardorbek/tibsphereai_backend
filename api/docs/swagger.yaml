@@ -2999,6 +2999,12 @@ paths:
       description: |-
         Ilova bot_url'ni ochadi; foydalanuvchi botda (bir marta raqamini yuborib) tasdiqlaydi.
         Ilova /mobile/auth/telegram/check ni 2 soniyada bir poll qiladi. Captcha yoqilgan bo'lsa X-Captcha-Token header kerak.
+        client=web - ilova oddiy brauzerda ochiq (Telegram Mini App emas): bot "Ilovaga qaytish" tugmasi oddiy havola bo'ladi (brauzerda sessiya saqlanadi). Bo'sh = Mini App.
+      parameters:
+      - description: web | miniapp (default miniapp)
+        in: query
+        name: client
+        type: string
       produces:
       - application/json
       responses:
@@ -4758,6 +4764,11 @@ paths:
       - user
   /mobile/user/phone/start:
     post:
+      parameters:
+      - description: web | miniapp (default miniapp)
+        in: query
+        name: client
+        type: string
       produces:
       - application/json
       responses:
