@@ -128,7 +128,7 @@ func (r *SimulationRepo) Finish(req *m.SimulationFinishReq, finalScore, xpEarned
 	var scoreOut int
 	err := r.db.QueryRow(ctx, `
 		UPDATE simulation_sessions
-		SET status = $1, ended_at = now(), final_score = $2, xp_earned = $3, coins_earned = $4
+		SET status = $1, ended_at = now(), final_score = $2, stars_earned = $3, coins_earned = $4
 		WHERE id = $5 AND status = 'active'
 		RETURNING final_score
 	`, status, finalScore, xpEarned, coinsEarned, req.SessionId).Scan(&scoreOut)
@@ -142,7 +142,7 @@ func (r *SimulationRepo) Finish(req *m.SimulationFinishReq, finalScore, xpEarned
 	return &m.SimulationFinishRes{
 		SessionId:    req.SessionId,
 		FinalScore:   scoreOut,
-		XPEarned:     xpEarned,
+		StarsEarned:  xpEarned,
 		CoinsEarned:  coinsEarned,
 		DebriefReady: false, // service qatlamida debrief muvaffaqiyatli saqlansa true'ga o'rnatiladi
 	}, nil
@@ -151,7 +151,7 @@ func (r *SimulationRepo) Finish(req *m.SimulationFinishReq, finalScore, xpEarned
 func (r *SimulationRepo) GetById(req *m.ById) (*m.SimulationSessionRes, error) {
 	row := r.db.QueryRow(context.Background(), `
 		SELECT s.id, s.user_id, s.case_id, c.title ->> 'uz', s.status, s.health_percent,
-			s.final_score, s.xp_earned, s.coins_earned, s.started_at::text, s.ended_at::text,
+			s.final_score, s.stars_earned, s.coins_earned, s.started_at::text, s.ended_at::text,
 			c.max_attempts,
 			(SELECT COUNT(*) FROM simulation_events e WHERE e.session_id = s.id AND e.type = 'question')
 		FROM simulation_sessions s
@@ -162,7 +162,7 @@ func (r *SimulationRepo) GetById(req *m.ById) (*m.SimulationSessionRes, error) {
 	s := m.SimulationSessionRes{}
 	err := row.Scan(
 		&s.Id, &s.UserId, &s.CaseId, &s.CaseTitle, &s.Status, &s.HealthPercent,
-		&s.FinalScore, &s.XPEarned, &s.CoinsEarned, &s.StartedAt, &s.EndedAt, &s.MaxAttempts, &s.AttemptsUsed,
+		&s.FinalScore, &s.StarsEarned, &s.CoinsEarned, &s.StartedAt, &s.EndedAt, &s.MaxAttempts, &s.AttemptsUsed,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("simulation session not found: %s", req.Id)
@@ -207,7 +207,7 @@ func (r *SimulationRepo) GetCompleted(req *m.ById) (*m.PaginationResponse, *m.Si
 func (r *SimulationRepo) listByStatus(userId, status string) (*m.PaginationResponse, *m.SimulationSessionList, error) {
 	rows, err := r.db.Query(context.Background(), `
 		SELECT s.id, s.user_id, s.case_id, c.title ->> 'uz', s.status, s.health_percent,
-			s.final_score, s.xp_earned, s.coins_earned, s.started_at::text, s.ended_at::text,
+			s.final_score, s.stars_earned, s.coins_earned, s.started_at::text, s.ended_at::text,
 			c.max_attempts,
 			(SELECT COUNT(*) FROM simulation_events e WHERE e.session_id = s.id AND e.type = 'question')
 		FROM simulation_sessions s
@@ -225,7 +225,7 @@ func (r *SimulationRepo) listByStatus(userId, status string) (*m.PaginationRespo
 		s := &m.SimulationSessionRes{}
 		if err := rows.Scan(
 			&s.Id, &s.UserId, &s.CaseId, &s.CaseTitle, &s.Status, &s.HealthPercent,
-			&s.FinalScore, &s.XPEarned, &s.CoinsEarned, &s.StartedAt, &s.EndedAt, &s.MaxAttempts, &s.AttemptsUsed,
+			&s.FinalScore, &s.StarsEarned, &s.CoinsEarned, &s.StartedAt, &s.EndedAt, &s.MaxAttempts, &s.AttemptsUsed,
 		); err != nil {
 			return nil, nil, fmt.Errorf("error while scanning simulation session: %w", err)
 		}

@@ -198,7 +198,7 @@ func TestUserService_AddPoints(t *testing.T) {
 	um := mocks.NewUserMock()
 	svc := newUserTestService(um, mocks.NewUserDeviceMock(), nil, &config.Config{}, nil)
 
-	req := &m.AddPointsReq{UserId: "user-1", XPDelta: 10, CoinsDelta: 5}
+	req := &m.AddPointsReq{UserId: "user-1", StarsDelta: 10, CoinsDelta: 5}
 	um.On("AddPoints", req).Return(&m.Void{}, nil)
 
 	_, err := svc.AddPoints(context.Background(), req)

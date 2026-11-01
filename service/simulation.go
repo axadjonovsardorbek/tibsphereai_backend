@@ -11,7 +11,7 @@ import (
 )
 
 // SimulationService - Simulyatsiya dvigateli (BACKEND_STRUCTURE.md 4-bo'lim):
-// kirish huquqi (limit/premium), qadamlar logi, yakunlash + AI debrief + XP/Coin.
+// kirish huquqi (limit/premium), qadamlar logi, yakunlash + AI debrief + stars/Coin.
 type SimulationService struct {
 	storage     st.Storage
 	ai          *ai.Client
@@ -334,7 +334,7 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 		}
 	} else if answeredCorrectly {
 		// Foydalanuvchi to'g'ri javob topdi - sessiya avtomatik yakunlanadi va
-		// AI debrief/XP/coin natijasi bir xil "session_ended" yo'li bilan qaytadi.
+		// AI debrief/stars/coin natijasi bir xil "session_ended" yo'li bilan qaytadi.
 		finishRes, fErr := s.Finish(ctx, &m.SimulationFinishReq{SessionId: req.SessionId, Reason: "solved"})
 		if fErr != nil {
 			fmt.Println("failed to auto-finish simulation on correct answer:", fErr)
@@ -347,12 +347,12 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 	return res, nil
 }
 
-// defaultLevelXPReward/defaultLevelCoinReward - levels jadvalida hali hech qanday
-// yozuv bo'lmasa (yoki foydalanuvchi XP'siga mos level topilmasa) ishlatiladigan
+// defaultLevelStarsReward/defaultLevelCoinReward - levels jadvalida hali hech qanday
+// yozuv bo'lmasa (yoki foydalanuvchi stars'siga mos level topilmasa) ishlatiladigan
 // bazaviy mukofot (Level 1'ning odatiy qiymatiga mos, ko'ring migrations/00013).
 const (
-	defaultLevelXPReward   = 50
-	defaultLevelCoinReward = 5
+	defaultLevelStarsReward = 50
+	defaultLevelCoinReward  = 5
 )
 
 // incorrectStepPenaltyPct - DebriefAI (Finish ichida sinxron generatsiya
@@ -362,23 +362,23 @@ const (
 // sessiya tugagach BUTUN tarixni ko'rib chiqib, real vaqtda yetarlicha
 // jazolanmagan (yoki umuman e'tibordan chetda qolgan) xatolarni topishi mumkin -
 // masalan "gipotenziyada nitroglikerin berish xavfi" kabi. Bu jarima bo'lmasa,
-// bunday xato final_score/XP/tangaga umuman ta'sir qilmay qolardi.
+// bunday xato final_score/stars/tangaga umuman ta'sir qilmay qolardi.
 const incorrectStepPenaltyPct = 10
 
-// Finish - sessiyani yakunlaydi, XP/Coin beradi va AI debriefing hisobotini
+// Finish - sessiyani yakunlaydi, stars/Coin beradi va AI debriefing hisobotini
 // generatsiya qiladi. Mukofot ikki omilga qarab hisoblanadi:
-// 1) foydalanuvchining O'Z DARAJASI (levels.xp_reward/coin_reward, [[LevelRes]]) -
+// 1) foydalanuvchining O'Z DARAJASI (levels.stars_reward/coin_reward, [[LevelRes]]) -
 // qancha yuqori level, shuncha ko'p bazaviy mukofot;
 // 2) case.difficulty (easy|medium|hard) koeffitsienti (AppSettingService.DifficultyMultiplier,
 // masalan hard=2x) - shu bazaga qo'llanadi.
 // Ikkalasi ham finalScore'ga (qobiliyat/to'g'ri bajarish darajasi) mutanosib
 // beriladi - masalan Level 3 foydalanuvchi hard case'ni 80% finalScore bilan
-// tugatsa: xp = round(level3_xp_reward * hard_multiplier * 80/100). finalScore -
+// tugatsa: stars = round(level3_stars_reward * hard_multiplier * 80/100). finalScore -
 // health_percent'dan DebriefAI xatolari uchun jarima ayirilgan qiymat (pastda,
 // incorrectStepPenaltyPct). Muvaffaqiyatsiz (health_zero) bo'lsa tanga
-// berilmaydi (coins=0), faqat XP hisoblanadi (BACKEND_STRUCTURE.md 6-bo'lim).
+// berilmaydi (coins=0), faqat stars hisoblanadi (BACKEND_STRUCTURE.md 6-bo'lim).
 // Hech qanday klinik harakat qilinmagan bo'lsa (0 ta action event - faqat "question"
-// chat hisobga olinmaydi), xp/coins ham 0 - aks holda darhol "finish" bosib, hech
+// chat hisobga olinmaydi), stars/coins ham 0 - aks holda darhol "finish" bosib, hech
 // narsa qilmasdan to'liq mukofot olish mumkin bo'lardi (health_percent 100'dan boshlanadi).
 func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishReq) (*m.SimulationFinishRes, error) {
 	session, err := s.storage.SimulationS.GetById(&m.ById{Id: req.SessionId})
@@ -405,12 +405,12 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 		}
 	}
 
-	xpBase, coinBase := defaultLevelXPReward, defaultLevelCoinReward
+	starsBase, coinBase := defaultLevelStarsReward, defaultLevelCoinReward
 	if session.UserId != nil {
-		if user, uErr := s.storage.UserS.GetById(&m.ById{Id: *session.UserId}); uErr == nil && user != nil && user.XP != nil {
-			if lvl, lErr := s.storage.LevelS.GetLevelForXP(*user.XP); lErr == nil && lvl != nil {
-				if lvl.XPReward != nil {
-					xpBase = *lvl.XPReward
+		if user, uErr := s.storage.UserS.GetById(&m.ById{Id: *session.UserId}); uErr == nil && user != nil && user.Stars != nil {
+			if lvl, lErr := s.storage.LevelS.GetLevelForStars(*user.Stars); lErr == nil && lvl != nil {
+				if lvl.StarsReward != nil {
+					starsBase = *lvl.StarsReward
 				}
 				if lvl.CoinReward != nil {
 					coinBase = *lvl.CoinReward
@@ -419,7 +419,7 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 		}
 	}
 	mult := s.appSettings.DifficultyMultiplier(ctx, difficulty)
-	xpBase = int(float64(xpBase)*mult + 0.5)
+	starsBase = int(float64(starsBase)*mult + 0.5)
 	coinBase = int(float64(coinBase)*mult + 0.5)
 
 	// actionCount - "question" (anamnez chat) hisobga olinmaydi, chunki u
@@ -441,7 +441,7 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 		}
 	}
 
-	// DebriefAI hisobotini XP/coin hisoblashdan OLDIN, sinxron generatsiya
+	// DebriefAI hisobotini stars/coin hisoblashdan OLDIN, sinxron generatsiya
 	// qilamiz (avval "go s.generateDebrief(...)" bilan fonda, natija reward'ga
 	// umuman ta'sir qilmasdi) - shunda incorrect_steps darhol jarima sifatida
 	// hisobga olinadi. AI mavjud bo'lmasa (Debrief=nil, mock/GEMINI_API_KEY
@@ -479,15 +479,15 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 		}
 	}
 
-	xp, coins := 0, 0
+	stars, coins := 0, 0
 	if actionCount > 0 {
-		xp = xpBase * finalScore / 100
+		stars = starsBase * finalScore / 100
 		if req.Reason != "health_zero" && req.Reason != "attempts_exhausted" {
 			coins = coinBase * finalScore / 100
 		}
 	}
 
-	res, err := s.storage.SimulationS.Finish(req, finalScore, xp, coins)
+	res, err := s.storage.SimulationS.Finish(req, finalScore, stars, coins)
 	if err != nil {
 		return nil, err
 	}
@@ -495,7 +495,7 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 	if session.UserId != nil {
 		if _, err := s.storage.UserS.AddPoints(&m.AddPointsReq{
 			UserId:      *session.UserId,
-			XPDelta:     res.XPEarned,
+			StarsDelta:  res.StarsEarned,
 			CoinsDelta:  res.CoinsEarned,
 			Reason:      "simulation_finish",
 			ReferenceId: req.SessionId,

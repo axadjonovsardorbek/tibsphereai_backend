@@ -45,7 +45,7 @@ func (r *DebriefRepo) Create(req *m.DebriefReportCreateReq) (*m.Void, error) {
 
 func (r *DebriefRepo) GetBySessionId(sessionId string) (*m.DebriefReportRes, error) {
 	row := r.db.QueryRow(context.Background(), `
-		SELECT d.session_id, d.correct_steps, d.incorrect_steps, s.final_score, s.xp_earned,
+		SELECT d.session_id, d.correct_steps, d.incorrect_steps, s.final_score, s.stars_earned,
 			s.coins_earned, d.guideline_notes, d.weak_topics, d.created_at::text
 		FROM debrief_reports d
 		JOIN simulation_sessions s ON s.id = d.session_id
@@ -55,7 +55,7 @@ func (r *DebriefRepo) GetBySessionId(sessionId string) (*m.DebriefReportRes, err
 	var correctJSON, incorrectJSON, weakJSON []byte
 	d := m.DebriefReportRes{}
 	err := row.Scan(
-		&d.SessionId, &correctJSON, &incorrectJSON, &d.FinalScore, &d.XPEarned,
+		&d.SessionId, &correctJSON, &incorrectJSON, &d.FinalScore, &d.StarsEarned,
 		&d.CoinsEarned, &d.GuidelineNotes, &weakJSON, &d.CreatedAt,
 	)
 	if err == pgx.ErrNoRows {

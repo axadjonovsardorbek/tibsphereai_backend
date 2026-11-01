@@ -7,11 +7,11 @@
 ## 📱 Asosiy Mobil Ilova Bo'limlari (Bottom Navigation)
 
 Ilova pastki menyusida quyidagi **4 ta asosiy bo'lim** mavjud:
-1. **Home (Bosh sahifa):** Foydalanuvchi mini-statusi (XP, Level, Streak), Kategoriyalar (Kardiologiya, Terapiya va h.k.), Tavsiya etilgan va tasodifiy keyslar.
+1. **Home (Bosh sahifa):** Foydalanuvchi mini-statusi (stars, Level, Streak), Kategoriyalar (Kardiologiya, Terapiya va h.k.), Tavsiya etilgan va tasodifiy keyslar.
 
 2. **Simulation (Simulyatsiya):** Barcha klinik keyslar katalogi (In Progress, Oson/O'rta/Murakkab), qidiruv va simulyatsiyani boshlash.
 3. **Favorites (Sevimlilar):** Foydalanuvchi o'zi saqlab qo'ygan (yurakcha bosilgan) keyslar ro'yxati.
-4. **Profile (Profil & Sozlamalar):** Foydalanuvchi ma'lumotlari, Level/XP, Tangalar, Keyslar tarixi (Completed/Ongoing), Obuna, **Mening Promokodlarim** va tozalangan Sozlamalar.
+4. **Profile (Profil & Sozlamalar):** Foydalanuvchi ma'lumotlari, Level/stars, Tangalar, Keyslar tarixi (Completed/Ongoing), Obuna, **Mening Promokodlarim** va tozalangan Sozlamalar.
 
 
 ---
@@ -31,8 +31,8 @@ Ilova pastki menyusida quyidagi **4 ta asosiy bo'lim** mavjud:
   - F.I.Sh / Username o'zgartirish (`Change Username`).
   - Tibbiy ixtisoslik va daraja (Talaba, Rezident, Shifokor).
   - Avatar / rasm yuklash.
-- [ ] **Profil Statistikasi va Daraja (Level & XP):**
-  - Foydalanuvchi darajasi (`Level 1`, `Level 2` va `XP bar`: masalan, 350/1000 XP).
+- [ ] **Profil Statistikasi va Daraja (Level & stars):**
+  - Foydalanuvchi darajasi (`Level 1`, `Level 2` va `stars bar`: masalan, 350/1000 stars).
   - Streak hisoblagichi (kunlik ketma-ket kirishlar soni).
   - Tangalar (Coins) balansi.
   - Yechilgan to'g'ri keyslar soni (`Correct`).
@@ -51,7 +51,7 @@ Ilova pastki menyusida quyidagi **4 ta asosiy bo'lim** mavjud:
 
 - [ ] **Home ma'lumotlari (Dashboard Feed):**
   - Yuqori promo-banner (Chegirmali obuna taklifi va taymer).
-  - Foydalanuvchi mini-profil kartochkasi (Ism, unvon, Level, XP, Streak, Obuna statusi).
+  - Foydalanuvchi mini-profil kartochkasi (Ism, unvon, Level, stars, Streak, Obuna statusi).
   - Agar foydalanuvchi obuna sotib olmagan bo'lsa, qolgan bepul urinishlar soni ko'rsatiladi (masalan: "3 ta bepul keys qoldi").
 - [ ] **Kategoriyalar (Categories):**
   - Tibbiy yo'nalishlar ro'yxati (Kardiologiya, Terapiya, Shoshilinch yordam, Nevrologiya, Pediatriya, Travmatologiya va h.k.).
@@ -117,7 +117,7 @@ Ilova pastki menyusida quyidagi **4 ta asosiy bo'lim** mavjud:
 
 - [ ] **AI orqali Debriefing hisoboti:**
   - Qilingan to'g'ri va noto'g'ri qadamlar ketma-ketligi jadvali.
-  - Yakuniy ball (0-100%) va qo'shilgan XP/Tangalar.
+  - Yakuniy ball (0-100%) va qo'shilgan stars/Tangalar.
   - Xalqaro klinik qo'llanmalar (AHA, ERC va b.) bo'yicha tahliliy izoh.
   - Bilim bo'shliqlari / Zaif mavzularni aniqlash (masalan: "EKG - Miokard infarkti").
 - [ ] **Hamkor kurslar taklifi va Obuna savdosi (Funnel):**

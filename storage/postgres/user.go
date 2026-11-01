@@ -389,7 +389,7 @@ func (r *UserRepo) GetById(req *m.ById) (*m.UserRes, error) {
 		language,
 		specialization,
 		level,
-		xp,
+		stars,
 		coins,
 		streak_count,
 		created_at::text,
@@ -414,7 +414,7 @@ func (r *UserRepo) GetById(req *m.ById) (*m.UserRes, error) {
 		&user.Language,
 		&user.Specialization,
 		&user.Level,
-		&user.XP,
+		&user.Stars,
 		&user.Coins,
 		&user.StreakCount,
 		&user.CreatedAt,
@@ -444,7 +444,7 @@ func (r *UserRepo) GetAll(req *m.UserGetListReq) (*m.PaginationResponse, *m.User
 		language,
 		specialization,
 		level,
-		xp,
+		stars,
 		coins,
 		streak_count,
 		created_at::text,
@@ -492,7 +492,7 @@ func (r *UserRepo) GetAll(req *m.UserGetListReq) (*m.PaginationResponse, *m.User
 			&user.Language,
 			&user.Specialization,
 			&user.Level,
-			&user.XP,
+			&user.Stars,
 			&user.Coins,
 			&user.StreakCount,
 			&user.CreatedAt,
@@ -706,7 +706,7 @@ func (r *UserRepo) CreateActivity(req *m.UserActivityCreateReq) (*m.Void, error)
 	return &m.Void{}, nil
 }
 
-// AddPoints - keys yakunlanganda yoki promokod ishlatilganda XP/Coin qo'shish va
+// AddPoints - keys yakunlanganda yoki promokod ishlatilganda stars/Coin qo'shish va
 // levels jadvaliga qarab users.level'ni qayta hisoblash (BACKEND_STRUCTURE.md 6-bo'lim).
 func (r *UserRepo) AddPoints(req *m.AddPointsReq) (*m.Void, error) {
 	ctx := context.Background()
@@ -719,9 +719,9 @@ func (r *UserRepo) AddPoints(req *m.AddPointsReq) (*m.Void, error) {
 
 	_, err = tx.Exec(ctx, `
 		UPDATE users
-		SET xp = xp + $1, coins = coins + $2, updated_at = now()
+		SET stars = stars + $1, coins = coins + $2, updated_at = now()
 		WHERE id = $3 AND deleted_at = 0
-	`, req.XPDelta, req.CoinsDelta, req.UserId)
+	`, req.StarsDelta, req.CoinsDelta, req.UserId)
 	if err != nil {
 		return nil, fmt.Errorf("error while adding points: %w", err)
 	}
@@ -731,8 +731,8 @@ func (r *UserRepo) AddPoints(req *m.AddPointsReq) (*m.Void, error) {
 		UPDATE users u
 		SET level = COALESCE((
 			SELECT l.level_number FROM levels l
-			WHERE l.required_xp <= u.xp
-			ORDER BY l.required_xp DESC
+			WHERE l.required_stars <= u.stars
+			ORDER BY l.required_stars DESC
 			LIMIT 1
 		), u.level)
 		WHERE u.id = $1
@@ -743,8 +743,8 @@ func (r *UserRepo) AddPoints(req *m.AddPointsReq) (*m.Void, error) {
 
 	_, err = tx.Exec(ctx, `
 		INSERT INTO point_transactions (id, user_id, kind, delta, reason, reference_id)
-		VALUES ($1, $2, 'xp', $3, $4, $5), ($6, $2, 'coin', $7, $4, $5)
-	`, uuid.NewString(), req.UserId, req.XPDelta, req.Reason, req.ReferenceId, uuid.NewString(), req.CoinsDelta)
+		VALUES ($1, $2, 'stars', $3, $4, $5), ($6, $2, 'coin', $7, $4, $5)
+	`, uuid.NewString(), req.UserId, req.StarsDelta, req.Reason, req.ReferenceId, uuid.NewString(), req.CoinsDelta)
 	if err != nil {
 		return nil, fmt.Errorf("error while logging point transaction: %w", err)
 	}
@@ -954,200 +954,6 @@ func (r *UserRepo) GetActivities(req *m.UserActivityGetListReq) (*m.ActivityStat
 	default:
 		return nil, fmt.Errorf("unsupported type: %s", req.Type)
 	}
-}
-
-func (r *UserRepo) GetRating(req *m.RatingRequest) (*m.RatingResponse, error) {
-	ctx := context.Background()
-
-	if req.Limit <= 0 || req.Limit > 100 {
-		req.Limit = 10
-	}
-	if req.Type == "" {
-		req.Type = "total"
-	}
-
-	loc := time.FixedZone("UTC+5", 5*3600)
-	rt := m.RatingType(req.Type)
-	start, end := calcRange(rt, loc)
-
-	res := &m.RatingResponse{
-		Type:  rt,
-		Limit: req.Limit,
-		Items: make([]m.RatingUserItem, 0, req.Limit),
-	}
-
-	query := `
-	WITH scores AS (
-		SELECT
-		  u.id AS user_id,
-		  u.name AS name,
-		  u.image_url AS avatar,
-		  COALESCE(SUM(ua.activity), 0) AS activity
-		FROM users u
-		LEFT JOIN user_activities ua
-		  ON ua.user_id = u.id
-		 AND ua.day >= $1::date
-		 AND ua.day <= $2::date
-		GROUP BY u.id, u.name, u.image_url
-	),
-	ranked AS (
-		SELECT
-		  user_id,
-		  name,
-		  avatar,
-		  activity,
-		  ROW_NUMBER() OVER (
-			ORDER BY activity DESC, name ASC, user_id ASC
-		  ) AS rank
-		FROM scores
-	),
-	topn AS (
-		SELECT user_id, name, avatar, activity, rank
-		FROM ranked
-		ORDER BY rank
-		LIMIT $3
-	),
-	me AS (
-		SELECT user_id, name, avatar, activity, rank
-		FROM ranked
-		WHERE user_id = $4::uuid
-	)
-	SELECT 'top' AS kind, user_id, name, avatar, activity, rank FROM topn
-	UNION ALL
-	SELECT 'me'  AS kind, user_id, name, avatar, activity, rank FROM me;
-	`
-
-	rows, err := r.db.Query(ctx, query, start, end, req.Limit, req.UserId)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var kind string
-		var it m.RatingUserItem
-
-		if err := rows.Scan(&kind, &it.UserID, &it.Name, &it.ImageUrl, &it.Activity, &it.Rank); err != nil {
-			return nil, err
-		}
-
-		if kind == "me" {
-			res.Me = &it
-		} else {
-			res.Items = append(res.Items, it)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
-func (r *UserRepo) GetTop(req *m.RatingRequest) ([]m.RatingUserItem, error) {
-	ctx := context.Background()
-
-	qTopRating := `
-	WITH scores AS (
-	  SELECT
-	    u.id AS user_id,
-	    u.name AS name,
-	    u.image_url AS avatar,
-	    COALESCE(SUM(ua.activity), 0) AS activity
-	  FROM users u
-	  LEFT JOIN user_activities ua
-	    ON ua.user_id = u.id
-	   AND ua.day >= $1::date
-	   AND ua.day <= $2::date
-	  GROUP BY u.id, u.name, u.image_url
-	),
-	ranked AS (
-	  SELECT
-	    user_id, name, avatar, activity,
-	    ROW_NUMBER() OVER (ORDER BY activity DESC, name ASC, user_id ASC) AS rank
-	  FROM scores
-	)
-	SELECT user_id, name, avatar, activity, rank, (user_id = $3) as is_me
-	FROM ranked
-	ORDER BY rank
-	LIMIT $4
-	`
-
-	loc := time.FixedZone("UTC+5", 5*3600)
-	rt := m.RatingType(req.Type)
-	start, end := calcRange(rt, loc)
-
-	rows, err := r.db.Query(ctx, qTopRating, start, end, req.UserId, req.Limit)
-	if err != nil {
-		return nil, fmt.Errorf("top rating query: %w", err)
-	}
-	defer rows.Close()
-
-	items := make([]m.RatingUserItem, 0, req.Limit)
-	for rows.Next() {
-		var it m.RatingUserItem
-
-		if err := rows.Scan(&it.UserID, &it.Name, &it.ImageUrl, &it.Activity, &it.Rank, &it.IsMe); err != nil {
-			return nil, fmt.Errorf("top rating scan: %w", err)
-		}
-
-		items = append(items, it)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("top rating rows: %w", err)
-	}
-
-	slog.Debug("GetTop rating", "type", req.Type, "limit", req.Limit, "items_count", len(items))
-	return items, nil
-}
-
-func (r *UserRepo) GetMe(req *m.RatingRequest) (*m.RatingUserItem, error) {
-	ctx := context.Background()
-
-	qMeRating := `
-	WITH scores AS (
-	  SELECT
-	    u.id AS user_id,
-	    u.name AS name,
-	    u.image_url AS avatar,
-	    COALESCE(SUM(ua.activity), 0) AS activity
-	  FROM users u
-	  LEFT JOIN user_activities ua
-	    ON ua.user_id = u.id
-	   AND ua.day >= $1::date
-	   AND ua.day <= $2::date
-	  GROUP BY u.id, u.name, u.image_url
-	),
-	ranked AS (
-	  SELECT
-	    user_id, name, avatar, activity,
-	    ROW_NUMBER() OVER (ORDER BY activity DESC, name ASC, user_id ASC) AS rank
-	  FROM scores
-	)
-	SELECT user_id, name, avatar, activity, rank
-	FROM ranked
-	WHERE user_id = $3::uuid
-	`
-
-	var it models.RatingUserItem
-
-	loc := time.FixedZone("UTC+5", 5*3600)
-	rt := m.RatingType(req.Type)
-	start, end := calcRange(rt, loc)
-
-	err := r.db.QueryRow(ctx, qMeRating, start, end, req.UserId).
-		Scan(&it.UserID, &it.Name, &it.ImageUrl, &it.Activity, &it.Rank)
-
-	if err == pgx.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("me rating query: %w", err)
-	}
-
-	it.IsMe = true
-
-	return &it, nil
 }
 
 func scanKeyValueTotalRows(rows pgx.Rows) (items []models.ActivityStatItem, total int64, err error) {

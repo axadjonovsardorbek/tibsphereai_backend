@@ -231,7 +231,7 @@ func TestSimulationService_AddEvent_AutoFinishesOnHealthZero(t *testing.T) {
 	sm.On("GetEvents", "sess-1").Return([]m.SimulationEventReq{{Type: "medication"}}, nil)
 
 	finishReq := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "health_zero"}
-	finishRes := &m.SimulationFinishRes{SessionId: "sess-1", XPEarned: 0, CoinsEarned: 0}
+	finishRes := &m.SimulationFinishRes{SessionId: "sess-1", StarsEarned: 0, CoinsEarned: 0}
 	sm.On("Finish", finishReq, 0, 0, 0).Return(finishRes, nil)
 
 	got, err := svc.AddEvent(context.Background(), req)
@@ -295,10 +295,10 @@ func (f fakeActionEvalAI) Evaluate(ctx context.Context, caseScenario map[string]
 }
 
 // Finish - sessiya yakunlanganda mukofot ikki omilga qarab hisoblanadi: (1)
-// foydalanuvchining O'Z DARAJASI (levels.xp_reward/coin_reward - bu yerda UserS.GetById
-// xato qaytaradi, shu sabab defaultLevelXPReward/CoinReward=50/5 ishlatiladi), (2) case
+// foydalanuvchining O'Z DARAJASI (levels.stars_reward/coin_reward - bu yerda UserS.GetById
+// xato qaytaradi, shu sabab defaultLevelStarsReward/CoinReward=50/5 ishlatiladi), (2) case
 // qiyinlik darajasi koeffitsienti (app_settings, sozlanmagan bo'lsa medium=1.5x, hard=2x -
-// shu sabab "medium" uchun 50*1.5=75 XP, 5*1.5=8 Coin). health_percent'ga mutanosib
+// shu sabab "medium" uchun 50*1.5=75 stars, 5*1.5=8 Coin). health_percent'ga mutanosib
 // hisoblanadi, balansga qo'shiladi va faoliyat (streak) loglanadi (BACKEND_STRUCTURE.md 6-bo'lim).
 // Level bo'yicha haqiqiy farqlanishni TestSimulationService_Finish_UsesUserLevelReward tekshiradi.
 func TestSimulationService_Finish_AwardsPointsAndLogsActivity(t *testing.T) {
@@ -323,23 +323,23 @@ func TestSimulationService_Finish_AwardsPointsAndLogsActivity(t *testing.T) {
 	sm.On("GetEvents", "sess-1").Return([]m.SimulationEventReq{{Type: "medication"}}, nil)
 
 	req := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "manual"}
-	// default bazasi: xp = round(50*1.5) = 75, coin = round(5*1.5) = 8; 100% sog'liq -> to'liq beriladi
-	finishRes := &m.SimulationFinishRes{SessionId: "sess-1", XPEarned: 75, CoinsEarned: 8}
+	// default bazasi: stars = round(50*1.5) = 75, coin = round(5*1.5) = 8; 100% sog'liq -> to'liq beriladi
+	finishRes := &m.SimulationFinishRes{SessionId: "sess-1", StarsEarned: 75, CoinsEarned: 8}
 	sm.On("Finish", req, 100, 75, 8).Return(finishRes, nil) // finalScore=100 - aiClient AI'siz (Debrief=nil), jarima yo'q
 
-	um.On("AddPoints", &m.AddPointsReq{UserId: "user-1", XPDelta: 75, CoinsDelta: 8, Reason: "simulation_finish", ReferenceId: "sess-1"}).
+	um.On("AddPoints", &m.AddPointsReq{UserId: "user-1", StarsDelta: 75, CoinsDelta: 8, Reason: "simulation_finish", ReferenceId: "sess-1"}).
 		Return(&m.Void{}, nil).Maybe()
 	um.On("CreateActivity", &m.UserActivityCreateReq{UserId: "user-1", Activity: 1}).Return(&m.Void{}, nil).Maybe()
 
 	got, err := svc.Finish(context.Background(), req)
 	require.NoError(t, err)
 	assert.Equal(t, "sess-1", got.SessionId)
-	assert.Equal(t, 75, got.XPEarned)
+	assert.Equal(t, 75, got.StarsEarned)
 	assert.Equal(t, 8, got.CoinsEarned)
 	assert.False(t, got.DebriefReady) // TODO: WS/poll orqali xabar qilinadi, hozircha doim false
 }
 
-// Finish - Level 5 (yuqori daraja, katta xp_reward/coin_reward) + "hard" case
+// Finish - Level 5 (yuqori daraja, katta stars_reward/coin_reward) + "hard" case
 // (2x koeffitsient) birgalikda past darajadagi foydalanuvchidan ancha ko'proq
 // mukofot berishi kerak - aynan shu narsa so'ralgan edi ("userni leveliga qarab
 // ham farq qilishi kerak").
@@ -361,28 +361,28 @@ func TestSimulationService_Finish_UsesUserLevelReward(t *testing.T) {
 	difficulty := "hard"
 	cm.On("GetById", &m.ById{Id: "case-1"}).Return(&m.CaseRes{Difficulty: &difficulty}, nil)
 
-	userXP := 8000 // "specialist" darajasidagi foydalanuvchi
-	um.On("GetById", &m.ById{Id: "user-1"}).Return(&m.UserRes{XP: &userXP}, nil)
+	userStars := 8000 // "specialist" darajasidagi foydalanuvchi
+	um.On("GetById", &m.ById{Id: "user-1"}).Return(&m.UserRes{Stars: &userStars}, nil)
 	xpReward, coinReward := 150, 15 // Level 5'ning bazaviy mukofoti (migrations/00013)
-	lm.On("GetLevelForXP", 8000).Return(&m.LevelRes{XPReward: &xpReward, CoinReward: &coinReward}, nil)
+	lm.On("GetLevelForStars", 8000).Return(&m.LevelRes{StarsReward: &xpReward, CoinReward: &coinReward}, nil)
 
 	am.On("Get", mock.Anything).Return(nil, errors.New("not set")).Maybe() // -> hard default 2x
 	sm.On("GetEvents", "sess-1").Return([]m.SimulationEventReq{{Type: "procedure"}}, nil)
 
 	req := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "manual"}
-	// 150*2=300 XP, 15*2=30 Coin - Level 1'ning (75/8, oldingi testga qarang) ustidagi test
-	sm.On("Finish", req, 100, 300, 30).Return(&m.SimulationFinishRes{SessionId: "sess-1", XPEarned: 300, CoinsEarned: 30}, nil)
+	// 150*2=300 stars, 15*2=30 Coin - Level 1'ning (75/8, oldingi testga qarang) ustidagi test
+	sm.On("Finish", req, 100, 300, 30).Return(&m.SimulationFinishRes{SessionId: "sess-1", StarsEarned: 300, CoinsEarned: 30}, nil)
 	um.On("AddPoints", mock.Anything).Return(&m.Void{}, nil).Maybe()
 	um.On("CreateActivity", mock.Anything).Return(&m.Void{}, nil).Maybe()
 
 	got, err := svc.Finish(context.Background(), req)
 	require.NoError(t, err)
-	assert.Equal(t, 300, got.XPEarned)
+	assert.Equal(t, 300, got.StarsEarned)
 	assert.Equal(t, 30, got.CoinsEarned)
 }
 
 // Finish - hech qanday klinik harakat qilinmagan bo'lsa (faqat anamnez "question"
-// yoki umuman hech narsa), xp/coins 0 bo'lishi kerak - health_percent boshlang'ich
+// yoki umuman hech narsa), stars/coins 0 bo'lishi kerak - health_percent boshlang'ich
 // 100'dan boshlangani uchun aks holda darhol "finish" bosib, hech narsa qilmasdan
 // to'liq mukofot olib ketish mumkin bo'lardi.
 func TestSimulationService_Finish_NoActions_NoReward(t *testing.T) {
@@ -400,12 +400,12 @@ func TestSimulationService_Finish_NoActions_NoReward(t *testing.T) {
 
 	got, err := svc.Finish(context.Background(), req)
 	require.NoError(t, err)
-	assert.Equal(t, 0, got.XPEarned)
+	assert.Equal(t, 0, got.StarsEarned)
 	assert.Equal(t, 0, got.CoinsEarned)
 }
 
 // Finish - health_zero (health 0'ga tushib avtomatik tugagan) sabab bo'lsa,
-// tanga umuman berilmaydi (coins=0), XP baribir health_percent nisbatida hisoblanadi.
+// tanga umuman berilmaydi (coins=0), stars baribir health_percent nisbatida hisoblanadi.
 func TestSimulationService_Finish_HealthZero_NoCoins(t *testing.T) {
 	sm := mocks.NewSimulationMock()
 	am := mocks.NewAppSettingMock()
@@ -443,8 +443,8 @@ func TestSimulationService_Finish_StorageError(t *testing.T) {
 	assert.ErrorIs(t, err, wantErr)
 }
 
-// Finish - DebriefAI (sinxron, xp/coin hisoblashdan OLDIN chaqiriladi) topgan
-// har bir klinik xato (incorrect_steps) uchun finalScore/XP/tangadan
+// Finish - DebriefAI (sinxron, stars/coin hisoblashdan OLDIN chaqiriladi) topgan
+// har bir klinik xato (incorrect_steps) uchun finalScore/stars/tangadan
 // incorrectStepPenaltyPct(10)% ayiriladi - ActionEvaluatorAI real vaqtda
 // yetarlicha jazolamagan xato (masalan "gipotenziyada nitroglikerin berish
 // xavfi") baribir yakuniy ballga ta'sir qilishi uchun.
@@ -472,9 +472,9 @@ func TestSimulationService_Finish_PenalizesForDebriefIncorrectSteps(t *testing.T
 	sm.On("GetEvents", "sess-1").Return([]m.SimulationEventReq{{Type: "medication"}}, nil)
 
 	req := &m.SimulationFinishReq{SessionId: "sess-1", Reason: "manual"}
-	// bazasi 75 XP/8 Coin (oldingi testlardagi kabi); 1 ta incorrect_step -> finalScore=100-10=90
-	// xp = 75*90/100 = 67, coin = 8*90/100 = 7
-	finishRes := &m.SimulationFinishRes{SessionId: "sess-1", FinalScore: 90, XPEarned: 67, CoinsEarned: 7}
+	// bazasi 75 stars/8 Coin (oldingi testlardagi kabi); 1 ta incorrect_step -> finalScore=100-10=90
+	// stars = 75*90/100 = 67, coin = 8*90/100 = 7
+	finishRes := &m.SimulationFinishRes{SessionId: "sess-1", FinalScore: 90, StarsEarned: 67, CoinsEarned: 7}
 	sm.On("Finish", req, 90, 67, 7).Return(finishRes, nil)
 
 	dm.On("Create", mock.MatchedBy(func(r *m.DebriefReportCreateReq) bool {
@@ -487,7 +487,7 @@ func TestSimulationService_Finish_PenalizesForDebriefIncorrectSteps(t *testing.T
 	got, err := svc.Finish(context.Background(), req)
 	require.NoError(t, err)
 	assert.Equal(t, 90, got.FinalScore)
-	assert.Equal(t, 67, got.XPEarned)
+	assert.Equal(t, 67, got.StarsEarned)
 	assert.Equal(t, 7, got.CoinsEarned)
 	assert.True(t, got.DebriefReady)
 	dm.AssertExpectations(t)

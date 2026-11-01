@@ -76,7 +76,7 @@ type UserRes struct {
 	Language       *string `json:"language"`
 	Specialization *string `json:"specialization"` // student|resident|doctor
 	Level          *int    `json:"level"`
-	XP             *int    `json:"xp"`
+	Stars          *int    `json:"stars"`
 	Coins          *int    `json:"coins"`
 	StreakCount    *int    `json:"streak_count"`
 	CreatedAt      *string `json:"created_at"`

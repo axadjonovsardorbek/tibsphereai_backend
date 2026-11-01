@@ -589,6 +589,7 @@ func (h *Handler) GetActivityStats(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param type query string false "Filter type: day|week|month|year|total (default: total)" Enums(day,week,month,year,total)
+// @Param sort query string false "Tartiblash mezoni: activity (case soni, default) | stars (yulduzlar)" Enums(activity,stars)
 // @Param limit query int false "Top list limit (default: 10, max: 100)"
 // @Success 200 {object} models.RatingResponse "Rating response"
 // @Failure 400 {object} string "Invalid request params"
@@ -615,10 +616,17 @@ func (h *Handler) GetRating(c *gin.Context) {
 		return
 	}
 
+	sort := c.DefaultQuery("sort", m.RatingSortActivity)
+	if sort != m.RatingSortActivity && sort != m.RatingSortStars {
+		errs.Bad(c, fmt.Errorf("sort must be one of: activity|stars"))
+		return
+	}
+
 	pagination := m.ParsePagination(limit, "0")
 
 	req := m.RatingRequest{
 		UserId: userID,
+		Sort:   sort,
 		Type:   m.RatingType(typ),
 		Limit:  int(pagination.Limit),
 	}

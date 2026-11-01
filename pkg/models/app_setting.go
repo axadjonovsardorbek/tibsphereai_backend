@@ -49,9 +49,9 @@ type UserLimitStatusRes struct {
 
 // --- Case qiyinlik darajasi (difficulty) koeffitsienti (admin sozlaydi) ---
 //
-// Avval xp=health_percent, coins=health_percent/10 edi (faqat sog'liqqa qarab,
-// case qanchalik qiyin bo'lishidan qat'i nazar bir xil). Endi bazaviy XP/Coin
-// foydalanuvchining O'Z DARAJASI (levels.xp_reward/coin_reward, [[LevelRes]]) bo'yicha
+// Avval stars=health_percent, coins=health_percent/10 edi (faqat sog'liqqa qarab,
+// case qanchalik qiyin bo'lishidan qat'i nazar bir xil). Endi bazaviy stars/Coin
+// foydalanuvchining O'Z DARAJASI (levels.stars_reward/coin_reward, [[LevelRes]]) bo'yicha
 // olinadi, case "medium"/"hard" bo'lsa esa shu bazaga koeffitsient bilan ko'paytiriladi
 // (masalan medium=1.5x, hard=2x) - admin panelda "Sozlamalar" -> "Mukofot sozlamalari"
 // orqali boshqariladi. Yakuniy mukofot bundan tashqari health_percent'ga (qobiliyat/

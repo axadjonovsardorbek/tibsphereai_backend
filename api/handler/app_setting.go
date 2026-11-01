@@ -51,7 +51,7 @@ func (h *Handler) SetSetting(c *gin.Context) {
 
 // GetDifficultyRewards godoc
 // @Summary Case qiyinlik darajasi (medium/hard) mukofot koeffitsienti
-// @Description Bazaviy XP/Coin foydalanuvchining darajasidan (levels.xp_reward/coin_reward)
+// @Description Bazaviy stars/Coin foydalanuvchining darajasidan (levels.stars_reward/coin_reward)
 // @Description olinadi, bu yerdagi koeffitsient ("easy"=1x, bu yerda yo'q) shunga qo'llanadi,
 // @Description keyin health_percent'ga mutanosib beriladi (SimulationService.Finish).
 // @Description Sozlanmagan bo'lsa default: medium=1.5, hard=2.

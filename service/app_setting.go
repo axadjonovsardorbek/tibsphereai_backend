@@ -103,8 +103,8 @@ func (s *AppSettingService) getFloatSetting(key string, def float64) float64 {
 
 // DifficultyMultiplier - case.difficulty (easy|medium|hard) bo'yicha koeffitsient
 // (admin "Mukofot sozlamalari" orqali sozlaydi, masalan medium=1.5x, hard=2x).
-// Bu koeffitsient foydalanuvchining o'z darajasidagi bazaviy XP/Coin'ga
-// (levels.xp_reward/coin_reward) qo'llanadi - ko'ring [[SimulationService.Finish]].
+// Bu koeffitsient foydalanuvchining o'z darajasidagi bazaviy stars/Coin'ga
+// (levels.stars_reward/coin_reward) qo'llanadi - ko'ring [[SimulationService.Finish]].
 // "easy" yoki noma'lum/bo'sh difficulty - 1x (ko'paytirilmagan).
 func (s *AppSettingService) DifficultyMultiplier(ctx context.Context, difficulty string) float64 {
 	switch difficulty {

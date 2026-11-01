@@ -47,7 +47,7 @@ type SimulationEventRes struct {
 	// SessionEnded - health_percent shu harakatdan keyin 0'ga tushib, sessiya
 	// server tomonidan avtomatik yakunlangan bo'lsa true (bemor "o'ldi").
 	// Frontend shu bayroqni ko'rsa, keyingi buyruq/xabar yuborishni to'xtatib,
-	// FinishResult'dagi debrief/XP/coin natijasini ko'rsatishi kerak.
+	// FinishResult'dagi debrief/stars/coin natijasini ko'rsatishi kerak.
 	// TokensUsed/CoinsSpent - sessiyada shu paytgacha AI sarflagan tokenlar va ulardan
 	// balansdan yechilgan tangalar (faqat tanga hisobidan boshlangan sessiyada CoinsSpent > 0).
 	TokensUsed   int                  `json:"tokens_used"`
@@ -64,7 +64,7 @@ type SimulationFinishReq struct {
 type SimulationFinishRes struct {
 	SessionId    string `json:"session_id"`
 	FinalScore   int    `json:"final_score"`
-	XPEarned     int    `json:"xp_earned"`
+	StarsEarned  int    `json:"stars_earned"`
 	CoinsEarned  int    `json:"coins_earned"`
 	DebriefReady bool   `json:"debrief_ready"`
 	TokensUsed   int    `json:"tokens_used"`
@@ -81,7 +81,7 @@ type SimulationSessionRes struct {
 	MaxAttempts   *int    `json:"max_attempts"`  // case.max_attempts
 	AttemptsUsed  *int    `json:"attempts_used"` // sessiyada yuborilgan "question" xabarlari soni
 	FinalScore    *int    `json:"final_score"`
-	XPEarned      *int    `json:"xp_earned"`
+	StarsEarned   *int    `json:"stars_earned"`
 	CoinsEarned   *int    `json:"coins_earned"`
 	StartedAt     *string `json:"started_at"`
 	EndedAt       *string `json:"ended_at"`

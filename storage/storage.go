@@ -85,7 +85,7 @@ type UserI interface {
 	GetRating(req *m.RatingRequest) (*m.RatingResponse, error)
 	GetTop(req *m.RatingRequest) ([]m.RatingUserItem, error)
 	GetMe(req *m.RatingRequest) (*m.RatingUserItem, error)
-	// Gamifikatsiya: XP/Coin qo'shish va level'ni levels jadvaliga qarab qayta hisoblash
+	// Gamifikatsiya: stars/Coin qo'shish va level'ni levels jadvaliga qarab qayta hisoblash
 	AddPoints(req *m.AddPointsReq) (*m.Void, error)
 	// GetReferralInfo - user'ning o'z referral_code'i, taklif qilganlari va ular
 	// evaziga olingan tangalar ro'yxati (mobile profil bo'limi).
@@ -249,7 +249,7 @@ type PracticeI interface {
 	Summaries(sessionId string) ([]string, error)
 	SetAnswer(itemId string, answer, eval []byte, isCorrect bool, score int, tokens int) error
 	AddTokens(sessionId string, prompt, completion int) error
-	Finish(sessionId, status string, score, xp int) error
+	Finish(sessionId, status string, score, stars int) error
 	// SetBilling - sessiya tanga hisobidan ishlayotganini belgilaydi (obunachi bo'lmaganlar).
 	SetBilling(sessionId string, billed bool) error
 	// AddCharged - sessiyada yechilgan tangalar yig'indisiga qo'shadi.
@@ -386,7 +386,7 @@ type LevelI interface {
 	GetAll() ([]m.LevelRes, error)
 	Update(req *m.LevelUpdateReq) (*m.Void, error)
 	Delete(req *m.ById) (*m.Void, error)
-	GetLevelForXP(xp int) (*m.LevelRes, error)
+	GetLevelForStars(stars int) (*m.LevelRes, error)
 }
 
 type AppSettingI interface {

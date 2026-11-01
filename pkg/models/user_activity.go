@@ -43,13 +43,30 @@ type RatingUserItem struct {
 	UserID   string  `json:"user_id"`
 	Name     string  `json:"name"`
 	ImageUrl *string `json:"image_url"`
-	Activity int64   `json:"activity"`
+	Activity int64   `json:"activity"` // davrdagi yakunlangan case soni
+	Stars    int64   `json:"stars"`    // davrdagi yulduzlar (total: foydalanuvchining jami yulduzi)
 	Rank     int64   `json:"rank"`
 	IsMe     bool    `json:"is_me"`
 }
 
+// Reyting tartiblash mezoni: case soni yoki yulduzlar.
+const (
+	RatingSortActivity = "activity"
+	RatingSortStars    = "stars"
+)
+
+// NormalizeRatingSort - noma'lum/bo'sh qiymat default (activity) ga tushadi.
+func NormalizeRatingSort(s string) string {
+	if s == RatingSortStars {
+		return RatingSortStars
+	}
+	return RatingSortActivity
+}
+
 type RatingResponse struct {
-	Type  RatingType       `json:"type"`
+	Type RatingType `json:"type"`
+	Sort string     `json:"sort"` // activity | stars - tartiblash mezoni
+
 	Limit int              `json:"limit"`
 	Items []RatingUserItem `json:"items"`
 	Me    *RatingUserItem  `json:"me,omitempty"`
@@ -59,4 +76,5 @@ type RatingRequest struct {
 	Type   RatingType `json:"type"`
 	Limit  int        `json:"limit"`
 	UserId string     `json:"user_id"`
+	Sort   string     `json:"sort"` // activity (default) | stars
 }

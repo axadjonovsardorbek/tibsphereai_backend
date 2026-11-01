@@ -88,7 +88,7 @@ func (h *Handler) AnswerPractice(c *gin.Context) {
 }
 
 // FinishPractice godoc
-// @Summary Sessiyani yakunlash (natija, XP)
+// @Summary Sessiyani yakunlash (natija, stars)
 // @Tags practice
 // @Produce json
 // @Param id path string true "Session ID"

@@ -15,7 +15,7 @@ type DebriefReportRes struct {
 	CorrectSteps   []string `json:"correct_steps"`
 	IncorrectSteps []string `json:"incorrect_steps"`
 	FinalScore     *int     `json:"final_score"`
-	XPEarned       *int     `json:"xp_earned"`
+	StarsEarned    *int     `json:"stars_earned"`
 	CoinsEarned    *int     `json:"coins_earned"`
 	GuidelineNotes *string  `json:"guideline_notes"`
 	WeakTopics     []string `json:"weak_topics"`

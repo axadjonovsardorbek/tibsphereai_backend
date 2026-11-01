@@ -11,8 +11,8 @@ const (
 	PracticeStatusFinished  = "finished"
 	PracticeStatusAbandoned = "abandoned"
 
-	// PracticeXPPerCorrect - to'g'ri javob uchun XP (case: score/100 ga proporsional).
-	PracticeXPPerCorrect = 5
+	// PracticeStarsPerCorrect - to'g'ri javob uchun stars (case: score/100 ga proporsional).
+	PracticeStarsPerCorrect = 5
 	// PracticeMaxItems - bir sessiyadagi maksimal elementlar soni (cheksiz case rejimida ham).
 	PracticeMaxItems = 50
 	// PracticeDefaultTestCount - test rejimida savollar soni ko'rsatilmasa.
@@ -33,21 +33,21 @@ type PracticeStartReq struct {
 }
 
 type PracticeSessionRes struct {
-	Id         string   `json:"id"`
-	Mode       string   `json:"mode"`
-	CategoryId string   `json:"category_id"`
-	TopicIds   []string `json:"topic_ids"`
-	Difficulty string   `json:"difficulty"`
-	TotalItems int      `json:"total_items"`
-	Generated  int      `json:"generated"` // hozirgacha generatsiya qilingan elementlar
-	Answered   int      `json:"answered"`
-	Correct    int      `json:"correct"`
-	Status     string   `json:"status"`
-	Score      int      `json:"score"`
-	XPEarned   int      `json:"xp_earned"`
-	StartedAt  string   `json:"started_at"`
-	FinishedAt *string  `json:"finished_at"`
-	FreeTopic  string   `json:"free_topic,omitempty"`
+	Id          string   `json:"id"`
+	Mode        string   `json:"mode"`
+	CategoryId  string   `json:"category_id"`
+	TopicIds    []string `json:"topic_ids"`
+	Difficulty  string   `json:"difficulty"`
+	TotalItems  int      `json:"total_items"`
+	Generated   int      `json:"generated"` // hozirgacha generatsiya qilingan elementlar
+	Answered    int      `json:"answered"`
+	Correct     int      `json:"correct"`
+	Status      string   `json:"status"`
+	Score       int      `json:"score"`
+	StarsEarned int      `json:"stars_earned"`
+	StartedAt   string   `json:"started_at"`
+	FinishedAt  *string  `json:"finished_at"`
+	FreeTopic   string   `json:"free_topic,omitempty"`
 	// Pay-as-you-go: sessiyada sarflangan AI tokenlar va ulardan yechilgan tanga.
 	TokensUsed int `json:"tokens_used"`
 	CoinsSpent int `json:"coins_spent"`
@@ -179,19 +179,19 @@ type PracticeGenInput struct {
 
 // PracticeSessionRow - storage qatlami uchun sessiya qatori.
 type PracticeSessionRow struct {
-	Id         string
-	UserId     string
-	Mode       string
-	CategoryId string
-	TopicIds   []string
-	Difficulty string
-	TotalItems int
-	Status     string
-	Score      int
-	XPEarned   int
-	Language   string
-	StartedAt  string
-	FinishedAt *string
+	Id          string
+	UserId      string
+	Mode        string
+	CategoryId  string
+	TopicIds    []string
+	Difficulty  string
+	TotalItems  int
+	Status      string
+	Score       int
+	StarsEarned int
+	Language    string
+	StartedAt   string
+	FinishedAt  *string
 
 	FreeTopic         string
 	CoinBilled        bool

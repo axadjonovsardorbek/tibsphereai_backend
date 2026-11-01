@@ -127,7 +127,7 @@ Get user profile
 - `specialization`: string
 - `streak_count`: integer
 - `updated_at`: string
-- `xp`: integer
+- `stars`: integer
 
 ### `GET /mobile/user/limit`
 **Kunlik bepul urinish limiti holati (home ekranidagi "35/50 Limit" belgisi)**
@@ -351,7 +351,7 @@ O'z referral_code'i, taklif qilganlar soni va ular evaziga olingan tangalar
 - `started_at`: string
 - `status`: string
 - `user_id`: string
-- `xp_earned`: integer
+- `stars_earned`: integer
 
 ### `POST /mobile/simulation/{id}/event`
 **Anamnez/ko'rik/tahlil/dori qadamini yuborish (BACKEND_STRUCTURE.md 4-bo'lim)**
@@ -382,7 +382,7 @@ O'z referral_code'i, taklif qilganlar soni va ular evaziga olingan tangalar
 - `debrief_ready`: boolean
 - `final_score`: integer
 - `session_id`: string
-- `xp_earned`: integer
+- `stars_earned`: integer
 
 ### `GET /mobile/simulation/{id}/ws`
 **Real-vaqt vitallar monitori (BACKEND_STRUCTURE.md 4-bo'lim, WebSocket)**
@@ -406,7 +406,7 @@ O'z referral_code'i, taklif qilganlar soni va ular evaziga olingan tangalar
 - `incorrect_steps`: string[]
 - `session_id`: string
 - `weak_topics`: string[]
-- `xp_earned`: integer
+- `stars_earned`: integer
 
 **Xatolar (poll qilish qoidasi):**
 - `404 debrief_not_ready` — sessiya hali faol, hisobot sessiya yopilgach yoziladi. Poll davom ettiriladi.

@@ -308,7 +308,7 @@ func (s *UserService) GetRating(ctx context.Context, req *m.RatingRequest) (*m.R
 		Items: make([]m.RatingUserItem, 0, req.Limit),
 	}
 
-	key := topCacheKey(string(req.Type), req.Limit)
+	key := topCacheKey(string(req.Type)+":"+m.NormalizeRatingSort(req.Sort), req.Limit)
 
 	if s.rdb != nil {
 		if b, err := s.rdb.Get(key).Bytes(); err == nil && len(b) > 0 {
@@ -341,7 +341,7 @@ func (s *UserService) GetRating(ctx context.Context, req *m.RatingRequest) (*m.R
 	return res, nil
 }
 
-// AddPoints - keys yakunlanganda XP/Coin qo'shish (simulation service shu orqali chaqiradi).
+// AddPoints - keys yakunlanganda stars/Coin qo'shish (simulation service shu orqali chaqiradi).
 func (s *UserService) AddPoints(ctx context.Context, req *m.AddPointsReq) (*m.Void, error) {
 	return s.storage.UserS.AddPoints(req)
 }

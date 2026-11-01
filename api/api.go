@@ -391,8 +391,8 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			partner.GET("", h.GetAllMobilePartners)
 		}
 
-		// level - front tomonda "780/1000 XP" progress-bar hisoblash uchun
-		// (joriy XP / keyingi levelning required_xp), o'qish uchun ochiq.
+		// level - front tomonda "780/1000 stars" progress-bar hisoblash uchun
+		// (joriy stars / keyingi levelning required_stars), o'qish uchun ochiq.
 		mobile.GET("/level", mid.NewAuth(enforcer, rdb), h.GetAllLevels)
 
 		caseGrp := mobile.Group("/case").Use(mid.NewAuth(enforcer, rdb))

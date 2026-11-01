@@ -75,11 +75,11 @@ func TestShuffleTest_KeepsCorrectAnswer(t *testing.T) {
 	}
 }
 
-func TestScoreAndXP(t *testing.T) {
-	s, x := ScoreAndXP(nil)
+func TestScoreAndStars(t *testing.T) {
+	s, x := ScoreAndStars(nil)
 	assert.Equal(t, 0, s)
 	assert.Equal(t, 0, x)
-	s, x = ScoreAndXP([]int{100, 0, 50})
+	s, x = ScoreAndStars([]int{100, 0, 50})
 	assert.Equal(t, 50, s)
 	assert.Equal(t, 8, x) // 150/100*5 = 7.5 -> 8
 }
@@ -465,7 +465,7 @@ func TestPractice_TestMode_FullFlow(t *testing.T) {
 	assert.False(t, *ans2.Item.IsCorrect)
 	assert.True(t, ans2.SessionFinished)
 	assert.Equal(t, 50, ans2.Session.Score)
-	assert.Equal(t, 5, ans2.Session.XPEarned) // 100/100*5 = 5
+	assert.Equal(t, 5, ans2.Session.StarsEarned) // 100/100*5 = 5
 	assert.Equal(t, m.PracticeStatusFinished, ans2.Session.Status)
 
 	// yakunlangan sessiyada next/finish yo'q
@@ -544,11 +544,11 @@ func TestPractice_CaseMode_Evaluation(t *testing.T) {
 	assert.Equal(t, "STEMI", ans.Item.CorrectAnswer)
 	assert.False(t, ans.SessionFinished) // case rejimi cheksiz
 
-	// foydalanuvchi to'xtatadi: ball 60, XP = 60/100*5 = 3, qiyinlik hard (2x) -> 6
+	// foydalanuvchi to'xtatadi: ball 60, stars = 60/100*5 = 3, qiyinlik hard (2x) -> 6
 	fin, err := e.prac.Finish(ctx, e.userId, sess.Id)
 	require.NoError(t, err)
 	assert.Equal(t, 60, fin.Score)
-	assert.Equal(t, 6, fin.XPEarned)
+	assert.Equal(t, 6, fin.StarsEarned)
 	assert.Equal(t, m.PracticeStatusFinished, fin.Status)
 
 	// takrorlanmaslik: ikkinchi generatsiyada oldingi xulosa promptga beriladi
@@ -565,10 +565,10 @@ func TestPractice_Finish_NoAnswers_Abandoned(t *testing.T) {
 	fin, err := e.prac.Finish(ctx, e.userId, sess.Id)
 	require.NoError(t, err)
 	assert.Equal(t, m.PracticeStatusAbandoned, fin.Status)
-	assert.Equal(t, 0, fin.XPEarned)
+	assert.Equal(t, 0, fin.StarsEarned)
 }
 
-// --- Pay-as-you-go, erkin mavzu, streak, XP koeffitsienti ---
+// --- Pay-as-you-go, erkin mavzu, streak, stars koeffitsienti ---
 
 func (e *practiceEnv) setSetting(t *testing.T, key, value string) {
 	t.Helper()
@@ -773,7 +773,7 @@ func TestPractice_XP_DifficultyMultiplier(t *testing.T) {
 	require.NoError(t, err)
 	fin, err := e.prac.Finish(ctx, e.userId, sess.Id)
 	require.NoError(t, err)
-	assert.Equal(t, 10, fin.XPEarned) // 5 XP * 2.0
+	assert.Equal(t, 10, fin.StarsEarned) // 5 stars * 2.0
 	var streak int
 	_ = e.pool.QueryRow(ctx, `SELECT streak_count FROM users WHERE id = $1`, e.userId).Scan(&streak)
 	assert.Equal(t, 1, streak, "javob berish streak'ni boshlaydi")

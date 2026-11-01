@@ -1626,8 +1626,8 @@ func (mk *LevelMock) Delete(req *m.ById) (*m.Void, error) {
 	return r0, args.Error(1)
 }
 
-func (mk *LevelMock) GetLevelForXP(xp int) (*m.LevelRes, error) {
-	args := mk.Called(xp)
+func (mk *LevelMock) GetLevelForStars(stars int) (*m.LevelRes, error) {
+	args := mk.Called(stars)
 	var r0 *m.LevelRes
 	if args.Get(0) != nil {
 		r0 = args.Get(0).(*m.LevelRes)

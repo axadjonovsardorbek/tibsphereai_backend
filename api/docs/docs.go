@@ -1946,7 +1946,7 @@ const docTemplate = `{
                 "tags": [
                     "practice"
                 ],
-                "summary": "Sessiyani yakunlash (natija, XP)",
+                "summary": "Sessiyani yakunlash (natija, stars)",
                 "parameters": [
                     {
                         "type": "string",
@@ -3233,6 +3233,16 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter type: day|week|month|year|total (default: total)",
                         "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "activity",
+                            "stars"
+                        ],
+                        "type": "string",
+                        "description": "Tartiblash mezoni: activity (case soni, default) | stars (yulduzlar)",
+                        "name": "sort",
                         "in": "query"
                     },
                     {
@@ -7813,7 +7823,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Bazaviy XP/Coin foydalanuvchining darajasidan (levels.xp_reward/coin_reward)\nolinadi, bu yerdagi koeffitsient (\"easy\"=1x, bu yerda yo'q) shunga qo'llanadi,\nkeyin health_percent'ga mutanosib beriladi (SimulationService.Finish).\nSozlanmagan bo'lsa default: medium=1.5, hard=2.",
+                "description": "Bazaviy stars/Coin foydalanuvchining darajasidan (levels.stars_reward/coin_reward)\nolinadi, bu yerdagi koeffitsient (\"easy\"=1x, bu yerda yo'q) shunga qo'llanadi,\nkeyin health_percent'ga mutanosib beriladi (SimulationService.Finish).\nSozlanmagan bo'lsa default: medium=1.5, hard=2.",
                 "produces": [
                     "application/json"
                 ],
@@ -10448,14 +10458,14 @@ const docTemplate = `{
                 "session_id": {
                     "type": "string"
                 },
+                "stars_earned": {
+                    "type": "integer"
+                },
                 "weak_topics": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
-                },
-                "xp_earned": {
-                    "type": "integer"
                 }
             }
         },
@@ -10920,17 +10930,17 @@ const docTemplate = `{
                 "level_number": {
                     "type": "integer"
                 },
-                "required_xp": {
+                "required_stars": {
                     "type": "integer"
                 },
                 "slug": {
                     "type": "string"
                 },
+                "stars_reward": {
+                    "type": "integer"
+                },
                 "title": {
                     "type": "string"
-                },
-                "xp_reward": {
-                    "type": "integer"
                 }
             }
         },
@@ -10949,17 +10959,17 @@ const docTemplate = `{
                 "level_number": {
                     "type": "integer"
                 },
-                "required_xp": {
+                "required_stars": {
                     "type": "integer"
                 },
                 "slug": {
                     "type": "string"
                 },
+                "stars_reward": {
+                    "type": "integer"
+                },
                 "title": {
                     "type": "string"
-                },
-                "xp_reward": {
-                    "type": "integer"
                 }
             }
         },
@@ -10978,17 +10988,17 @@ const docTemplate = `{
                 "level_number": {
                     "type": "integer"
                 },
-                "required_xp": {
+                "required_stars": {
                     "type": "integer"
                 },
                 "slug": {
                     "type": "string"
                 },
+                "stars_reward": {
+                    "type": "integer"
+                },
                 "title": {
                     "type": "string"
-                },
-                "xp_reward": {
-                    "type": "integer"
                 }
             }
         },
@@ -11503,6 +11513,9 @@ const docTemplate = `{
                 "score": {
                     "type": "integer"
                 },
+                "stars_earned": {
+                    "type": "integer"
+                },
                 "started_at": {
                     "type": "string"
                 },
@@ -11520,9 +11533,6 @@ const docTemplate = `{
                     }
                 },
                 "total_items": {
-                    "type": "integer"
-                },
-                "xp_earned": {
                     "type": "integer"
                 }
             }
@@ -11761,6 +11771,10 @@ const docTemplate = `{
                 "me": {
                     "$ref": "#/definitions/models.RatingUserItem"
                 },
+                "sort": {
+                    "description": "activity | stars - tartiblash mezoni",
+                    "type": "string"
+                },
                 "type": {
                     "$ref": "#/definitions/models.RatingType"
                 }
@@ -11787,6 +11801,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "activity": {
+                    "description": "davrdagi yakunlangan case soni",
                     "type": "integer"
                 },
                 "image_url": {
@@ -11799,6 +11814,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "rank": {
+                    "type": "integer"
+                },
+                "stars": {
+                    "description": "davrdagi yulduzlar (total: foydalanuvchining jami yulduzi)",
                     "type": "integer"
                 },
                 "user_id": {
@@ -12141,7 +12160,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "tokens_used": {
-                    "description": "SessionEnded - health_percent shu harakatdan keyin 0'ga tushib, sessiya\nserver tomonidan avtomatik yakunlangan bo'lsa true (bemor \"o'ldi\").\nFrontend shu bayroqni ko'rsa, keyingi buyruq/xabar yuborishni to'xtatib,\nFinishResult'dagi debrief/XP/coin natijasini ko'rsatishi kerak.\nTokensUsed/CoinsSpent - sessiyada shu paytgacha AI sarflagan tokenlar va ulardan\nbalansdan yechilgan tangalar (faqat tanga hisobidan boshlangan sessiyada CoinsSpent \u003e 0).",
+                    "description": "SessionEnded - health_percent shu harakatdan keyin 0'ga tushib, sessiya\nserver tomonidan avtomatik yakunlangan bo'lsa true (bemor \"o'ldi\").\nFrontend shu bayroqni ko'rsa, keyingi buyruq/xabar yuborishni to'xtatib,\nFinishResult'dagi debrief/stars/coin natijasini ko'rsatishi kerak.\nTokensUsed/CoinsSpent - sessiyada shu paytgacha AI sarflagan tokenlar va ulardan\nbalansdan yechilgan tangalar (faqat tanga hisobidan boshlangan sessiyada CoinsSpent \u003e 0).",
                     "type": "integer"
                 }
             }
@@ -12164,10 +12183,10 @@ const docTemplate = `{
                 "session_id": {
                     "type": "string"
                 },
-                "tokens_used": {
+                "stars_earned": {
                     "type": "integer"
                 },
-                "xp_earned": {
+                "tokens_used": {
                     "type": "integer"
                 }
             }
@@ -12218,6 +12237,9 @@ const docTemplate = `{
                     "description": "case.max_attempts",
                     "type": "integer"
                 },
+                "stars_earned": {
+                    "type": "integer"
+                },
                 "started_at": {
                     "type": "string"
                 },
@@ -12226,9 +12248,6 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "type": "string"
-                },
-                "xp_earned": {
-                    "type": "integer"
                 }
             }
         },
@@ -12852,14 +12871,14 @@ const docTemplate = `{
                     "description": "student|resident|doctor",
                     "type": "string"
                 },
+                "stars": {
+                    "type": "integer"
+                },
                 "streak_count": {
                     "type": "integer"
                 },
                 "updated_at": {
                     "type": "string"
-                },
-                "xp": {
-                    "type": "integer"
                 }
             }
         },

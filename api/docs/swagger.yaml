@@ -1079,12 +1079,12 @@ definitions:
         type: array
       session_id:
         type: string
+      stars_earned:
+        type: integer
       weak_topics:
         items:
           type: string
         type: array
-      xp_earned:
-        type: integer
     type: object
   models.DifficultyRewardRes:
     properties:
@@ -1393,14 +1393,14 @@ definitions:
         type: integer
       level_number:
         type: integer
-      required_xp:
+      required_stars:
         type: integer
       slug:
         type: string
+      stars_reward:
+        type: integer
       title:
         type: string
-      xp_reward:
-        type: integer
     type: object
   models.LevelRes:
     properties:
@@ -1412,14 +1412,14 @@ definitions:
         type: string
       level_number:
         type: integer
-      required_xp:
+      required_stars:
         type: integer
       slug:
         type: string
+      stars_reward:
+        type: integer
       title:
         type: string
-      xp_reward:
-        type: integer
     type: object
   models.LevelUpdateReq:
     properties:
@@ -1431,14 +1431,14 @@ definitions:
         type: string
       level_number:
         type: integer
-      required_xp:
+      required_stars:
         type: integer
       slug:
         type: string
+      stars_reward:
+        type: integer
       title:
         type: string
-      xp_reward:
-        type: integer
     type: object
   models.LoginReq:
     properties:
@@ -1783,6 +1783,8 @@ definitions:
         type: string
       score:
         type: integer
+      stars_earned:
+        type: integer
       started_at:
         type: string
       status:
@@ -1796,8 +1798,6 @@ definitions:
           type: string
         type: array
       total_items:
-        type: integer
-      xp_earned:
         type: integer
     type: object
   models.PracticeStartReq:
@@ -1967,6 +1967,9 @@ definitions:
         type: integer
       me:
         $ref: '#/definitions/models.RatingUserItem'
+      sort:
+        description: activity | stars - tartiblash mezoni
+        type: string
       type:
         $ref: '#/definitions/models.RatingType'
     type: object
@@ -1987,6 +1990,7 @@ definitions:
   models.RatingUserItem:
     properties:
       activity:
+        description: davrdagi yakunlangan case soni
         type: integer
       image_url:
         type: string
@@ -1995,6 +1999,9 @@ definitions:
       name:
         type: string
       rank:
+        type: integer
+      stars:
+        description: 'davrdagi yulduzlar (total: foydalanuvchining jami yulduzi)'
         type: integer
       user_id:
         type: string
@@ -2229,7 +2236,7 @@ definitions:
           SessionEnded - health_percent shu harakatdan keyin 0'ga tushib, sessiya
           server tomonidan avtomatik yakunlangan bo'lsa true (bemor "o'ldi").
           Frontend shu bayroqni ko'rsa, keyingi buyruq/xabar yuborishni to'xtatib,
-          FinishResult'dagi debrief/XP/coin natijasini ko'rsatishi kerak.
+          FinishResult'dagi debrief/stars/coin natijasini ko'rsatishi kerak.
           TokensUsed/CoinsSpent - sessiyada shu paytgacha AI sarflagan tokenlar va ulardan
           balansdan yechilgan tangalar (faqat tanga hisobidan boshlangan sessiyada CoinsSpent > 0).
         type: integer
@@ -2246,9 +2253,9 @@ definitions:
         type: integer
       session_id:
         type: string
-      tokens_used:
+      stars_earned:
         type: integer
-      xp_earned:
+      tokens_used:
         type: integer
     type: object
   models.SimulationSessionList:
@@ -2282,14 +2289,14 @@ definitions:
       max_attempts:
         description: case.max_attempts
         type: integer
+      stars_earned:
+        type: integer
       started_at:
         type: string
       status:
         type: string
       user_id:
         type: string
-      xp_earned:
-        type: integer
     type: object
   models.SimulationStartRes:
     properties:
@@ -2704,12 +2711,12 @@ definitions:
       specialization:
         description: student|resident|doctor
         type: string
+      stars:
+        type: integer
       streak_count:
         type: integer
       updated_at:
         type: string
-      xp:
-        type: integer
     type: object
   models.VoiceSettingRes:
     properties:
@@ -4009,7 +4016,7 @@ paths:
             $ref: '#/definitions/models.PracticeSessionRes'
       security:
       - BearerAuth: []
-      summary: Sessiyani yakunlash (natija, XP)
+      summary: Sessiyani yakunlash (natija, stars)
       tags:
       - practice
   /mobile/practice/sessions/{id}/next:
@@ -4799,6 +4806,13 @@ paths:
         - total
         in: query
         name: type
+        type: string
+      - description: 'Tartiblash mezoni: activity (case soni, default) | stars (yulduzlar)'
+        enum:
+        - activity
+        - stars
+        in: query
+        name: sort
         type: string
       - description: 'Top list limit (default: 10, max: 100)'
         in: query
@@ -7663,7 +7677,7 @@ paths:
   /web/setting/difficulty-reward:
     get:
       description: |-
-        Bazaviy XP/Coin foydalanuvchining darajasidan (levels.xp_reward/coin_reward)
+        Bazaviy stars/Coin foydalanuvchining darajasidan (levels.stars_reward/coin_reward)
         olinadi, bu yerdagi koeffitsient ("easy"=1x, bu yerda yo'q) shunga qo'llanadi,
         keyin health_percent'ga mutanosib beriladi (SimulationService.Finish).
         Sozlanmagan bo'lsa default: medium=1.5, hard=2.

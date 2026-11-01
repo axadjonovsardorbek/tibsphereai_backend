@@ -39,13 +39,13 @@ func (r *PracticeRepo) CreateSession(s *m.PracticeSessionRow) (string, error) {
 }
 
 const sessionCols = `id::text, user_id::text, mode, COALESCE(category_id::text, ''), topic_ids::text[], difficulty, total_items,
-	status, score, xp_earned, language, started_at::text, finished_at::text,
+	status, score, stars_earned, language, started_at::text, finished_at::text,
 	free_topic, coin_billed, coins_charged, prompt_tokens, completion_tokens, flashcards_status, flashcards_created`
 
 func scanSession(row pgx.Row) (*m.PracticeSessionRow, error) {
 	s := &m.PracticeSessionRow{}
 	err := row.Scan(&s.Id, &s.UserId, &s.Mode, &s.CategoryId, &s.TopicIds, &s.Difficulty, &s.TotalItems,
-		&s.Status, &s.Score, &s.XPEarned, &s.Language, &s.StartedAt, &s.FinishedAt,
+		&s.Status, &s.Score, &s.StarsEarned, &s.Language, &s.StartedAt, &s.FinishedAt,
 		&s.FreeTopic, &s.CoinBilled, &s.CoinsCharged, &s.PromptTokens, &s.CompletionTokens, &s.FlashcardsStatus, &s.FlashcardsCreated)
 	return s, err
 }
@@ -75,7 +75,7 @@ func (r *PracticeRepo) ListSessions(req *m.PracticeListReq) (*m.PaginationRespon
 	for rows.Next() {
 		s := &m.PracticeSessionRow{}
 		if err := rows.Scan(&total, &s.Id, &s.UserId, &s.Mode, &s.CategoryId, &s.TopicIds, &s.Difficulty, &s.TotalItems,
-			&s.Status, &s.Score, &s.XPEarned, &s.Language, &s.StartedAt, &s.FinishedAt,
+			&s.Status, &s.Score, &s.StarsEarned, &s.Language, &s.StartedAt, &s.FinishedAt,
 			&s.FreeTopic, &s.CoinBilled, &s.CoinsCharged, &s.PromptTokens, &s.CompletionTokens, &s.FlashcardsStatus, &s.FlashcardsCreated); err != nil {
 			return nil, nil, err
 		}
@@ -211,11 +211,11 @@ func (r *PracticeRepo) AddTokens(sessionId string, prompt, completion int) error
 	return err
 }
 
-func (r *PracticeRepo) Finish(sessionId, status string, score, xp int) error {
+func (r *PracticeRepo) Finish(sessionId, status string, score, stars int) error {
 	res, err := r.db.Exec(context.Background(), `
-		UPDATE practice_sessions SET status = $2, score = $3, xp_earned = $4, finished_at = now()
+		UPDATE practice_sessions SET status = $2, score = $3, stars_earned = $4, finished_at = now()
 		WHERE id = $1 AND status = 'active'
-	`, sessionId, status, score, xp)
+	`, sessionId, status, score, stars)
 	if err != nil {
 		return fmt.Errorf("error while finishing practice session: %w", err)
 	}

@@ -32,7 +32,7 @@ const (
 )
 
 // PracticeService - AI real-time case/test (new-feature.md): sessiya, generatsiya (RAG),
-// javobni baholash, yakunlash (XP) va shikoyat.
+// javobni baholash, yakunlash (stars) va shikoyat.
 type PracticeService struct {
 	storage  st.Storage
 	ai       *ai.Client
@@ -181,7 +181,7 @@ func (s *PracticeService) sessionRes(sess *m.PracticeSessionRow) (*m.PracticeSes
 	return &m.PracticeSessionRes{
 		Id: sess.Id, Mode: sess.Mode, CategoryId: sess.CategoryId, TopicIds: nonNil(sess.TopicIds),
 		Difficulty: sess.Difficulty, TotalItems: sess.TotalItems, Generated: gen, Answered: ans, Correct: cor,
-		Status: sess.Status, Score: sess.Score, XPEarned: sess.XPEarned, StartedAt: sess.StartedAt, FinishedAt: sess.FinishedAt,
+		Status: sess.Status, Score: sess.Score, StarsEarned: sess.StarsEarned, StartedAt: sess.StartedAt, FinishedAt: sess.FinishedAt,
 		FreeTopic: sess.FreeTopic, TokensUsed: sess.PromptTokens + sess.CompletionTokens, CoinsSpent: sess.CoinsCharged,
 		FlashcardsStatus: sess.FlashcardsStatus, FlashcardsCreated: sess.FlashcardsCreated,
 	}, nil
@@ -740,9 +740,9 @@ func (s *PracticeService) Finish(ctx context.Context, userId, sessionId string) 
 	return s.GetSession(ctx, userId, sessionId)
 }
 
-// ScoreAndXP - sessiya bahosi: javob berilgan elementlar ballarining o'rtachasi (0..100);
-// XP = jami ball/100 * PracticeXPPerCorrect (to'liq to'g'ri javob = 5 XP).
-func ScoreAndXP(scores []int) (score, xp int) {
+// ScoreAndStars - sessiya bahosi: javob berilgan elementlar ballarining o'rtachasi (0..100);
+// stars = jami ball/100 * PracticeStarsPerCorrect (to'liq to'g'ri javob = 5 stars).
+func ScoreAndStars(scores []int) (score, stars int) {
 	if len(scores) == 0 {
 		return 0, 0
 	}
@@ -750,7 +750,7 @@ func ScoreAndXP(scores []int) (score, xp int) {
 	for _, v := range scores {
 		sum += v
 	}
-	return int(math.Round(float64(sum) / float64(len(scores)))), int(math.Round(float64(sum) / 100 * float64(m.PracticeXPPerCorrect)))
+	return int(math.Round(float64(sum) / float64(len(scores)))), int(math.Round(float64(sum) / 100 * float64(m.PracticeStarsPerCorrect)))
 }
 
 func (s *PracticeService) finish(sess *m.PracticeSessionRow, status string) (*m.PracticeSessionRes, error) {
@@ -764,19 +764,19 @@ func (s *PracticeService) finish(sess *m.PracticeSessionRow, status string) (*m.
 			scores = append(scores, *it.Score)
 		}
 	}
-	score, xp := ScoreAndXP(scores)
-	// Qiyinroq daraja ko'proq XP beradi (admin sozlaydigan medium/hard koeffitsientlari; easy = 1x).
-	if xp > 0 && s.settings != nil {
-		xp = int(float64(xp)*s.settings.DifficultyMultiplier(context.Background(), sess.Difficulty) + 0.5)
+	score, stars := ScoreAndStars(scores)
+	// Qiyinroq daraja ko'proq stars beradi (admin sozlaydigan medium/hard koeffitsientlari; easy = 1x).
+	if stars > 0 && s.settings != nil {
+		stars = int(float64(stars)*s.settings.DifficultyMultiplier(context.Background(), sess.Difficulty) + 0.5)
 	}
-	if err := s.storage.PracticeS.Finish(sess.Id, status, score, xp); err != nil {
+	if err := s.storage.PracticeS.Finish(sess.Id, status, score, stars); err != nil {
 		return nil, err
 	}
-	if xp > 0 {
+	if stars > 0 {
 		if _, err := s.storage.UserS.AddPoints(&m.AddPointsReq{
-			UserId: sess.UserId, XPDelta: xp, Reason: "practice_finish", ReferenceId: sess.Id,
+			UserId: sess.UserId, StarsDelta: stars, Reason: "practice_finish", ReferenceId: sess.Id,
 		}); err != nil {
-			fmt.Println("failed to add practice XP:", err)
+			fmt.Println("failed to add practice stars:", err)
 		}
 	}
 	// Xatolar asosida fleshkartalar (fonda): natija "flashcards_status/flashcards_created" da ko'rinadi.

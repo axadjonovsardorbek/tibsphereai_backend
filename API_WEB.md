@@ -538,7 +538,7 @@ AI generatsiya uchun manbalar. `content` — veb-havola (http/https) yoki matn p
 **Javob (200):**
 `string`
 
-## Levellar (XP)
+## Levellar (stars)
 
 ### `GET /web/level`
 - Auth: kerak (Bearer token)
@@ -548,10 +548,10 @@ AI generatsiya uchun manbalar. `content` — veb-havola (http/https) yoki matn p
   - `coin_reward`: integer
   - `id`: string
   - `level_number`: integer
-  - `required_xp`: integer
+  - `required_stars`: integer
   - `slug`: string
   - `title`: string
-  - `xp_reward`: integer
+  - `stars_reward`: integer
 
 ### `POST /web/level`
 **Level qo'shish (statik jadval)**
@@ -560,10 +560,10 @@ AI generatsiya uchun manbalar. `content` — veb-havola (http/https) yoki matn p
   - `badge_image_url`: string
   - `coin_reward`: integer
   - `level_number`: integer
-  - `required_xp`: integer
+  - `required_stars`: integer
   - `slug`: string
   - `title`: string
-  - `xp_reward`: integer
+  - `stars_reward`: integer
 **Javob (200):**
 `string`
 
@@ -583,10 +583,10 @@ AI generatsiya uchun manbalar. `content` — veb-havola (http/https) yoki matn p
   - `coin_reward`: integer
   - `id`: string
   - `level_number`: integer
-  - `required_xp`: integer
+  - `required_stars`: integer
   - `slug`: string
   - `title`: string
-  - `xp_reward`: integer
+  - `stars_reward`: integer
 **Javob (200):**
 `string`
 
@@ -912,7 +912,7 @@ Sotib olingan, ishlab topilgan, sarflangan va aylanmadagi jami tanga
 
 ### `GET /web/setting/difficulty-reward`
 **Case qiyinlik darajasi (medium/hard) mukofot koeffitsienti**
-Bazaviy XP/Coin foydalanuvchining darajasidan (levels.xp_reward/coin_reward)
+Bazaviy stars/Coin foydalanuvchining darajasidan (levels.stars_reward/coin_reward)
 olinadi, bu yerdagi koeffitsient ("easy"=1x, bu yerda yo'q) shunga qo'llanadi,
 keyin health_percent'ga mutanosib beriladi (SimulationService.Finish).
 Sozlanmagan bo'lsa default: medium=1.5, hard=2.
@@ -1344,7 +1344,7 @@ Get an user by their ID
 - `specialization`: string
 - `streak_count`: integer
 - `updated_at`: string
-- `xp`: integer
+- `stars`: integer
 
 ### `DELETE /web/user/{id}/delete`
 **Delete user**
