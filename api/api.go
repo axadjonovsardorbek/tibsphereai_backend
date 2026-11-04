@@ -65,7 +65,8 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 
 	// --- Public (unauthorized) ---
 	router.POST("/web/auth/admin/login", rl("admin_login", 10, 10*time.Minute, mid.ByIP), h.Login)
-	router.POST("/mobile/auth/user/check", rl("user_check", 30, time.Minute, mid.ByIP), h.CheckUser)
+	// ARCHIVED (auth check): route o'chirilgan, handler/service kodi saqlangan.
+	// router.POST("/mobile/auth/user/check", rl("user_check", 30, time.Minute, mid.ByIP), h.CheckUser)
 	router.POST("/mobile/auth/google", rl("google", 30, time.Minute, mid.ByIP), h.GoogleLogin)
 	router.POST("/mobile/auth/telegram/start", rl("tg_start", 20, time.Hour, mid.ByIP), captcha, h.TelegramLoginStart)
 	router.POST("/mobile/auth/telegram/check", rl("tg_check", 120, time.Minute, mid.ByIP), h.TelegramLoginCheck)
@@ -262,13 +263,14 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			promocode.DELETE("/:id/delete", h.DeletePromoCode)
 		}
 
-		level := web.Group("/level").Use(mid.NewAuth(enforcer, rdb))
-		{
-			level.POST("", h.CreateLevel)
-			level.GET("", h.GetAllLevels)
-			level.PUT("/:id/update", h.UpdateLevel)
-			level.DELETE("/:id/delete", h.DeleteLevel)
-		}
+		// ARCHIVED (daraja): route o'chirilgan, handler/service kodi saqlangan.
+		// level := web.Group("/level").Use(mid.NewAuth(enforcer, rdb))
+		// {
+			// level.POST("", h.CreateLevel)
+			// level.GET("", h.GetAllLevels)
+			// level.PUT("/:id/update", h.UpdateLevel)
+			// level.DELETE("/:id/delete", h.DeleteLevel)
+		// }
 
 		setting := web.Group("/setting").Use(mid.NewAuth(enforcer, rdb))
 		{
@@ -333,10 +335,12 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			user.PUT("/update/profile", h.UpdateProfileUser)
 			user.DELETE("/delete/profile", h.DeleteProfileUser)
 			user.POST("/activity", h.CreateActivity)
-			user.GET("/activity", h.GetActivityStats)
+			// ARCHIVED (faollik grafigi): route o'chirilgan, handler/service kodi saqlangan.
+			// user.GET("/activity", h.GetActivityStats)
 			user.GET("/rating", h.GetRating)
 			user.POST("/device", h.RegisterDevice)
-			user.DELETE("/device", h.UnregisterDevice)
+			// ARCHIVED (logout device): route o'chirilgan, handler/service kodi saqlangan.
+			// user.DELETE("/device", h.UnregisterDevice)
 			user.POST("/phone/start", rl("phone_link", 10, time.Hour, mid.ByUser), h.PhoneLinkStart)
 			user.POST("/phone/confirm", rl("phone_confirm", 120, time.Minute, mid.ByUser), h.PhoneLinkConfirm)
 			user.DELETE("/phone", h.UnlinkPhone)
@@ -386,14 +390,16 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			topic.GET("", h.GetAllMobileTopics)
 		}
 
-		partner := mobile.Group("/partner").Use(mid.NewAuth(enforcer, rdb))
-		{
-			partner.GET("", h.GetAllMobilePartners)
-		}
+		// ARCHIVED (hamkor): route o'chirilgan, handler/service kodi saqlangan.
+		// partner := mobile.Group("/partner").Use(mid.NewAuth(enforcer, rdb))
+		// {
+			// partner.GET("", h.GetAllMobilePartners)
+		// }
 
-		// level - front tomonda "780/1000 stars" progress-bar hisoblash uchun
-		// (joriy stars / keyingi levelning required_stars), o'qish uchun ochiq.
-		mobile.GET("/level", mid.NewAuth(enforcer, rdb), h.GetAllLevels)
+		// ARCHIVED (daraja): route o'chirilgan, handler/service kodi saqlangan.
+		// // level - front tomonda "780/1000 stars" progress-bar hisoblash uchun
+		// // (joriy stars / keyingi levelning required_stars), o'qish uchun ochiq.
+		// mobile.GET("/level", mid.NewAuth(enforcer, rdb), h.GetAllLevels)
 
 		caseGrp := mobile.Group("/case").Use(mid.NewAuth(enforcer, rdb))
 		{
@@ -408,11 +414,12 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			favorite.GET("", h.GetFavorites)
 		}
 
-		studyPlan := mobile.Group("/study-plan").Use(mid.NewAuth(enforcer, rdb))
-		{
-			studyPlan.GET("", h.GetStudyPlan)
-			studyPlan.PUT("", h.UpsertStudyPlan)
-		}
+		// ARCHIVED (o'quv reja): route o'chirilgan, handler/service kodi saqlangan.
+		// studyPlan := mobile.Group("/study-plan").Use(mid.NewAuth(enforcer, rdb))
+		// {
+			// studyPlan.GET("", h.GetStudyPlan)
+			// studyPlan.PUT("", h.UpsertStudyPlan)
+		// }
 
 		simulation := mobile.Group("/simulation").Use(mid.NewAuth(enforcer, rdb))
 		{
@@ -477,11 +484,12 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			subscription.POST("", h.CreateOrder)
 		}
 
-		promocode := mobile.Group("/promocode").Use(mid.NewAuth(enforcer, rdb))
-		{
-			promocode.GET("", h.GetMyPromoCodes)
-			promocode.POST("/redeem", h.RedeemPromoCode)
-		}
+		// ARCHIVED (promokod): route o'chirilgan, handler/service kodi saqlangan.
+		// promocode := mobile.Group("/promocode").Use(mid.NewAuth(enforcer, rdb))
+		// {
+			// promocode.GET("", h.GetMyPromoCodes)
+			// promocode.POST("/redeem", h.RedeemPromoCode)
+		// }
 	}
 	return router
 }

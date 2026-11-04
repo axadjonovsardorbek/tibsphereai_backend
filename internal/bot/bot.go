@@ -16,25 +16,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
-// Asosiy menu tugmalari - bosilganda web ilovaga (config.WEBSITE_URL) o'tkazib
-// yuboradi (inline URL tugma orqali - ReplyKeyboardMarkup'da URL bo'lmaydi).
-const (
-	menuBtnCases      = "🩺 Case yechish"
-	menuBtnCategories = "📚 Bo'limlar"
-	menuBtnProfile    = "👤 Profil"
-	menuBtnAbout      = "ℹ️ Biz haqimizda"
-)
-
-func mainMenuKeyboard() tgbotapi.ReplyKeyboardMarkup {
-	return tgbotapi.ReplyKeyboardMarkup{
-		Keyboard: [][]tgbotapi.KeyboardButton{
-			{{Text: menuBtnCases}, {Text: menuBtnCategories}},
-			{{Text: menuBtnProfile}, {Text: menuBtnAbout}},
-		},
-		ResizeKeyboard: true,
-	}
-}
-
 // --- Telegram Mini App (web_app) tugmasi ---
 //
 // go-telegram-bot-api (v4.6.4, shu jumladan eng so'nggi v5.5.1 ham) InlineKeyboardButton'da
@@ -58,10 +39,14 @@ type webAppInlineKeyboard struct {
 	InlineKeyboard [][]webAppInlineButton `json:"inline_keyboard"`
 }
 
-// sendWebLink - berilgan matn bilan, websiteURL'ni Telegram Mini App sifatida
-// (bot ichida) ochadigan bitta web_app tugmali xabar yuboradi.
-func sendWebLink(bot *tgbotapi.BotAPI, chatID int64, websiteURL, text string) {
-	msg := tgbotapi.NewMessage(chatID, text)
+// welcomeText - /start (va boshqa har qanday matn) javobi: ortiqcha menyu tugmalari yo'q,
+// faqat Mini App'ni ochadigan bitta web_app tugma.
+const welcomeText = "👋 Xush kelibsiz!\n\nTibStation'ni ishga tushirish uchun pastdagi tugma orqali mini ilovani oching."
+
+// sendWelcome - welcomeText va websiteURL'ni Telegram Mini App sifatida (bot ichida)
+// ochadigan bitta web_app tugmali xabar yuboradi.
+func sendWelcome(bot *tgbotapi.BotAPI, chatID int64, websiteURL string) {
+	msg := tgbotapi.NewMessage(chatID, welcomeText)
 	msg.ReplyMarkup = webAppInlineKeyboard{
 		InlineKeyboard: [][]webAppInlineButton{
 			{{Text: "📱 Ilovani ochish", WebApp: webAppInfo{URL: websiteURL}}},
@@ -163,36 +148,14 @@ func BotAuth(config *config.Config) {
 					continue
 				}
 
-				// Oddiy /start (login payload'siz) - asosiy menu ko'rsatiladi
-				// (Case yechish/Bo'limlar/Profil/Biz haqimizda - har biri web
-				// ilovaga o'tkazib yuboradi).
-				msg := tgbotapi.NewMessage(chatID, "👋 Xush kelibsiz! Kerakli bo'limni tanlang:")
-				msg.ReplyMarkup = mainMenuKeyboard()
-				bot.Send(msg)
+				// Oddiy /start - faqat mini ilovani ochish xabari.
+				sendWelcome(bot, chatID, config.WEBSITE_URL)
 				continue
 			}
 
-			if text == "/menu" {
-				msg := tgbotapi.NewMessage(chatID, "Kerakli bo'limni tanlang:")
-				msg.ReplyMarkup = mainMenuKeyboard()
-				bot.Send(msg)
-				continue
-			}
-
-			switch text {
-			case menuBtnCases:
-				sendWebLink(bot, chatID, config.WEBSITE_URL, "🩺 Case yechish uchun web ilovani oching:")
-				continue
-			case menuBtnCategories:
-				sendWebLink(bot, chatID, config.WEBSITE_URL, "📚 Bo'limlarni ko'rish uchun web ilovani oching:")
-				continue
-			case menuBtnProfile:
-				sendWebLink(bot, chatID, config.WEBSITE_URL, "👤 Profilingizni ko'rish uchun web ilovani oching:")
-				continue
-			case menuBtnAbout:
-				sendWebLink(bot, chatID, config.WEBSITE_URL, "ℹ️ Biz haqimizda ma'lumot uchun web ilovani oching:")
-				continue
-			}
+			// Boshqa har qanday matn (eski menyu tugmalari, /menu va h.k.) - xuddi /start kabi.
+			sendWelcome(bot, chatID, config.WEBSITE_URL)
+			continue
 		}
 
 		// Bosqich 2: Raqam yuborildi

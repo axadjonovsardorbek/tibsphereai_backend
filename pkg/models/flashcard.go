@@ -85,7 +85,7 @@ type FlashcardReviewRes struct {
 	Card         *FlashcardRes `json:"card"`
 	NextInterval int           `json:"next_interval_days"`
 	DueAt        string        `json:"due_at"`
-	StreakCount  int           `json:"streak_count"`
+	StreakCount  int           `json:"-"` // ARCHIVED: ketma-ketlik (🔥) API javobidan yashirilgan
 }
 
 type FlashcardDueRes struct {
@@ -102,8 +102,8 @@ type FlashcardStatsRes struct {
 	ReviewsToday  int     `json:"reviews_today"`
 	Retention30d  float64 `json:"retention_30d"` // 0..1: good+easy ulushi
 	Decks         int     `json:"decks"`
-	StreakCount   int     `json:"streak_count"`
-	LongestStreak int     `json:"longest_streak"`
+	StreakCount   int     `json:"-"` // ARCHIVED: ketma-ketlik (🔥) API javobidan yashirilgan
+	LongestStreak int     `json:"-"` // ARCHIVED: ketma-ketlik (🔥) API javobidan yashirilgan
 }
 
 // --- storage qatlami ---

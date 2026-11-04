@@ -78,7 +78,7 @@ type UserRes struct {
 	Level          *int    `json:"level"`
 	Stars          *int    `json:"stars"`
 	Coins          *int    `json:"coins"`
-	StreakCount    *int    `json:"streak_count"`
+	StreakCount    *int    `json:"-"` // ARCHIVED: ketma-ketlik (🔥) API javobidan yashirilgan
 	CreatedAt      *string `json:"created_at"`
 	UpdatedAt      *string `json:"updated_at"`
 }
