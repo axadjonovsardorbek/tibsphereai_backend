@@ -641,6 +641,7 @@ func (g *geminiClient) doRequest(ctx context.Context, model string, reqBody gemi
 		PromptTokens: gr.UsageMetadata.PromptTokenCount,
 		OutputTokens: gr.UsageMetadata.CandidatesTokenCount + gr.UsageMetadata.ThoughtsTokenCount,
 		TotalTokens:  gr.UsageMetadata.TotalTokenCount,
+		Model:        model,
 	}
 	usage.CostUSD = calcCost(model, usage.PromptTokens, usage.OutputTokens)
 

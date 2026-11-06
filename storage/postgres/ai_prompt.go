@@ -79,17 +79,32 @@ func NewAIUsageLogRepo(db *pgxpool.Pool) *AIUsageLogRepo {
 }
 
 func (r *AIUsageLogRepo) Log(req *m.AIUsageLogCreateReq) error {
-	var userId, caseId interface{}
+	var userId, caseId, sessionId interface{}
 	if req.UserId != "" {
 		userId = req.UserId
 	}
 	if req.CaseId != "" {
 		caseId = req.CaseId
 	}
+	if req.SessionId != "" {
+		sessionId = req.SessionId
+	}
+	// user_tier - chaqiruv paytidagi holat: faol obuna -> premium; simulyatsiya sessiyasi tanga
+	// hisobidan (coin_billed) yoki bugungi bepul tangalar tugagan -> coin; aks holda free.
 	_, err := r.db.Exec(context.Background(), `
-		INSERT INTO ai_usage_logs (id, feature, tokens_used, cost_usd, user_id, case_id)
-		VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
-	`, req.Feature, req.Tokens, req.CostUSD, userId, caseId)
+		INSERT INTO ai_usage_logs (id, feature, tokens_used, cost_usd, user_id, case_id,
+			session_kind, session_id, model, prompt_tokens, completion_tokens, user_tier)
+		VALUES (gen_random_uuid(), $1, $2, $3, $4::uuid, $5, $6::varchar, $7::uuid, $8, $9, $10,
+			CASE
+				WHEN $4::uuid IS NULL THEN ''
+				WHEN EXISTS (SELECT 1 FROM subscriptions s WHERE s.user_id = $4::uuid AND s.status = 'active' AND s.ended_at > now()) THEN 'premium'
+				WHEN $6::varchar = 'simulation' THEN COALESCE((SELECT CASE WHEN ss.coin_billed THEN 'coin' ELSE 'free' END
+					FROM simulation_sessions ss WHERE ss.id = $7::uuid), 'free')
+				WHEN COALESCE((SELECT d.granted - d.used FROM user_daily_coins d
+					WHERE d.user_id = $4::uuid AND d.day = (now() AT TIME ZONE 'Asia/Tashkent')::date), 0) > 0 THEN 'free'
+				ELSE 'coin'
+			END)
+	`, req.Feature, req.Tokens, req.CostUSD, userId, caseId, req.SessionKind, sessionId, req.Model, req.PromptTokens, req.CompletionTokens)
 	if err != nil {
 		return fmt.Errorf("error while logging ai usage: %w", err)
 	}

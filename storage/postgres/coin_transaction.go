@@ -26,7 +26,7 @@ func (r *CoinTransactionRepo) GetAll(req *m.CoinTransactionGetListReq) (*m.Pagin
 		pt.id, pt.user_id, u.name, pt.delta, pt.reason, pt.reference_type, pt.reference_id, pt.created_at::text
 	FROM point_transactions pt
 	JOIN users u ON u.id = pt.user_id
-	WHERE pt.kind = 'coin'
+	WHERE pt.kind = 'coin' AND pt.source <> 'daily_free'
 	`
 
 	var args []interface{}
@@ -95,7 +95,7 @@ func (r *CoinTransactionRepo) GetSummary() (*m.CoinMonitoringSummaryRes, error) 
 	}
 
 	if err := r.db.QueryRow(ctx, `
-		SELECT COALESCE(SUM(-delta), 0) FROM point_transactions WHERE kind = 'coin' AND delta < 0
+		SELECT COALESCE(SUM(-delta), 0) FROM point_transactions WHERE kind = 'coin' AND delta < 0 AND source <> 'daily_free'
 	`).Scan(&res.TotalSpent); err != nil {
 		return nil, fmt.Errorf("error while summing spent: %w", err)
 	}

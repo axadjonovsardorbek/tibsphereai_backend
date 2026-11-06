@@ -102,8 +102,9 @@ func (r *UserRepo) EmailLogin(req *m.ConfirmationReq) (*m.TokenRes, error) {
 			id,
 			email,
 			name,
-			referral_code
-		) VALUES($1, $2, $3, $4)
+			referral_code,
+			signup_method
+		) VALUES($1, $2, $3, $4, 'email')
 		`
 
 	_, err = r.db.Exec(ctx, insertQuery, id, req.Identifier, "Foydalanuvchi", refCode)
@@ -170,8 +171,9 @@ func (r *UserRepo) TelegramLogin(req *m.TelegramLoginReq) (*m.TokenRes, error) {
 			id,
 			phone_number,
 			name,
-			referral_code
-		) VALUES($1, $2, $3, $4)
+			referral_code,
+			signup_method
+		) VALUES($1, $2, $3, $4, 'telegram')
 		`
 
 	_, err = r.db.Exec(ctx, insertQuery, id, req.Phone, req.Name, refCode)
@@ -217,8 +219,8 @@ func (r *UserRepo) GoogleLogin(req *m.GoogleAuthReq) (*m.TokenRes, error) {
 		user_id = uuid.NewString()
 		refCode := r.newReferralCode(ctx)
 		insertQuery := `
-		INSERT INTO users (id, google_id, email, name, referral_code)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO users (id, google_id, email, name, referral_code, signup_method)
+		VALUES ($1, $2, $3, $4, $5, 'google')
 		`
 		_, err = r.db.Exec(ctx, insertQuery, user_id, req.GoogleId, req.Email, req.Name, refCode)
 		if err != nil {
@@ -311,8 +313,8 @@ func (r *UserRepo) applyReferral(ctx context.Context, newUserId, referralCode st
 		return
 	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO point_transactions (id, user_id, kind, delta, reason, reference_type, reference_id)
-		VALUES ($1, $2, 'coin', $3, 'referral_reward', 'user', $4), ($5, $4, 'coin', $6, 'referral_reward', 'user', $2)
+		INSERT INTO point_transactions (id, user_id, kind, delta, reason, reference_type, reference_id, source)
+		VALUES ($1, $2, 'coin', $3, 'referral_reward', 'user', $4, 'referral'), ($5, $4, 'coin', $6, 'referral_reward', 'user', $2, 'referral')
 	`, uuid.New().String(), referrerId, referrerCoins, newUserId, uuid.New().String(), referredCoins); err != nil {
 		slog.Error("applyReferral: log point transactions failed", "err", err)
 		return
@@ -433,43 +435,100 @@ func (r *UserRepo) GetById(req *m.ById) (*m.UserRes, error) {
 }
 
 func (r *UserRepo) GetAll(req *m.UserGetListReq) (*m.PaginationResponse, *m.UserList, error) {
+	// Admin ro'yxati: har foydalanuvchiga statistika (TZ_STATISTICS 9). Ko'rsatkichlar
+	// LATERAL bilan hisoblanadi - filtr/saralash ham shu ustunlar bo'yicha ishlaydi.
 	query := `
+	SELECT * FROM (
 	SELECT
-		COUNT(id) OVER() AS total_count,
-		id,
-		name,
-		phone_number,
-		email,
-		image_url,
-		language,
-		specialization,
-		level,
-		stars,
-		coins,
-		streak_count,
-		created_at::text,
-		updated_at::text
-	FROM
-		users
-	WHERE
-		deleted_at = 0
+		u.id,
+		u.name,
+		u.phone_number,
+		u.email,
+		u.image_url,
+		u.language,
+		u.specialization,
+		u.level,
+		u.stars,
+		u.coins,
+		u.streak_count,
+		u.created_at,
+		u.updated_at,
+		u.last_active_at,
+		u.signup_method,
+		u.platform,
+		u.app_version,
+		(SELECT COUNT(*) FROM practice_sessions p WHERE p.user_id = u.id)
+			+ (SELECT COUNT(*) FROM simulation_sessions s WHERE s.user_id = u.id) AS sessions_count,
+		ai.cost AS ai_cost,
+		ai.tokens AS ai_tokens,
+		(SELECT COALESCE(SUM(-delta), 0) FROM point_transactions t
+			WHERE t.user_id = u.id AND t.kind = 'coin' AND t.delta < 0) AS coins_spent,
+		o.paid AS paid,
+		o.cnt AS orders_count,
+		(SELECT MAX(ended_at) FROM subscriptions sb
+			WHERE sb.user_id = u.id AND sb.status = 'active' AND sb.ended_at > now()) AS sub_until,
+		(SELECT COUNT(*) FROM user_feedback f WHERE f.user_id = u.id) AS feedback_count
+	FROM users u
+	LEFT JOIN LATERAL (
+		SELECT COALESCE(SUM(cost_usd), 0)::float8 AS cost, COALESCE(SUM(tokens_used), 0)::bigint AS tokens
+		FROM ai_usage_logs a WHERE a.user_id = u.id
+	) ai ON TRUE
+	LEFT JOIN LATERAL (
+		SELECT COALESCE(SUM(amount) FILTER (WHERE status = 'PAID' AND amount > 0), 0)::float8 AS paid, COUNT(*) AS cnt
+		FROM orders WHERE user_id = u.id
+	) o ON TRUE
+	WHERE u.deleted_at = 0
 	`
 
 	var args []interface{}
+	arg := func(v interface{}) string {
+		args = append(args, v)
+		return fmt.Sprintf("$%d", len(args))
+	}
 
 	if req.Name != "" && req.Name != "string" {
-		query += fmt.Sprintf(" AND name ILIKE $%d", len(args)+1)
-		args = append(args, "%"+req.Name+"%")
+		query += " AND u.name ILIKE " + arg("%"+req.Name+"%")
 	}
 	if req.PhoneNumber != "" && req.PhoneNumber != "string" {
-		query += fmt.Sprintf(" AND phone_number ILIKE $%d", len(args)+1)
-		args = append(args, "%"+req.PhoneNumber+"%")
+		query += " AND u.phone_number ILIKE " + arg("%"+req.PhoneNumber+"%")
+	}
+	if req.Email != "" && req.Email != "string" {
+		query += " AND u.email ILIKE " + arg("%"+req.Email+"%")
+	}
+	if req.CreatedFrom != "" {
+		query += " AND u.created_at >= (" + arg(req.CreatedFrom) + "::date)::timestamp AT TIME ZONE 'Asia/Tashkent'"
+	}
+	if req.CreatedTo != "" {
+		query += " AND u.created_at < ((" + arg(req.CreatedTo) + "::date) + 1)::timestamp AT TIME ZONE 'Asia/Tashkent'"
+	}
+	if req.InactiveDays > 0 {
+		query += " AND (u.last_active_at IS NULL OR u.last_active_at < now() - make_interval(days => " + arg(req.InactiveDays) + "))"
+	}
+	query += ") x WHERE TRUE"
+	switch req.HasSubscription {
+	case "true":
+		query += " AND x.sub_until IS NOT NULL"
+	case "false":
+		query += " AND x.sub_until IS NULL"
+	}
+	switch req.Paid {
+	case "true":
+		query += " AND x.paid > 0"
+	case "false":
+		query += " AND x.paid = 0"
 	}
 
-	query += " ORDER BY created_at DESC"
-
-	args = append(args, req.Filter.Limit, req.Filter.Page)
-	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)-1, len(args))
+	order := map[string]string{
+		"last_active": "x.last_active_at DESC NULLS LAST",
+		"ai_cost":     "x.ai_cost DESC",
+		"paid":        "x.paid DESC",
+		"sessions":    "x.sessions_count DESC",
+	}[req.SortBy]
+	if order == "" {
+		order = "x.created_at DESC"
+	}
+	query = "SELECT COUNT(*) OVER() AS total_count, x.* FROM (" + query + ") x ORDER BY " + order + ", x.id"
+	query += " LIMIT " + arg(req.Filter.Limit) + " OFFSET " + arg(req.Filter.Page)
 
 	rows, err := r.db.Query(context.Background(), query, args...)
 	if err != nil {
@@ -480,8 +539,13 @@ func (r *UserRepo) GetAll(req *m.UserGetListReq) (*m.PaginationResponse, *m.User
 	users := m.UserList{}
 
 	for rows.Next() {
-		user := m.UserRes{}
-		var totalCount int
+		user := m.UserRes{Stats: &m.UserAdminStats{}}
+		st := user.Stats
+		var (
+			totalCount           int
+			createdAt, updatedAt time.Time
+			lastActive, subUntil *time.Time
+		)
 		err := rows.Scan(
 			&totalCount,
 			&user.Id,
@@ -495,12 +559,29 @@ func (r *UserRepo) GetAll(req *m.UserGetListReq) (*m.PaginationResponse, *m.User
 			&user.Stars,
 			&user.Coins,
 			&user.StreakCount,
-			&user.CreatedAt,
-			&user.UpdatedAt,
+			&createdAt,
+			&updatedAt,
+			&lastActive,
+			&st.SignupMethod,
+			&st.Platform,
+			&st.AppVersion,
+			&st.SessionsCount,
+			&st.AICostUSD,
+			&st.AITokens,
+			&st.CoinsSpent,
+			&st.PaidUZS,
+			&st.OrdersCount,
+			&subUntil,
+			&st.FeedbackCount,
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error while scanning user row: %w", err)
 		}
+		user.CreatedAt = timeStr(&createdAt)
+		user.UpdatedAt = timeStr(&updatedAt)
+		st.LastActiveAt = timeStr(lastActive)
+		st.SubscriptionUntil = timeStr(subUntil)
+		st.HasSubscription = subUntil != nil
 		users.Users = append(users.Users, user)
 		users.Count = totalCount
 	}
@@ -508,6 +589,15 @@ func (r *UserRepo) GetAll(req *m.UserGetListReq) (*m.PaginationResponse, *m.User
 	response := m.NewPaginationResponse(req.Filter, users.Count, users.Users)
 
 	return &response, &users, nil
+}
+
+// timeStr - vaqtni boshqa endpointlardagi kabi Postgres matn ko'rinishida qaytaradi.
+func timeStr(t *time.Time) *string {
+	if t == nil {
+		return nil
+	}
+	s := t.Format("2006-01-02 15:04:05.999999-07")
+	return &s
 }
 
 func (r *UserRepo) Update(req *m.UserUpdateReq) (*m.Void, error) {
@@ -742,9 +832,9 @@ func (r *UserRepo) AddPoints(req *m.AddPointsReq) (*m.Void, error) {
 	}
 
 	_, err = tx.Exec(ctx, `
-		INSERT INTO point_transactions (id, user_id, kind, delta, reason, reference_id)
-		VALUES ($1, $2, 'stars', $3, $4, $5), ($6, $2, 'coin', $7, $4, $5)
-	`, uuid.NewString(), req.UserId, req.StarsDelta, req.Reason, req.ReferenceId, uuid.NewString(), req.CoinsDelta)
+		INSERT INTO point_transactions (id, user_id, kind, delta, reason, reference_id, source)
+		VALUES ($1, $2, 'stars', $3, $4, $5, ''), ($6, $2, 'coin', $7, $4, $5, $8)
+	`, uuid.NewString(), req.UserId, req.StarsDelta, req.Reason, req.ReferenceId, uuid.NewString(), req.CoinsDelta, coinSource(req.Reason))
 	if err != nil {
 		return nil, fmt.Errorf("error while logging point transaction: %w", err)
 	}
@@ -1004,4 +1094,12 @@ func calcRange(t m.RatingType, loc *time.Location) (time.Time, time.Time) {
 		start := time.Date(1970, 1, 1, 0, 0, 0, 0, loc)
 		return start, today
 	}
+}
+
+// coinSource - AddPoints orqali kelgan tanga kirimining manbasi (point_transactions.source).
+func coinSource(reason string) string {
+	if reason == "promo_redeem" {
+		return "promo"
+	}
+	return "reward"
 }

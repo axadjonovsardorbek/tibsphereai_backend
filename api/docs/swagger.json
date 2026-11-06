@@ -8232,6 +8232,182 @@
                 }
             }
         },
+        "/web/stats/ai-cost": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stats"
+                ],
+                "summary": "AI xarajati: funksiya, amal va foydalanuvchi turi bo'yicha; 1 tanga tannarxi",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.AICostStatsRes"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/stats/engagement": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stats"
+                ],
+                "summary": "Faollik: DAU/WAU/MAU, kunlik ko'rsatkichlar, voronka",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.EngagementStatsRes"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/stats/finance": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stats"
+                ],
+                "summary": "Moliya: tushum, AI xarajati, foyda, ARPU/ARPPU, kunlik va tarif bo'yicha",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "YYYY-MM-DD (default: to - 29 kun)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "YYYY-MM-DD (default: bugun, Toshkent)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.FinanceStatsRes"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/web/stats/premium-cost": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stats"
+                ],
+                "summary": "Premium foydalanuvchilar AI xarajati va eng ko'p sarflagan 20 foydalanuvchi",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.PremiumCostStatsRes"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/web/tariff": {
             "get": {
                 "security": [
@@ -8702,6 +8878,63 @@
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Email",
+                        "name": "email",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ro'yxatdan o'tgan sana (dan), YYYY-MM-DD",
+                        "name": "created_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ro'yxatdan o'tgan sana (gacha, kiradi), YYYY-MM-DD",
+                        "name": "created_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "N kundan beri faol emas",
+                        "name": "inactive_days",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "true",
+                            "false"
+                        ],
+                        "type": "string",
+                        "description": "Obunasi bor/yo'q",
+                        "name": "has_subscription",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "true",
+                            "false"
+                        ],
+                        "type": "string",
+                        "description": "To'lagan/to'lamagan",
+                        "name": "paid",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "created_at",
+                            "last_active",
+                            "ai_cost",
+                            "paid",
+                            "sessions"
+                        ],
+                        "type": "string",
+                        "description": "Saralash",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Limit",
                         "name": "limit",
@@ -8832,9 +9065,139 @@
                     }
                 }
             }
+        },
+        "/web/user/{id}/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stats"
+                ],
+                "summary": "Bitta foydalanuvchi: oxirgi 30 kun grafigi, eng ko'p bo'limlar, oxirgi tranzaksiya/buyurtmalar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.UserStatsRes"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "models.AICostAction": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "description": "case_session | test_session | simulation | flashcard_deck | roadmap",
+                    "type": "string"
+                },
+                "avg_coins": {
+                    "description": "foydalanuvchidan o'rtacha yechilgan tanga",
+                    "type": "number"
+                },
+                "avg_cost_usd": {
+                    "type": "number"
+                },
+                "count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.AICostFeature": {
+            "type": "object",
+            "properties": {
+                "calls": {
+                    "type": "integer"
+                },
+                "cost_usd": {
+                    "type": "number"
+                },
+                "feature": {
+                    "description": "practice_generate, practice_evaluate, chat, debrief, flashcard_deck, roadmap, practice_image...",
+                    "type": "string"
+                },
+                "tokens": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.AICostStatsRes": {
+            "type": "object",
+            "properties": {
+                "by_feature": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.AICostFeature"
+                    }
+                },
+                "by_tier": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.AICostTier"
+                    }
+                },
+                "calls": {
+                    "type": "integer"
+                },
+                "coins_spent": {
+                    "description": "CoinsSpent - davrda yechilgan jami tanga (bepul + balans); CostPerCoinUSD - bepul/tangali\nfoydalanuvchilar AI xarajati / CoinsSpent: 1 tanganing haqiqiy tannarxi.",
+                    "type": "integer"
+                },
+                "cost_per_coin_usd": {
+                    "type": "number"
+                },
+                "per_action": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.AICostAction"
+                    }
+                },
+                "period": {
+                    "$ref": "#/definitions/models.StatsPeriod"
+                },
+                "total_cost_usd": {
+                    "type": "number"
+                },
+                "total_tokens": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.AICostTier": {
+            "type": "object",
+            "properties": {
+                "calls": {
+                    "type": "integer"
+                },
+                "cost_usd": {
+                    "type": "number"
+                },
+                "tier": {
+                    "description": "free | coin | premium | system (admin/case generatsiyasi)",
+                    "type": "string"
+                },
+                "users": {
+                    "type": "integer"
+                }
+            }
+        },
         "models.AIPromptRes": {
             "type": "object",
             "properties": {
@@ -10473,6 +10836,82 @@
                 }
             }
         },
+        "models.EngagementDay": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "dau": {
+                    "type": "integer"
+                },
+                "flashcard_reviews": {
+                    "type": "integer"
+                },
+                "new_users": {
+                    "type": "integer"
+                },
+                "sessions": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.EngagementFunnel": {
+            "type": "object",
+            "properties": {
+                "finished_session": {
+                    "type": "integer"
+                },
+                "paid": {
+                    "type": "integer"
+                },
+                "registered": {
+                    "type": "integer"
+                },
+                "returned_next_day": {
+                    "type": "integer"
+                },
+                "started_session": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.EngagementStatsRes": {
+            "type": "object",
+            "properties": {
+                "daily": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.EngagementDay"
+                    }
+                },
+                "dau": {
+                    "description": "bugun",
+                    "type": "integer"
+                },
+                "dau_mau": {
+                    "type": "number"
+                },
+                "funnel": {
+                    "$ref": "#/definitions/models.EngagementFunnel"
+                },
+                "mau": {
+                    "description": "oxirgi 30 kun",
+                    "type": "integer"
+                },
+                "new_users": {
+                    "description": "davrda",
+                    "type": "integer"
+                },
+                "period": {
+                    "$ref": "#/definitions/models.StatsPeriod"
+                },
+                "wau": {
+                    "description": "oxirgi 7 kun",
+                    "type": "integer"
+                }
+            }
+        },
         "models.FaqCreateBody": {
             "type": "object",
             "properties": {
@@ -10620,6 +11059,97 @@
                 "rating": {
                     "description": "1..5 (ixtiyoriy, 0 = ko'rsatilmagan)",
                     "type": "integer"
+                }
+            }
+        },
+        "models.FinanceDay": {
+            "type": "object",
+            "properties": {
+                "ai_cost_usd": {
+                    "type": "number"
+                },
+                "ai_cost_uzs": {
+                    "type": "number"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "revenue_uzs": {
+                    "type": "number"
+                }
+            }
+        },
+        "models.FinanceStatsRes": {
+            "type": "object",
+            "properties": {
+                "active_users": {
+                    "type": "integer"
+                },
+                "ai_cost_usd": {
+                    "type": "number"
+                },
+                "ai_cost_uzs": {
+                    "type": "number"
+                },
+                "arppu_uzs": {
+                    "description": "tushum / davrda to'lagan foydalanuvchilar",
+                    "type": "number"
+                },
+                "arpu_uzs": {
+                    "description": "tushum / davrdagi faol foydalanuvchilar",
+                    "type": "number"
+                },
+                "by_tariff": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.FinanceTariff"
+                    }
+                },
+                "daily": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.FinanceDay"
+                    }
+                },
+                "paid_orders": {
+                    "type": "integer"
+                },
+                "paying_users": {
+                    "type": "integer"
+                },
+                "period": {
+                    "$ref": "#/definitions/models.StatsPeriod"
+                },
+                "profit_uzs": {
+                    "description": "tushum - AI xarajati",
+                    "type": "number"
+                },
+                "revenue_uzs": {
+                    "type": "number"
+                },
+                "usd_to_uzs_rate": {
+                    "type": "number"
+                }
+            }
+        },
+        "models.FinanceTariff": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "description": "subscription | coin_package",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "revenue_uzs": {
+                    "type": "number"
+                },
+                "sold": {
+                    "type": "integer"
+                },
+                "tariff_id": {
+                    "type": "string"
                 }
             }
         },
@@ -10815,9 +11345,6 @@
                 },
                 "next_interval_days": {
                     "type": "integer"
-                },
-                "streak_count": {
-                    "type": "integer"
                 }
             }
         },
@@ -10838,9 +11365,6 @@
                     "description": "interval \u003e= 21 kun",
                     "type": "integer"
                 },
-                "longest_streak": {
-                    "type": "integer"
-                },
                 "new": {
                     "description": "hali ko'rilmagan",
                     "type": "integer"
@@ -10850,9 +11374,6 @@
                     "type": "number"
                 },
                 "reviews_today": {
-                    "type": "integer"
-                },
-                "streak_count": {
                     "type": "integer"
                 },
                 "total": {
@@ -11626,6 +12147,31 @@
                 }
             }
         },
+        "models.PremiumCostStatsRes": {
+            "type": "object",
+            "properties": {
+                "avg_ai_cost_usd": {
+                    "type": "number"
+                },
+                "loss_making_users": {
+                    "description": "LossMakingUsers - premiumlar ichida umrbod AI xarajati (so'mda) umrbod to'lagan pulidan ko'p bo'lganlar.",
+                    "type": "integer"
+                },
+                "period": {
+                    "$ref": "#/definitions/models.StatsPeriod"
+                },
+                "premium_users": {
+                    "description": "davrda obunasi faol bo'lganlar",
+                    "type": "integer"
+                },
+                "top_spenders": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.TopSpender"
+                    }
+                }
+            }
+        },
         "models.PromoCodeCreateReq": {
             "type": "object",
             "properties": {
@@ -12390,6 +12936,17 @@
                 }
             }
         },
+        "models.StatsPeriod": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string"
+                },
+                "to": {
+                    "type": "string"
+                }
+            }
+        },
         "models.StudyPlanRes": {
             "type": "object",
             "properties": {
@@ -12532,6 +13089,34 @@
                     "type": "string"
                 },
                 "role": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.TopSpender": {
+            "type": "object",
+            "properties": {
+                "cost_usd": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "paid_uzs": {
+                    "description": "umrbod to'lagan puli",
+                    "type": "number"
+                },
+                "sessions": {
+                    "type": "integer"
+                },
+                "tokens": {
+                    "type": "integer"
+                },
+                "type": {
+                    "description": "premium | paying | free",
+                    "type": "string"
+                },
+                "user_id": {
                     "type": "string"
                 }
             }
@@ -12741,6 +13326,52 @@
                 }
             }
         },
+        "models.UserAdminStats": {
+            "type": "object",
+            "properties": {
+                "ai_cost_usd": {
+                    "type": "number"
+                },
+                "ai_tokens": {
+                    "type": "integer"
+                },
+                "app_version": {
+                    "type": "string"
+                },
+                "coins_spent": {
+                    "type": "integer"
+                },
+                "feedback_count": {
+                    "type": "integer"
+                },
+                "has_subscription": {
+                    "type": "boolean"
+                },
+                "last_active_at": {
+                    "type": "string"
+                },
+                "orders_count": {
+                    "type": "integer"
+                },
+                "paid_uzs": {
+                    "type": "number"
+                },
+                "platform": {
+                    "description": "ios | android | web",
+                    "type": "string"
+                },
+                "sessions_count": {
+                    "type": "integer"
+                },
+                "signup_method": {
+                    "description": "telegram | email | google",
+                    "type": "string"
+                },
+                "subscription_until": {
+                    "type": "string"
+                }
+            }
+        },
         "models.UserCheckReq": {
             "type": "object",
             "properties": {
@@ -12867,10 +13498,122 @@
                 "stars": {
                     "type": "integer"
                 },
-                "streak_count": {
-                    "type": "integer"
+                "stats": {
+                    "description": "Stats - faqat admin ro'yxatida (GET /web/user) to'ldiriladi.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.UserAdminStats"
+                        }
+                    ]
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.UserStatsCategory": {
+            "type": "object",
+            "properties": {
+                "category_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "sessions": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.UserStatsCoinTx": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "delta": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.UserStatsDay": {
+            "type": "object",
+            "properties": {
+                "coins_spent": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "sessions": {
+                    "type": "integer"
+                },
+                "tokens": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.UserStatsOrder": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "paid_at": {
+                    "type": "string"
+                },
+                "payment_type": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tariff_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.UserStatsRes": {
+            "type": "object",
+            "properties": {
+                "daily": {
+                    "description": "oxirgi 30 kun",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.UserStatsDay"
+                    }
+                },
+                "orders": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.UserStatsOrder"
+                    }
+                },
+                "top_categories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.UserStatsCategory"
+                    }
+                },
+                "transactions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.UserStatsCoinTx"
+                    }
+                },
+                "user_id": {
                     "type": "string"
                 }
             }

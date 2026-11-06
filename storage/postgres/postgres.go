@@ -34,6 +34,7 @@ type Storage struct {
 	RoadmapS          storage.RoadmapI
 	FeedbackS         storage.FeedbackI
 	DashboardS        storage.DashBoardI
+	StatsS            storage.StatsI
 	UserS             storage.UserI
 	UserDeviceS       storage.UserDeviceI
 
@@ -89,6 +90,7 @@ func NewPostgresStorage(cf config.Config, rdb *redis.Client) (*Storage, error) {
 		RoadmapS:          NewRoadmapRepo(pool),
 		FeedbackS:         NewFeedbackRepo(pool),
 		DashboardS:        NewDashboardRepo(pool),
+		StatsS:            NewStatsRepo(pool),
 		UserS:             NewUserRepo(pool, rdb),
 		UserDeviceS:       NewUserDeviceRepo(pool),
 

@@ -253,8 +253,7 @@ func (s *UserService) GetById(ctx context.Context, req *m.ById) (*m.UserRes, err
 func (s *UserService) GetAll(ctx context.Context, req *m.UserGetListReq) (*m.PaginationResponse, *m.UserList, error) {
 	res := &m.PaginationResponse{}
 
-	key := fmt.Sprintf("user_name:%s_user_phone:%s_page:%d_limit:%d",
-		req.Name, req.PhoneNumber, req.Filter.Page, req.Filter.Limit)
+	key := fmt.Sprintf("user_list:%+v", *req)
 
 	if s.rdb != nil {
 		if b, err := s.rdb.Get(key).Bytes(); err == nil && len(b) > 0 {
@@ -358,4 +357,14 @@ func clampLimit(limit int) int {
 
 func topCacheKey(typ string, limit int) string {
 	return fmt.Sprintf("rating:top:%s:%d", typ, limit)
+}
+
+// SaveClientInfo - oxirgi so'rov kelgan platforma va ilova versiyasi (bo'sh qiymat eskisini o'chirmaydi).
+func (s *UserService) SaveClientInfo(ctx context.Context, userId, platform, version string) {
+	if _, err := s.storage.Db.Exec(ctx, `
+		UPDATE users SET platform = COALESCE(NULLIF($2, ''), platform), app_version = COALESCE(NULLIF($3, ''), app_version)
+		WHERE id = $1
+	`, userId, platform, version); err != nil {
+		fmt.Println("failed to save client info:", err)
+	}
 }

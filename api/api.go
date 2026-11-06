@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"log/slog"
 
 	"time"
@@ -43,7 +44,7 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Accept-Language", "Authorization", "X-Captcha-Token"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Accept-Language", "Authorization", "X-Captcha-Token", "X-Platform", "X-App-Version"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           24 * time.Hour,
@@ -92,6 +93,7 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 		{
 			user.GET("", h.GetAllUsers)
 			user.GET("/:id", h.GetByIdUser)
+			user.GET("/:id/stats", h.GetUserStats)
 			user.DELETE("/:id/delete", h.DeleteUser)
 		}
 
@@ -266,10 +268,10 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 		// ARCHIVED (daraja): route o'chirilgan, handler/service kodi saqlangan.
 		// level := web.Group("/level").Use(mid.NewAuth(enforcer, rdb))
 		// {
-			// level.POST("", h.CreateLevel)
-			// level.GET("", h.GetAllLevels)
-			// level.PUT("/:id/update", h.UpdateLevel)
-			// level.DELETE("/:id/delete", h.DeleteLevel)
+		// level.POST("", h.CreateLevel)
+		// level.GET("", h.GetAllLevels)
+		// level.PUT("/:id/update", h.UpdateLevel)
+		// level.DELETE("/:id/delete", h.DeleteLevel)
 		// }
 
 		setting := web.Group("/setting").Use(mid.NewAuth(enforcer, rdb))
@@ -317,6 +319,14 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 			dashboard.GET("", h.GetDashboard)
 		}
 
+		stats := web.Group("/stats").Use(mid.NewAuth(enforcer, rdb))
+		{
+			stats.GET("/finance", h.GetFinanceStats)
+			stats.GET("/ai-cost", h.GetAICostStats)
+			stats.GET("/premium-cost", h.GetPremiumCostStats)
+			stats.GET("/engagement", h.GetEngagementStats)
+		}
+
 		coinTransaction := web.Group("/coin-transaction").Use(mid.NewAuth(enforcer, rdb))
 		{
 			coinTransaction.GET("", h.GetAllCoinTransactions)
@@ -327,6 +337,9 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 	}
 
 	mobile := router.Group("/mobile")
+	mobile.Use(mid.ClientInfo(rdb, func(userId, platform, version string) {
+		h.Clients.User.SaveClientInfo(context.Background(), userId, platform, version)
+	}))
 	{
 		user := mobile.Group("/user").Use(mid.NewAuth(enforcer, rdb))
 		{
@@ -393,7 +406,7 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 		// ARCHIVED (hamkor): route o'chirilgan, handler/service kodi saqlangan.
 		// partner := mobile.Group("/partner").Use(mid.NewAuth(enforcer, rdb))
 		// {
-			// partner.GET("", h.GetAllMobilePartners)
+		// partner.GET("", h.GetAllMobilePartners)
 		// }
 
 		// ARCHIVED (daraja): route o'chirilgan, handler/service kodi saqlangan.
@@ -417,8 +430,8 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 		// ARCHIVED (o'quv reja): route o'chirilgan, handler/service kodi saqlangan.
 		// studyPlan := mobile.Group("/study-plan").Use(mid.NewAuth(enforcer, rdb))
 		// {
-			// studyPlan.GET("", h.GetStudyPlan)
-			// studyPlan.PUT("", h.UpsertStudyPlan)
+		// studyPlan.GET("", h.GetStudyPlan)
+		// studyPlan.PUT("", h.UpsertStudyPlan)
 		// }
 
 		simulation := mobile.Group("/simulation").Use(mid.NewAuth(enforcer, rdb))
@@ -487,8 +500,8 @@ func NewApi(h *handler.Handler, rdb *redis.Client) *gin.Engine {
 		// ARCHIVED (promokod): route o'chirilgan, handler/service kodi saqlangan.
 		// promocode := mobile.Group("/promocode").Use(mid.NewAuth(enforcer, rdb))
 		// {
-			// promocode.GET("", h.GetMyPromoCodes)
-			// promocode.POST("/redeem", h.RedeemPromoCode)
+		// promocode.GET("", h.GetMyPromoCodes)
+		// promocode.POST("/redeem", h.RedeemPromoCode)
 		// }
 	}
 	return router

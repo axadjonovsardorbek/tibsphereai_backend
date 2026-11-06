@@ -302,6 +302,15 @@ type DashBoardI interface {
 	GetDashboard(req *m.GetDashboardReq) (*m.DashboardRes, error)
 }
 
+// StatsI - admin statistikasi (TZ_STATISTICS).
+type StatsI interface {
+	Finance(req *m.StatsPeriodReq) (*m.FinanceStatsRes, error)
+	AICost(req *m.StatsPeriodReq) (*m.AICostStatsRes, error)
+	PremiumCost(req *m.StatsPeriodReq) (*m.PremiumCostStatsRes, error)
+	Engagement(req *m.StatsPeriodReq) (*m.EngagementStatsRes, error)
+	UserStats(userId string) (*m.UserStatsRes, error)
+}
+
 // --- Home / Kategoriyalar ---
 
 type CategoryI interface {

@@ -424,7 +424,7 @@ func (s *RoadmapService) Refresh(ctx context.Context, userId, lang string) (*m.R
 	}
 	coins := 0
 	if usage != nil {
-		logAIUsage(&s.storage, "roadmap", usage, userId, "")
+		logAIUsage(&s.storage, "roadmap", usage, aiRef{UserId: userId})
 		if c := CoinsForTokens(usage.PromptTokens+usage.OutputTokens, s.settings.CoinsPer1kTokens(ctx)); c > 0 {
 			charged, cErr := s.biller.Charge(ctx, userId, c, "roadmap", "roadmap", "")
 			if cErr != nil {

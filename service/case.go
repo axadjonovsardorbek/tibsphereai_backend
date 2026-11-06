@@ -62,7 +62,7 @@ func (s *CaseService) enrichWithAI(ctx context.Context, req *m.CaseCreateReq) {
 		return
 	}
 	out, usage, err := s.ai.CaseGen.Generate(ctx, gen)
-	logAIUsage(&s.storage, "case_generation", usage, "", "")
+	logAIUsage(&s.storage, "case_generation", usage, aiRef{})
 	if err != nil || out == nil {
 		return
 	}
@@ -125,7 +125,7 @@ func (s *CaseService) GenerateWithAI(ctx context.Context, genReq *m.CaseGenReq) 
 		return nil, err
 	}
 	req, usage, err := s.ai.CaseGen.Generate(ctx, genReq)
-	logAIUsage(&s.storage, "case_generation", usage, "", "")
+	logAIUsage(&s.storage, "case_generation", usage, aiRef{})
 	if err != nil {
 		return nil, err
 	}

@@ -1,5 +1,73 @@
 basePath: /
 definitions:
+  models.AICostAction:
+    properties:
+      action:
+        description: case_session | test_session | simulation | flashcard_deck | roadmap
+        type: string
+      avg_coins:
+        description: foydalanuvchidan o'rtacha yechilgan tanga
+        type: number
+      avg_cost_usd:
+        type: number
+      count:
+        type: integer
+    type: object
+  models.AICostFeature:
+    properties:
+      calls:
+        type: integer
+      cost_usd:
+        type: number
+      feature:
+        description: practice_generate, practice_evaluate, chat, debrief, flashcard_deck,
+          roadmap, practice_image...
+        type: string
+      tokens:
+        type: integer
+    type: object
+  models.AICostStatsRes:
+    properties:
+      by_feature:
+        items:
+          $ref: '#/definitions/models.AICostFeature'
+        type: array
+      by_tier:
+        items:
+          $ref: '#/definitions/models.AICostTier'
+        type: array
+      calls:
+        type: integer
+      coins_spent:
+        description: |-
+          CoinsSpent - davrda yechilgan jami tanga (bepul + balans); CostPerCoinUSD - bepul/tangali
+          foydalanuvchilar AI xarajati / CoinsSpent: 1 tanganing haqiqiy tannarxi.
+        type: integer
+      cost_per_coin_usd:
+        type: number
+      per_action:
+        items:
+          $ref: '#/definitions/models.AICostAction'
+        type: array
+      period:
+        $ref: '#/definitions/models.StatsPeriod'
+      total_cost_usd:
+        type: number
+      total_tokens:
+        type: integer
+    type: object
+  models.AICostTier:
+    properties:
+      calls:
+        type: integer
+      cost_usd:
+        type: number
+      tier:
+        description: free | coin | premium | system (admin/case generatsiyasi)
+        type: string
+      users:
+        type: integer
+    type: object
   models.AIPromptRes:
     properties:
       key:
@@ -1093,6 +1161,57 @@ definitions:
       medium_multiplier:
         type: number
     type: object
+  models.EngagementDay:
+    properties:
+      date:
+        type: string
+      dau:
+        type: integer
+      flashcard_reviews:
+        type: integer
+      new_users:
+        type: integer
+      sessions:
+        type: integer
+    type: object
+  models.EngagementFunnel:
+    properties:
+      finished_session:
+        type: integer
+      paid:
+        type: integer
+      registered:
+        type: integer
+      returned_next_day:
+        type: integer
+      started_session:
+        type: integer
+    type: object
+  models.EngagementStatsRes:
+    properties:
+      daily:
+        items:
+          $ref: '#/definitions/models.EngagementDay'
+        type: array
+      dau:
+        description: bugun
+        type: integer
+      dau_mau:
+        type: number
+      funnel:
+        $ref: '#/definitions/models.EngagementFunnel'
+      mau:
+        description: oxirgi 30 kun
+        type: integer
+      new_users:
+        description: davrda
+        type: integer
+      period:
+        $ref: '#/definitions/models.StatsPeriod'
+      wau:
+        description: oxirgi 7 kun
+        type: integer
+    type: object
   models.FaqCreateBody:
     properties:
       answer:
@@ -1190,6 +1309,67 @@ definitions:
       rating:
         description: 1..5 (ixtiyoriy, 0 = ko'rsatilmagan)
         type: integer
+    type: object
+  models.FinanceDay:
+    properties:
+      ai_cost_usd:
+        type: number
+      ai_cost_uzs:
+        type: number
+      date:
+        type: string
+      revenue_uzs:
+        type: number
+    type: object
+  models.FinanceStatsRes:
+    properties:
+      active_users:
+        type: integer
+      ai_cost_usd:
+        type: number
+      ai_cost_uzs:
+        type: number
+      arppu_uzs:
+        description: tushum / davrda to'lagan foydalanuvchilar
+        type: number
+      arpu_uzs:
+        description: tushum / davrdagi faol foydalanuvchilar
+        type: number
+      by_tariff:
+        items:
+          $ref: '#/definitions/models.FinanceTariff'
+        type: array
+      daily:
+        items:
+          $ref: '#/definitions/models.FinanceDay'
+        type: array
+      paid_orders:
+        type: integer
+      paying_users:
+        type: integer
+      period:
+        $ref: '#/definitions/models.StatsPeriod'
+      profit_uzs:
+        description: tushum - AI xarajati
+        type: number
+      revenue_uzs:
+        type: number
+      usd_to_uzs_rate:
+        type: number
+    type: object
+  models.FinanceTariff:
+    properties:
+      kind:
+        description: subscription | coin_package
+        type: string
+      name:
+        type: string
+      revenue_uzs:
+        type: number
+      sold:
+        type: integer
+      tariff_id:
+        type: string
     type: object
   models.FlashcardAdminStats:
     properties:
@@ -1321,8 +1501,6 @@ definitions:
         type: string
       next_interval_days:
         type: integer
-      streak_count:
-        type: integer
     type: object
   models.FlashcardStatsRes:
     properties:
@@ -1336,8 +1514,6 @@ definitions:
       learned:
         description: interval >= 21 kun
         type: integer
-      longest_streak:
-        type: integer
       new:
         description: hali ko'rilmagan
         type: integer
@@ -1345,8 +1521,6 @@ definitions:
         description: '0..1: good+easy ulushi'
         type: number
       reviews_today:
-        type: integer
-      streak_count:
         type: integer
       total:
         type: integer
@@ -1866,6 +2040,24 @@ definitions:
         type: integer
       tokens:
         type: integer
+    type: object
+  models.PremiumCostStatsRes:
+    properties:
+      avg_ai_cost_usd:
+        type: number
+      loss_making_users:
+        description: LossMakingUsers - premiumlar ichida umrbod AI xarajati (so'mda)
+          umrbod to'lagan pulidan ko'p bo'lganlar.
+        type: integer
+      period:
+        $ref: '#/definitions/models.StatsPeriod'
+      premium_users:
+        description: davrda obunasi faol bo'lganlar
+        type: integer
+      top_spenders:
+        items:
+          $ref: '#/definitions/models.TopSpender'
+        type: array
     type: object
   models.PromoCodeCreateReq:
     properties:
@@ -2395,6 +2587,13 @@ definitions:
       url:
         type: string
     type: object
+  models.StatsPeriod:
+    properties:
+      from:
+        type: string
+      to:
+        type: string
+    type: object
   models.StudyPlanRes:
     properties:
       is_enabled:
@@ -2489,6 +2688,25 @@ definitions:
       refresh_token:
         type: string
       role:
+        type: string
+    type: object
+  models.TopSpender:
+    properties:
+      cost_usd:
+        type: number
+      name:
+        type: string
+      paid_uzs:
+        description: umrbod to'lagan puli
+        type: number
+      sessions:
+        type: integer
+      tokens:
+        type: integer
+      type:
+        description: premium | paying | free
+        type: string
+      user_id:
         type: string
     type: object
   models.TopicCreateReq:
@@ -2628,6 +2846,37 @@ definitions:
       activity:
         type: integer
     type: object
+  models.UserAdminStats:
+    properties:
+      ai_cost_usd:
+        type: number
+      ai_tokens:
+        type: integer
+      app_version:
+        type: string
+      coins_spent:
+        type: integer
+      feedback_count:
+        type: integer
+      has_subscription:
+        type: boolean
+      last_active_at:
+        type: string
+      orders_count:
+        type: integer
+      paid_uzs:
+        type: number
+      platform:
+        description: ios | android | web
+        type: string
+      sessions_count:
+        type: integer
+      signup_method:
+        description: telegram | email | google
+        type: string
+      subscription_until:
+        type: string
+    type: object
   models.UserCheckReq:
     properties:
       identifier:
@@ -2713,9 +2962,81 @@ definitions:
         type: string
       stars:
         type: integer
-      streak_count:
-        type: integer
+      stats:
+        allOf:
+        - $ref: '#/definitions/models.UserAdminStats'
+        description: Stats - faqat admin ro'yxatida (GET /web/user) to'ldiriladi.
       updated_at:
+        type: string
+    type: object
+  models.UserStatsCategory:
+    properties:
+      category_id:
+        type: string
+      name:
+        type: string
+      sessions:
+        type: integer
+    type: object
+  models.UserStatsCoinTx:
+    properties:
+      created_at:
+        type: string
+      delta:
+        type: integer
+      reason:
+        type: string
+      source:
+        type: string
+    type: object
+  models.UserStatsDay:
+    properties:
+      coins_spent:
+        type: integer
+      date:
+        type: string
+      sessions:
+        type: integer
+      tokens:
+        type: integer
+    type: object
+  models.UserStatsOrder:
+    properties:
+      amount:
+        type: number
+      created_at:
+        type: string
+      id:
+        type: string
+      paid_at:
+        type: string
+      payment_type:
+        type: string
+      status:
+        type: string
+      tariff_name:
+        type: string
+    type: object
+  models.UserStatsRes:
+    properties:
+      daily:
+        description: oxirgi 30 kun
+        items:
+          $ref: '#/definitions/models.UserStatsDay'
+        type: array
+      orders:
+        items:
+          $ref: '#/definitions/models.UserStatsOrder'
+        type: array
+      top_categories:
+        items:
+          $ref: '#/definitions/models.UserStatsCategory'
+        type: array
+      transactions:
+        items:
+          $ref: '#/definitions/models.UserStatsCoinTx'
+        type: array
+      user_id:
         type: string
     type: object
   models.VoiceSettingRes:
@@ -7945,6 +8266,115 @@ paths:
       - BearerAuth: []
       tags:
       - source
+  /web/stats/ai-cost:
+    get:
+      parameters:
+      - description: YYYY-MM-DD
+        in: query
+        name: from
+        type: string
+      - description: YYYY-MM-DD
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AICostStatsRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 'AI xarajati: funksiya, amal va foydalanuvchi turi bo''yicha; 1 tanga
+        tannarxi'
+      tags:
+      - stats
+  /web/stats/engagement:
+    get:
+      parameters:
+      - description: YYYY-MM-DD
+        in: query
+        name: from
+        type: string
+      - description: YYYY-MM-DD
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.EngagementStatsRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 'Faollik: DAU/WAU/MAU, kunlik ko''rsatkichlar, voronka'
+      tags:
+      - stats
+  /web/stats/finance:
+    get:
+      parameters:
+      - description: 'YYYY-MM-DD (default: to - 29 kun)'
+        in: query
+        name: from
+        type: string
+      - description: 'YYYY-MM-DD (default: bugun, Toshkent)'
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.FinanceStatsRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 'Moliya: tushum, AI xarajati, foyda, ARPU/ARPPU, kunlik va tarif bo''yicha'
+      tags:
+      - stats
+  /web/stats/premium-cost:
+    get:
+      parameters:
+      - description: YYYY-MM-DD
+        in: query
+        name: from
+        type: string
+      - description: YYYY-MM-DD
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PremiumCostStatsRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Premium foydalanuvchilar AI xarajati va eng ko'p sarflagan 20 foydalanuvchi
+      tags:
+      - stats
   /web/tariff:
     get:
       consumes:
@@ -8231,6 +8661,46 @@ paths:
         in: query
         name: phone_number
         type: string
+      - description: Email
+        in: query
+        name: email
+        type: string
+      - description: Ro'yxatdan o'tgan sana (dan), YYYY-MM-DD
+        in: query
+        name: created_from
+        type: string
+      - description: Ro'yxatdan o'tgan sana (gacha, kiradi), YYYY-MM-DD
+        in: query
+        name: created_to
+        type: string
+      - description: N kundan beri faol emas
+        in: query
+        name: inactive_days
+        type: integer
+      - description: Obunasi bor/yo'q
+        enum:
+        - "true"
+        - "false"
+        in: query
+        name: has_subscription
+        type: string
+      - description: To'lagan/to'lamagan
+        enum:
+        - "true"
+        - "false"
+        in: query
+        name: paid
+        type: string
+      - description: Saralash
+        enum:
+        - created_at
+        - last_active
+        - ai_cost
+        - paid
+        - sessions
+        in: query
+        name: sort_by
+        type: string
       - description: Limit
         in: query
         name: limit
@@ -8320,6 +8790,27 @@ paths:
       summary: Delete user
       tags:
       - user
+  /web/user/{id}/stats:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserStatsRes'
+      security:
+      - BearerAuth: []
+      summary: 'Bitta foydalanuvchi: oxirgi 30 kun grafigi, eng ko''p bo''limlar,
+        oxirgi tranzaksiya/buyurtmalar'
+      tags:
+      - stats
 securityDefinitions:
   BearerAuth:
     in: header

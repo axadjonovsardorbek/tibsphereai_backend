@@ -32,6 +32,7 @@ type Clients struct {
 	Roadmap          *service.RoadmapService
 	Feedback         *service.FeedbackService
 	Dashboard        *service.DashboardService
+	Stats            *service.StatsService
 	User             *service.UserService
 	UserDevice       *service.UserDeviceService
 
@@ -75,6 +76,7 @@ func NewClients(cfg *config.Config, conn *postgres.Storage, rdb *redis.Client, p
 		Roadmap:          service.NewRoadmapService(conn, aiClient, appSettingSvc),
 		Feedback:         service.NewFeedbackService(conn),
 		Dashboard:        service.NewDashboardService(conn, rdb),
+		Stats:            service.NewStatsService(conn, rdb),
 		User:             userSvc,
 		UserDevice:       service.NewUserDeviceService(conn, pushClient),
 

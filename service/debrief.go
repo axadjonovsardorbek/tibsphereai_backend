@@ -73,7 +73,7 @@ func (s *DebriefService) regenerate(ctx context.Context, sessionId string, sessi
 	if session.UserId != nil {
 		userId = *session.UserId
 	}
-	logAIUsage(&s.storage, "debrief", usage, userId, *session.CaseId)
+	logAIUsage(&s.storage, "debrief", usage, aiRef{userId, *session.CaseId, m.AISessionSimulation, sessionId})
 	if err != nil {
 		return err
 	}

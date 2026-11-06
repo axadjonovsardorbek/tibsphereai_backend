@@ -14,6 +14,7 @@ func touchStreak(ctx context.Context, db *pgxpool.Pool, userId string) {
 	if db == nil || userId == "" {
 		return
 	}
+	touchActive(ctx, db, userId)
 	_, err := db.Exec(ctx, `
 		UPDATE users SET
 			streak_count = CASE
@@ -28,5 +29,16 @@ func touchStreak(ctx context.Context, db *pgxpool.Pool, userId string) {
 	`, userId)
 	if err != nil {
 		fmt.Println("failed to touch streak:", err)
+	}
+}
+
+// touchActive - users.last_active_at: haqiqiy faollik (sessiya boshlash, javob, fleshkarta
+// takrorlash) vaqti - login yoki profil ochish emas. Admin statistikasi shundan o'qiydi.
+func touchActive(ctx context.Context, db *pgxpool.Pool, userId string) {
+	if db == nil || userId == "" {
+		return
+	}
+	if _, err := db.Exec(ctx, `UPDATE users SET last_active_at = now() WHERE id = $1`, userId); err != nil {
+		fmt.Println("failed to touch last_active_at:", err)
 	}
 }

@@ -47,7 +47,7 @@ func (s *AIPromptService) TestPatient(ctx context.Context, req *m.AITestPatientR
 	}
 
 	reply, usage, err := s.ai.Patient.Reply(ctx, caseRes.Scenario, expectedAnswer, req.Question)
-	logAIUsage(&s.storage, "chat_test", usage, "", req.CaseId)
+	logAIUsage(&s.storage, "chat_test", usage, aiRef{CaseId: req.CaseId})
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (s *AIPromptService) TestDebrief(ctx context.Context, req *m.AITestDebriefR
 	}
 
 	report, usage, err := s.ai.Debrief.Generate(ctx, caseRes.Scenario, req.Events)
-	logAIUsage(&s.storage, "debrief_test", usage, "", req.CaseId)
+	logAIUsage(&s.storage, "debrief_test", usage, aiRef{CaseId: req.CaseId})
 	if err != nil {
 		return nil, err
 	}

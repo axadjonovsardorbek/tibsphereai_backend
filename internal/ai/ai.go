@@ -20,6 +20,7 @@ type Usage struct {
 	OutputTokens int
 	TotalTokens  int
 	CostUSD      float64
+	Model        string
 }
 
 // PatientReplyRes - chat xabariga javob: shifokor xabari ikki xil bo'lishi mumkin -

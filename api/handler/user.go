@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"tibsphereai/pkg/errs"
 
 	m "tibsphereai/pkg/models"
@@ -243,6 +244,13 @@ func (h *Handler) GetByIdUser(c *gin.Context) {
 // @Produce  json
 // @Param name query string false "Name"
 // @Param phone_number query string false "PhoneNumber"
+// @Param email query string false "Email"
+// @Param created_from query string false "Ro'yxatdan o'tgan sana (dan), YYYY-MM-DD"
+// @Param created_to query string false "Ro'yxatdan o'tgan sana (gacha, kiradi), YYYY-MM-DD"
+// @Param inactive_days query int false "N kundan beri faol emas"
+// @Param has_subscription query string false "Obunasi bor/yo'q" Enums(true, false)
+// @Param paid query string false "To'lagan/to'lamagan" Enums(true, false)
+// @Param sort_by query string false "Saralash" Enums(created_at, last_active, ai_cost, paid, sessions)
 // @Param limit query int false "Limit"
 // @Param page query int false "Page"
 // @Success 200 {object} models.UserList
@@ -259,9 +267,29 @@ func (h *Handler) GetAllUsers(c *gin.Context) {
 	pagination := m.ParsePagination(limit, page)
 
 	req := &m.UserGetListReq{
-		Name:        name,
-		PhoneNumber: phone_number,
-		Filter:      pagination,
+		Name:            name,
+		PhoneNumber:     phone_number,
+		Email:           c.Query("email"),
+		CreatedFrom:     c.Query("created_from"),
+		CreatedTo:       c.Query("created_to"),
+		HasSubscription: c.Query("has_subscription"),
+		Paid:            c.Query("paid"),
+		SortBy:          c.Query("sort_by"),
+		Filter:          pagination,
+	}
+	for _, d := range []string{req.CreatedFrom, req.CreatedTo} {
+		if d != "" && !IsYYYYMMDD(d) {
+			errs.Bad(c, fmt.Errorf("created_from/created_to must be YYYY-MM-DD"))
+			return
+		}
+	}
+	if v := c.Query("inactive_days"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			errs.Bad(c, fmt.Errorf("inactive_days must be a non-negative integer"))
+			return
+		}
+		req.InactiveDays = n
 	}
 
 	slog.Info("Get all user with filtes", req)

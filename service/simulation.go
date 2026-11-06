@@ -62,6 +62,7 @@ func (s *SimulationService) Start(ctx context.Context, req *m.SimulationStartReq
 	if err != nil {
 		return nil, err
 	}
+	touchActive(ctx, s.storage.Db, req.UserId)
 
 	if coinBilled {
 		if _, err := s.storage.Db.Exec(ctx, `UPDATE simulation_sessions SET coin_billed = TRUE WHERE id = $1`, res.SessionId); err != nil {
@@ -132,8 +133,8 @@ func (s *SimulationService) settleTokens(ctx context.Context, sessionId string) 
 		fmt.Println("failed to update coins_charged:", err)
 	}
 	if _, err := s.storage.Db.Exec(ctx, `
-		INSERT INTO point_transactions (id, user_id, kind, delta, reason, reference_type, reference_id)
-		VALUES (gen_random_uuid(), $1, 'coin', $2, 'ai_usage', 'simulation', $3)
+		INSERT INTO point_transactions (id, user_id, kind, delta, reason, reference_type, reference_id, source)
+		VALUES (gen_random_uuid(), $1, 'coin', $2, 'ai_usage', 'simulation', $3, 'balance')
 	`, userId, -deducted, sessionId); err != nil {
 		fmt.Println("failed to log ai_usage coin spend:", err)
 	}
@@ -216,7 +217,7 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 	if audioB64, ok := req.Payload["audio_base64"].(string); ok && audioB64 != "" && s.ai != nil && s.ai.Voice != nil {
 		mimeType, _ := req.Payload["audio_mime"].(string)
 		transcript, usage, tErr := s.ai.Voice.Transcribe(ctx, audioB64, mimeType)
-		logAIUsage(&s.storage, "voice_transcribe", usage, userId, caseId)
+		logAIUsage(&s.storage, "voice_transcribe", usage, aiRef{userId, caseId, m.AISessionSimulation, req.SessionId})
 		s.addSessionTokens(ctx, req.SessionId, usage)
 		if tErr != nil {
 			transcribeFailed = true
@@ -236,7 +237,7 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 		if req.Type == "question" {
 			question, _ := req.Payload["question"].(string)
 			reply, usage, aiErr := s.ai.Patient.Reply(ctx, caseRes.Scenario, expectedAnswer, question)
-			logAIUsage(&s.storage, "chat", usage, userId, caseId)
+			logAIUsage(&s.storage, "chat", usage, aiRef{userId, caseId, m.AISessionSimulation, req.SessionId})
 			s.addSessionTokens(ctx, req.SessionId, usage)
 			if aiErr != nil {
 				responseExtra["patient_reply_error"] = friendlyAIError(aiErr)
@@ -260,7 +261,7 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 			}
 		} else {
 			eval, usage, aiErr := s.ai.Action.Evaluate(ctx, caseRes.Scenario, expectedAnswer, req.Type, req.Payload)
-			logAIUsage(&s.storage, "action_eval", usage, userId, caseId)
+			logAIUsage(&s.storage, "action_eval", usage, aiRef{userId, caseId, m.AISessionSimulation, req.SessionId})
 			s.addSessionTokens(ctx, req.SessionId, usage)
 			if aiErr == nil && eval != nil {
 				isCorrect, healthDelta = eval.IsCorrect, eval.HealthDelta
@@ -285,7 +286,7 @@ func (s *SimulationService) AddEvent(ctx context.Context, req *m.SimulationEvent
 		}
 		if toSpeak != "" {
 			audioB64, usage, sErr := s.ai.Voice.Synthesize(ctx, toSpeak)
-			logAIUsage(&s.storage, "voice_synthesize", usage, userId, caseId)
+			logAIUsage(&s.storage, "voice_synthesize", usage, aiRef{userId, caseId, m.AISessionSimulation, req.SessionId})
 			s.addSessionTokens(ctx, req.SessionId, usage)
 			if sErr != nil {
 				fmt.Println("voice synthesize failed:", sErr)
@@ -462,7 +463,7 @@ func (s *SimulationService) Finish(ctx context.Context, req *m.SimulationFinishR
 			userId = *session.UserId
 		}
 		if session.CaseId != nil {
-			logAIUsage(&s.storage, "debrief", usage, userId, *session.CaseId)
+			logAIUsage(&s.storage, "debrief", usage, aiRef{userId, *session.CaseId, m.AISessionSimulation, req.SessionId})
 		}
 	}
 

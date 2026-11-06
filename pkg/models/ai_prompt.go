@@ -22,12 +22,24 @@ type AIPromptRes struct {
 	UpdatedAt   string         `json:"updated_at"`
 }
 
+// ai_usage_logs.session_kind qiymatlari.
+const (
+	AISessionSimulation = "simulation"
+	AISessionPractice   = "practice"
+)
+
 type AIUsageLogCreateReq struct {
 	Feature string  `json:"feature"` // chat|debrief|case_generation
 	Tokens  int     `json:"tokens"`
 	CostUSD float64 `json:"cost_usd"`
 	UserId  string  `json:"user_id"`
 	CaseId  string  `json:"case_id"`
+
+	SessionKind      string `json:"session_kind"` // simulation|practice|"" (sessiyasiz: roadmap, flashcard_deck)
+	SessionId        string `json:"session_id"`
+	Model            string `json:"model"`
+	PromptTokens     int    `json:"prompt_tokens"`
+	CompletionTokens int    `json:"completion_tokens"`
 }
 
 type AIUsageSummaryRes struct {

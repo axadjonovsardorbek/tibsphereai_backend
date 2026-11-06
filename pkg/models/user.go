@@ -81,6 +81,9 @@ type UserRes struct {
 	StreakCount    *int    `json:"-"` // ARCHIVED: ketma-ketlik (🔥) API javobidan yashirilgan
 	CreatedAt      *string `json:"created_at"`
 	UpdatedAt      *string `json:"updated_at"`
+
+	// Stats - faqat admin ro'yxatida (GET /web/user) to'ldiriladi.
+	Stats *UserAdminStats `json:"stats,omitempty"`
 }
 
 type UserUpdateReq struct {
@@ -107,6 +110,13 @@ type UserGetListReq struct {
 	Name        string     `json:"name"`
 	Email       string     `json:"email"`
 	PhoneNumber string     `json:"phone_number"`
+
+	CreatedFrom     string `json:"created_from"`     // YYYY-MM-DD (Toshkent)
+	CreatedTo       string `json:"created_to"`       // YYYY-MM-DD (Toshkent, kiradi)
+	InactiveDays    int    `json:"inactive_days"`    // N kundan beri faol emas (hech faol bo'lmaganlar ham)
+	HasSubscription string `json:"has_subscription"` // "true" | "false" | ""
+	Paid            string `json:"paid"`             // "true" | "false" | ""
+	SortBy          string `json:"sort_by"`          // created_at | last_active | ai_cost | paid | sessions
 }
 
 type UserList struct {

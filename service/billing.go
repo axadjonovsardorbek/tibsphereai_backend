@@ -121,6 +121,13 @@ func (b *Biller) Charge(ctx context.Context, userId string, coins int, reason, r
 		if _, err := tx.Exec(ctx, `UPDATE user_daily_coins SET used = used + $2 WHERE user_id = $1 AND day = `+tashkentToday, userId, fromFree); err != nil {
 			return 0, err
 		}
+		// Statistika uchun: bepul tangadan sarf ham yoziladi (balansga ta'sir qilmaydi).
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO point_transactions (id, user_id, kind, delta, reason, reference_type, reference_id, source)
+			VALUES (gen_random_uuid(), $1, 'coin', $2, $3, $4, $5, 'daily_free')
+		`, userId, -fromFree, reason, refType, refId); err != nil {
+			return 0, err
+		}
 	}
 	paid := 0
 	if rest := coins - fromFree; rest > 0 {
@@ -134,8 +141,8 @@ func (b *Biller) Charge(ctx context.Context, userId string, coins int, reason, r
 				return 0, err
 			}
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO point_transactions (id, user_id, kind, delta, reason, reference_type, reference_id)
-				VALUES (gen_random_uuid(), $1, 'coin', $2, $3, $4, $5)
+				INSERT INTO point_transactions (id, user_id, kind, delta, reason, reference_type, reference_id, source)
+				VALUES (gen_random_uuid(), $1, 'coin', $2, $3, $4, $5, 'balance')
 			`, userId, -paid, reason, refType, refId); err != nil {
 				return 0, err
 			}

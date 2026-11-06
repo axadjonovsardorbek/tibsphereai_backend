@@ -1,6 +1,7 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -158,6 +159,7 @@ func (s *PracticeService) Start(ctx context.Context, req *m.PracticeStartReq) (*
 	if err != nil {
 		return nil, err
 	}
+	touchActive(ctx, s.storage.Db, req.UserId)
 	return s.GetSession(ctx, req.UserId, id)
 }
 
@@ -318,6 +320,9 @@ func (s *PracticeService) Next(ctx context.Context, userId, sessionId string) (*
 	if errors.Is(genErr, ai.ErrTopicNotMedical) {
 		// Tibbiy bo'lmagan erkin mavzu: sessiya yopiladi (keraksiz sessiya qolmasin).
 		_ = s.storage.PracticeS.Finish(sessionId, m.PracticeStatusAbandoned, 0, 0)
+		if _, err := s.storage.Db.Exec(ctx, `UPDATE practice_sessions SET rejected_reason = 'not_medical' WHERE id = $1`, sessionId); err != nil {
+			fmt.Println("failed to mark rejected topic:", err)
+		}
 		return nil, errs.ErrTopicNotMedical
 	}
 	if genErr != nil {
@@ -528,6 +533,7 @@ func addUsage(a, b *ai.Usage) *ai.Usage {
 	return &ai.Usage{
 		PromptTokens: a.PromptTokens + b.PromptTokens, OutputTokens: a.OutputTokens + b.OutputTokens,
 		TotalTokens: a.TotalTokens + b.TotalTokens, CostUSD: a.CostUSD + b.CostUSD,
+		Model: cmp.Or(a.Model, b.Model),
 	}
 }
 
@@ -535,7 +541,7 @@ func (s *PracticeService) recordUsage(ctx context.Context, sessionId, userId, fe
 	if usage == nil {
 		return
 	}
-	logAIUsage(&s.storage, feature, usage, userId, "")
+	logAIUsage(&s.storage, feature, usage, aiRef{UserId: userId, SessionKind: m.AISessionPractice, SessionId: sessionId})
 	if err := s.storage.PracticeS.AddTokens(sessionId, usage.PromptTokens, usage.OutputTokens); err != nil {
 		fmt.Println("failed to add practice tokens:", err)
 	}

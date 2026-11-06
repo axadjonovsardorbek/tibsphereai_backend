@@ -54,8 +54,8 @@ func (r *OrderRepo) activateTariff(ctx context.Context, tx pgx.Tx, userId, tarif
 			return fmt.Errorf("activateTariff: credit coins: %w", err)
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO point_transactions (id, user_id, kind, delta, reason, reference_type, reference_id)
-			VALUES ($1, $2, 'coin', $3, 'coin_purchase', 'order', $4)
+			INSERT INTO point_transactions (id, user_id, kind, delta, reason, reference_type, reference_id, source)
+			VALUES ($1, $2, 'coin', $3, 'coin_purchase', 'order', $4, 'purchased')
 		`, uuid.NewString(), userId, coins, orderId); err != nil {
 			return fmt.Errorf("activateTariff: log coin purchase: %w", err)
 		}

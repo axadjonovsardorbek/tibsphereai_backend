@@ -18,6 +18,7 @@ p, admin, /web/auth/password/refresh, PUT
 p, admin, /web/user, GET
 p, admin, /web/user/:id, GET
 p, admin, /web/user/:id/delete, DELETE
+p, admin, /web/user/:id/stats, GET
 p, admin, /web/user/get/profile, GET
 p, admin, /web/user/update/profile, PUT
 p, admin, /web/user/delete/profile, DELETE
@@ -140,6 +141,10 @@ p, admin, /web/notification/user, GET
 p, admin, /web/order/:id, GET
 p, admin, /web/order, GET
 p, admin, /web/dashboard, GET
+p, admin, /web/stats/finance, GET
+p, admin, /web/stats/ai-cost, GET
+p, admin, /web/stats/premium-cost, GET
+p, admin, /web/stats/engagement, GET
 p, admin, /web/coin-transaction, GET
 p, admin, /web/coin-transaction/summary, GET
 p, admin, /web/file-upload, POST

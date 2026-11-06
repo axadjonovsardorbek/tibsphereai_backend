@@ -307,7 +307,7 @@ func (s *FlashcardService) CreateDeck(ctx context.Context, req *m.FlashcardDeckC
 	}
 	res := &DeckCreateRes{}
 	if usage != nil {
-		logAIUsage(&s.storage, "flashcard_deck", usage, req.UserId, "")
+		logAIUsage(&s.storage, "flashcard_deck", usage, aiRef{UserId: req.UserId})
 		res.TokensUsed = usage.TotalTokens
 		// Manba ishlatilgan bo'lsa ham, token narxi har doim yechiladi (AI resursi sarflangan).
 		if coins := CoinsForTokens(usage.PromptTokens+usage.OutputTokens, s.settings.CoinsPer1kTokens(ctx)); coins > 0 {
